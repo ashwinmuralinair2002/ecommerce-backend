@@ -1,0 +1,145 @@
+const User = require('../models/user.model');
+const bcrypt = require('bcryptjs');
+
+// Get Profile
+const getProfile = async (userId) => {
+    const user = await User.findById(userId).select('-password -otp -otpExpires -resetOtp -resetOtpExpires -emailChangeOtp -emailChangeOtpExpires');
+    if (!user) {
+        throw new Error('User not found');
+    }
+    return user;
+};
+
+// Update Profile (Name only for now, can extend)
+const updateProfile = async (userId, data) => {
+    const user = await User.findById(userId);
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    if (data.name) user.name = data.name;
+
+    await user.save();
+    return {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        addresses: user.addresses
+    };
+};
+
+// Request Email Change
+const requestEmailChange = async (userId, newEmail) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    if (newEmail === user.email) throw new Error('New email cannot be same as current email');
+
+    const emailExists = await User.findOne({ email: newEmail });
+    if (emailExists) throw new Error('Email already in use');
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.newEmail = newEmail;
+    user.emailChangeOtp = otp;
+    user.emailChangeOtpExpires = Date.now() + 10 * 60 * 1000;
+
+    await user.save();
+    return { message: 'OTP sent to new email', otp }; // Return OTP for testing
+};
+
+// Verify Email Change
+const verifyEmailChange = async (userId, otp) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    if (user.emailChangeOtp !== otp) throw new Error('Invalid OTP');
+    if (user.emailChangeOtpExpires < Date.now()) throw new Error('OTP expired');
+
+    // Update Email
+    user.email = user.newEmail;
+    user.newEmail = undefined;
+    user.emailChangeOtp = undefined;
+    user.emailChangeOtpExpires = undefined;
+
+    await user.save();
+    return { message: 'Email updated successfully', email: user.email };
+};
+
+// Add Address
+const addAddress = async (userId, addressData) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    if (user.addresses.length >= 5) {
+        throw new Error('Max address limit reached');
+    }
+
+    // Check Duplicate (Simple check: all fields match)
+    const duplicate = user.addresses.some(addr =>
+        addr.street === addressData.street &&
+        addr.city === addressData.city &&
+        addr.zip === addressData.zip
+    );
+
+    if (duplicate) {
+        throw new Error('Address already exists');
+    }
+
+    if (addressData.isDefault) {
+        user.addresses.forEach(addr => addr.isDefault = false);
+    }
+
+    user.addresses.push(addressData);
+    await user.save();
+    return user.addresses;
+};
+
+// Update Address
+const updateAddress = async (userId, addressId, addressData) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    const address = user.addresses.id(addressId);
+    if (!address) throw new Error('Address not found');
+
+    if (addressData.isDefault) {
+        user.addresses.forEach(addr => addr.isDefault = false);
+    }
+
+    // Update fields
+    if (addressData.street) address.street = addressData.street;
+    if (addressData.city) address.city = addressData.city;
+    if (addressData.state) address.state = addressData.state;
+    if (addressData.zip) address.zip = addressData.zip;
+    if (addressData.country) address.country = addressData.country;
+    if (addressData.isDefault !== undefined) address.isDefault = addressData.isDefault;
+
+    await user.save();
+    return user.addresses;
+};
+
+// Delete Address
+const deleteAddress = async (userId, addressId) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    const address = user.addresses.id(addressId);
+    if (!address) throw new Error('Address not found');
+
+    // address.remove(); // Deprecated
+    user.addresses.pull(addressId);
+
+    await user.save();
+    return user.addresses;
+};
+
+module.exports = {
+    getProfile,
+    updateProfile,
+    requestEmailChange,
+    verifyEmailChange,
+    addAddress,
+    updateAddress,
+    deleteAddress
+};

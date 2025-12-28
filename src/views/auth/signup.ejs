@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
+    <title>SoundWave | Create Account</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        async function handleSignup() {
+            // Get inputs
+            const inputs = document.querySelectorAll('input');
+            const firstName = inputs[0].value.trim();
+            const lastName = inputs[1].value.trim();
+            const email = inputs[2].value.trim();
+            const password = inputs[3].value;
+            const confirmPassword = inputs[4].value;
+            const referralCode = inputs[5].value.trim();
+            const submitButton = document.querySelector('button.bg-\\[\\#0df20d\\]');
+
+            // Reset UI
+            submitButton.disabled = true;
+            submitButton.textContent = 'Creating Account...';
+
+            try {
+                // Client-side validation
+                if (!firstName || !lastName || !email || !password || !confirmPassword) {
+                    throw new Error('Please fill in all required fields');
+                }
+
+                if (password !== confirmPassword) {
+                    throw new Error('Passwords do not match');
+                }
+
+                if (password.length < 6) {
+                    throw new Error('Password must be at least 6 characters');
+                }
+
+                // Construct Payload (Mapping firstName + lastName -> name)
+                const payload = {
+                    name: `${firstName} ${lastName}`,
+                    email: email,
+                    password: password
+                };
+
+                // Call API
+                const response = await fetch('/api/auth/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Signup failed');
+                }
+
+                // Success
+                alert('Account created successfully! Please verify your email via OTP.');
+                window.location.href = `/verify-otp?email=${encodeURIComponent(email)}`;
+
+            } catch (error) {
+                alert(error.message);
+                submitButton.disabled = false;
+                submitButton.textContent = 'Create Account';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const submitButton = document.querySelector('button.bg-\\[\\#0df20d\\]');
+            if (submitButton) {
+                submitButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    handleSignup();
+                });
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8] overflow-x-hidden"
+        style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+        <header class="flex items-center justify-between border-b border-[#e7f4e7] px-10 py-3">
+            <div class="flex items-center gap-4 text-[#0d1c0d]">
+                <h2 class="text-lg font-bold">SoundWave</h2>
+            </div>
+        </header>
+
+        <main class="flex flex-1 items-center justify-center px-4">
+            <div class="w-full max-w-md py-8">
+                <h2 class="text-center text-[28px] font-bold text-[#0d1c0d] mb-6">
+                    Create Account
+                </h2>
+
+                <input class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
+                    placeholder="First Name" />
+
+                <input class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
+                    placeholder="Last Name" />
+
+                <input class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
+                    placeholder="Email / Phone" />
+
+                <input type="password"
+                    class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
+                    placeholder="Password" />
+
+                <input type="password"
+                    class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
+                    placeholder="Confirm Password" />
+
+                <input class="form-input w-full h-14 mb-5 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
+                    placeholder="Have a referral code? (optional)" />
+
+                <button class="w-full h-10 rounded-lg bg-[#0df20d] text-sm font-bold text-[#0d1c0d] mb-3">
+                    Create Account
+                </button>
+
+                <button onclick="window.location.href='/api/auth/google'"
+                    class="w-full h-10 rounded-lg bg-[#e7f4e7] text-sm font-bold text-[#0d1c0d] mb-4">
+                    Sign up with Google
+                </button>
+
+                <p class="text-center text-sm text-[#499c49]">
+                    Already have an account?
+                    <a href="/login" class="underline">Login</a>
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

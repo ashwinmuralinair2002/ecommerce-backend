@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
+    <title>SoundWave | Login</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        async function handleLogin() {
+            // Clear previous messages
+            const errorContainer = document.getElementById('error-message');
+            if (errorContainer) errorContainer.remove();
+
+            const emailInput = document.querySelector('input[type="text"]');
+            const passwordInput = document.querySelector('input[type="password"]');
+            const submitButton = document.querySelector('button.bg-\\[\\#0df20d\\]');
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+
+            if (!email || !password) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            // Disable button
+            submitButton.disabled = true;
+            submitButton.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Handle Blocked User
+                    if (response.status === 403 && data.error === 'User account is blocked') {
+                        throw new Error('Your account is blocked. Please contact support.');
+                    }
+                    throw new Error(data.error || 'Login failed');
+                }
+
+                // Success: Store token
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('userInfo', JSON.stringify(data.user));
+
+                // Redirect
+                if (data.user.role === 'admin') {
+                    // Assuming admin dashboard exists or just redirect home for now
+                    window.location.href = '/login?success=admin';
+                    // Note: Ideally /admin/dashboard, but using query param to show success in this limited scope
+                    alert('Login Successful (Admin). Token stored.');
+                } else {
+                    window.location.href = '/home';
+                    alert('Login Successful. Token stored.');
+                }
+
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Log In';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const submitButton = document.querySelector('button.bg-\\[\\#0df20d\\]');
+            if (submitButton) {
+                submitButton.addEventListener('click', (e) => {
+                    e.preventDefault(); // Prevent implicit form submission if any
+                    handleLogin();
+                });
+            }
+
+            const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+            if (forgotPasswordBtn) {
+                forgotPasswordBtn.addEventListener('click', () => {
+                    window.location.href = '/forgot-password';
+                });
+            }
+
+            const createAccountBtn = document.getElementById('create-account-btn');
+            if (createAccountBtn) {
+                createAccountBtn.addEventListener('click', () => {
+                    window.location.href = '/signup';
+                });
+            }
+
+            // Check for Google Login Token
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const userData = urlParams.get('user');
+
+            if (token && userData) {
+                try {
+                    localStorage.setItem('authToken', token);
+                    localStorage.setItem('userInfo', userData);
+
+                    // Clean URL
+                    window.history.replaceState({}, document.title, '/login');
+
+                    alert('Google Login Successful!');
+                    window.location.href = '/home';
+                } catch (e) {
+                    console.error('Error saving Google token', e);
+                }
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8] overflow-x-hidden"
+        style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+        <header class="flex items-center justify-between border-b border-[#e7f4e7] px-10 py-3">
+            <div class="flex items-center gap-4 text-[#0d1c0d]">
+                <div class="size-4">
+                    <svg viewBox="0 0 48 48" fill="none">
+                        <path
+                            d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"
+                            fill="currentColor" />
+                    </svg>
+                </div>
+                <h2 class="text-lg font-bold tracking-tight">SoundWave</h2>
+            </div>
+        </header>
+
+        <main class="flex flex-1 items-center justify-center px-4">
+            <div class="w-full max-w-md py-8">
+                <h2 class="text-center text-[28px] font-bold text-[#0d1c0d] mb-6">
+                    Log in to SoundWave
+                </h2>
+
+                <div class="mb-4">
+                    <label class="block text-base font-medium text-[#0d1c0d] mb-2">
+                        Email / Phone Number
+                    </label>
+                    <input type="text" placeholder="Enter your email or phone number"
+                        class="form-input w-full rounded-lg border border-[#cee8ce] bg-[#f8fcf8] h-14 px-4 text-base placeholder:text-[#499c49]" />
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-base font-medium text-[#0d1c0d] mb-2">
+                        Password
+                    </label>
+                    <input type="password" placeholder="Enter your password"
+                        class="form-input w-full rounded-lg border border-[#cee8ce] bg-[#f8fcf8] h-14 px-4 text-base placeholder:text-[#499c49]" />
+                </div>
+
+                <button class="w-full h-10 rounded-lg bg-[#0df20d] text-sm font-bold text-[#0d1c0d] mb-3">
+                    Log In
+                </button>
+
+                <button onclick="window.location.href='/api/auth/google'"
+                    class="w-full h-10 rounded-lg bg-[#e7f4e7] text-sm font-bold text-[#0d1c0d] mb-4">
+                    Log in with Google
+                </button>
+
+                <div class="flex flex-col items-center gap-2">
+                    <button id="forgot-password-btn" class="text-sm text-[#0d1c0d]">Forgot Password?</button>
+                    <button id="create-account-btn" class="text-sm text-[#0d1c0d]">Create Account</button>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>
