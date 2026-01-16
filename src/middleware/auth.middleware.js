@@ -13,6 +13,12 @@ const verifyToken = async (req, res, next) => {
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+                // Handle Hardcoded Admin
+                if (decoded.role === 'admin' && decoded.id === 'admin') {
+                    req.user = { id: 'admin', role: 'admin', name: 'Ashwin Murali Nair', email: process.env.ADMIN_EMAIL };
+                    return next();
+                }
+
                 // Optional: Fetch user to check isBlocked status dynamically
                 // This makes every request hit DB but improves security for blocking active users
                 const user = await User.findById(decoded.id).select('-password');
@@ -46,12 +52,19 @@ const verifyToken = async (req, res, next) => {
 
 const isAdmin = async (req, res, next) => {
     try {
-        const user = await User.findById(req.user.id);
-        if (user && user.role === 'admin') {
-            next();
-        } else {
-            res.status(403).json({ error: 'Not authorized as an admin' });
+        if (req.user && req.user.role === 'admin') {
+            return next();
         }
+
+        // Fallback for DB users
+        if (req.user && req.user.id !== 'admin') {
+            const user = await User.findById(req.user.id);
+            if (user && user.role === 'admin') {
+                return next();
+            }
+        }
+
+        res.status(403).json({ error: 'Not authorized as an admin' });
     } catch (error) {
         res.status(500).json({ error: 'Server error during admin check' });
     }

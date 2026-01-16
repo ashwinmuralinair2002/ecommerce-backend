@@ -18,7 +18,9 @@ router.post(
 router.post('/login', login);
 router.post('/verify-otp', verifyOtp);
 router.post('/resend-otp', resendOtp);
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', [
+    check('email', 'Please include a valid email').isEmail()
+], forgotPassword);
 router.post('/reset-password', resetPassword);
 
 // Google Auth Routes

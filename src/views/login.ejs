@@ -10,8 +10,10 @@
     <script>
         async function handleLogin() {
             // Clear previous messages
-            const errorContainer = document.getElementById('error-message');
-            if (errorContainer) errorContainer.remove();
+            const msgContainer = document.getElementById('auth-message');
+            msgContainer.classList.add('hidden');
+            msgContainer.textContent = '';
+            msgContainer.className = 'hidden mt-4 p-3 rounded-lg text-sm font-medium text-center transition-all duration-300';
 
             const emailInput = document.querySelector('input[type="text"]');
             const passwordInput = document.querySelector('input[type="password"]');
@@ -20,8 +22,21 @@
             const email = emailInput.value.trim();
             const password = passwordInput.value;
 
+            // Helper for showing message
+            const showMessage = (msg, type) => {
+                msgContainer.textContent = msg;
+                msgContainer.classList.remove('hidden');
+                if (type === 'error') {
+                    msgContainer.classList.add('bg-red-100', 'text-red-700');
+                    msgContainer.classList.remove('bg-green-100', 'text-green-700');
+                } else {
+                    msgContainer.classList.add('bg-green-100', 'text-green-700');
+                    msgContainer.classList.remove('bg-red-100', 'text-red-700');
+                }
+            };
+
             if (!email || !password) {
-                alert('Please fill in all fields.');
+                showMessage('Please fill in all fields.', 'error');
                 return;
             }
 
@@ -50,19 +65,19 @@
                 localStorage.setItem('authToken', data.token);
                 localStorage.setItem('userInfo', JSON.stringify(data.user));
 
+                showMessage('Login Successful! Redirecting...', 'success');
+
                 // Redirect
-                if (data.user.role === 'admin') {
-                    // Assuming admin dashboard exists or just redirect home for now
-                    window.location.href = '/login?success=admin';
-                    // Note: Ideally /admin/dashboard, but using query param to show success in this limited scope
-                    alert('Login Successful (Admin). Token stored.');
-                } else {
-                    window.location.href = '/home';
-                    alert('Login Successful. Token stored.');
-                }
+                setTimeout(() => {
+                    if (data.user.role === 'admin') {
+                        window.location.href = '/admin/dashboard';
+                    } else {
+                        window.location.href = '/home';
+                    }
+                }, 1000);
 
             } catch (error) {
-                alert(error.message);
+                showMessage(error.message, 'error');
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Log In';
@@ -96,6 +111,31 @@
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
             const userData = urlParams.get('user');
+            const errorParam = urlParams.get('error');
+            const messageParam = urlParams.get('message');
+
+            const msgContainer = document.getElementById('auth-message');
+
+            const showMessage = (msg, type) => {
+                msgContainer.textContent = msg;
+                msgContainer.classList.remove('hidden');
+                if (type === 'error') {
+                    msgContainer.classList.add('bg-red-100', 'text-red-700');
+                } else {
+                    msgContainer.classList.add('bg-green-100', 'text-green-700');
+                }
+            };
+
+            if (errorParam) {
+                showMessage(decodeURIComponent(errorParam), 'error');
+            } else if (messageParam) {
+                showMessage(decodeURIComponent(messageParam), 'success'); // or neutral
+            }
+
+            // Clean URL param
+            if (errorParam || messageParam) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
 
             if (token && userData) {
                 try {
@@ -105,8 +145,8 @@
                     // Clean URL
                     window.history.replaceState({}, document.title, '/login');
 
-                    alert('Google Login Successful!');
-                    window.location.href = '/home';
+                    showMessage('Google Login Successful! Redirecting...', 'success');
+                    setTimeout(() => window.location.href = '/home', 1000);
                 } catch (e) {
                     console.error('Error saving Google token', e);
                 }
@@ -161,6 +201,11 @@
                     class="w-full h-10 rounded-lg bg-[#e7f4e7] text-sm font-bold text-[#0d1c0d] mb-4">
                     Log in with Google
                 </button>
+
+                <!-- Auth Message Container -->
+                <div id="auth-message"
+                    class="hidden mt-4 p-3 rounded-lg text-sm font-medium text-center transition-all duration-300">
+                </div>
 
                 <div class="flex flex-col items-center gap-2">
                     <button id="forgot-password-btn" class="text-sm text-[#0d1c0d]">Forgot Password?</button>

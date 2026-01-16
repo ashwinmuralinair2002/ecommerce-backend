@@ -7,6 +7,8 @@
         href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
     <title>SoundWave | OTP Verification</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/utils.js"></script>
     <style>
         /* Ensure OTP inputs don't show spinners */
         .otp-input::-webkit-outer-spin-button,
@@ -65,6 +67,11 @@
                     Verify OTP
                 </button>
 
+                <!-- Auth Message Container -->
+                <div id="auth-message"
+                    class="hidden mb-4 p-3 rounded-lg text-sm font-medium text-center transition-all duration-300">
+                </div>
+
                 <p id="resendOtp"
                     class="text-[#479e47] text-sm text-center underline cursor-not-allowed opacity-60 mb-2">
                     Resend OTP in <span id="timer">0:59</span> seconds
@@ -95,14 +102,28 @@
 
                     // --- LOGIC INTEGRATION START ---
 
+                    // Message Container Helper
+                    const msgContainer = document.getElementById('auth-message');
+                    const showMessage = (msg, type) => {
+                        msgContainer.textContent = msg;
+                        msgContainer.classList.remove('hidden');
+                        if (type === 'error') {
+                            msgContainer.classList.add('bg-red-100', 'text-red-700');
+                            msgContainer.classList.remove('bg-green-100', 'text-green-700');
+                        } else {
+                            msgContainer.classList.add('bg-green-100', 'text-green-700');
+                            msgContainer.classList.remove('bg-red-100', 'text-red-700');
+                        }
+                    };
+
                     // Get Email and Mode from URL
                     const urlParams = new URLSearchParams(window.location.search);
                     const email = urlParams.get('email');
                     const mode = urlParams.get('mode');
 
                     if (!email) {
-                        alert('No email provided. Redirecting to login.');
-                        window.location.href = '/login';
+                        // Redirect logic, simplified
+                        window.location.href = '/login?error=' + encodeURIComponent('No email provided.');
                     }
 
                     // OTP Input Handling (Focus movement)
@@ -129,14 +150,17 @@
                     const verifyButton = document.querySelector('button.bg-\\[\\#1ff91f\\]');
                     verifyButton.addEventListener('click', async () => {
                         const otp = Array.from(inputs).map(input => input.value).join('');
+
+                        // Clear previous
+                        msgContainer.classList.add('hidden');
+
                         if (otp.length !== 6) {
-                            alert('Please enter a valid 6-digit OTP');
+                            showMessage('Please enter a valid 6-digit OTP', 'error');
                             return;
                         }
 
                         // --- RESET PASSWORD MODE ---
                         if (mode === 'reset') {
-                            // Simply redirect to Reset Password page with OTP included
                             window.location.href = `/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
                             return;
                         }
@@ -158,20 +182,25 @@
                                 throw new Error(data.error || 'Verification failed');
                             }
 
-                            alert('Email verified successfully!');
+                            showMessage('Email verified successfully!', 'success');
                             window.location.href = '/home'; // Go to post-login home
 
                         } catch (error) {
-                            alert(error.message);
+                            showMessage(error.message, 'error');
                         } finally {
-                            verifyButton.disabled = false;
-                            verifyButton.textContent = 'Verify OTP';
+                            if (verifyButton.textContent !== 'Verify OTP') { // Only reset if not redirected (heuristic)
+                                verifyButton.disabled = false;
+                                verifyButton.textContent = 'Verify OTP';
+                            }
                         }
                     });
 
                     // Resend OTP Logic
                     async function handleResendOtp() {
                         if (resendOtp.classList.contains('cursor-not-allowed')) return;
+
+                        // Clear previous
+                        msgContainer.classList.add('hidden');
 
                         resendOtp.textContent = "Sending...";
 
@@ -202,13 +231,13 @@
                                 throw new Error(data.error || 'Resend failed');
                             }
 
-                            alert('OTP Resent! Please check your email.');
+                            showMessage('OTP Resent! Please check your email.', 'success');
                             // Reset Timer (Optional, but good UX)
-                            window.location.reload();
+                            setTimeout(() => window.location.reload(), 1500);
 
                         } catch (error) {
-                            alert(error.message);
-                            resendOtp.textContent = "Resend OTP"; // Revert text on error if not reloading
+                            showMessage(error.message, 'error');
+                            resendOtp.textContent = "Resend OTP";
                         }
                     }
 

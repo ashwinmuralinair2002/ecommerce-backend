@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Space+Grotesk%3Awght%40400%3B500%3B700" />
+    <title>Edit Customer - <%= customer.name %>
+    </title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
+        style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+        <div class="layout-container flex h-full grow flex-col">
+            <!-- Header reused conceptually -->
+            <header
+                class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f5f0] px-10 py-3">
+                <div class="flex items-center gap-4 text-[#111811]">
+                    <h2 class="text-[#111811] text-lg font-bold leading-tight tracking-[-0.015em]">SoundWave Admin</h2>
+                </div>
+            </header>
+            <div class="px-40 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
+                    <div class="flex flex-wrap gap-2 p-4">
+                        <a href="/admin/customers/<%= customer._id %>"
+                            class="text-[#5f8c5f] text-base font-medium leading-normal">Back to Details</a>
+                    </div>
+                    <h2 class="text-[#111811] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                        Edit Customer: <%= customer.name %>
+                    </h2>
+
+                    <form action="/admin/customers/<%= customer._id %>/update" method="POST">
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Full Name</p>
+                                <input name="name"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= customer.name || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Email</p>
+                                <input name="email" type="email"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= customer.email || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Phone Number</p>
+                                <input name="phone"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= customer.phone || '' %>" />
+                            </label>
+                        </div>
+
+                        <div class="flex justify-center">
+                            <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 max-w-[480px] justify-center">
+                                <a href="/admin/customers/<%= customer._id %>"
+                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#f0f5f0] text-[#111811] text-base font-bold leading-normal tracking-[0.015em] grow"
+                                    style="text-decoration:none; text-align:center; display:flex;">
+                                    <span class="truncate">Cancel</span>
+                                </a>
+                                <button type="submit"
+                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#1ff91f] text-[#111811] text-base font-bold leading-normal tracking-[0.015em] grow">
+                                    <span class="truncate">Save Changes</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

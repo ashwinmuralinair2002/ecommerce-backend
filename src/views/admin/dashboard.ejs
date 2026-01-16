@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col w-80">
+                    <%- include('../partials/admin/sidebar', { page: 'dashboard' }) %>
+                </div>
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    <%- include('../partials/admin/navbar') %>
+
+                        <!-- Dashboard Content -->
+                        <div class="flex flex-wrap justify-between gap-3 p-4">
+                            <p class="text-[#121811] tracking-light text-[32px] font-bold leading-tight min-w-72">Admin
+                                Account</p>
+                        </div>
+
+                        <!-- Profile Summary -->
+                        <section class="flex flex-col items-center gap-4 mb-8">
+                            <div class="w-32 h-32 rounded-full bg-cover bg-center"
+                                style="background-image:url('https://lh3.googleusercontent.com/aida-public/AB6AXuBQqtJGrejxVVUegjYs8AI6PEY5y939l1asgdfvN4aYQpTGr6pUmSMtwXb9Og-sPxsI0QeyL0UXMFoMGAbfV2jnUNI9_LuV0PS9PhSABQQu9Bq9VBwXPfkhmN31NjNdAxFFwyOWTKpnOH4ViWFkZS_OQ_IQdxlDu9l4x0GGtEMoLBOF3e3I2RDUa98wIgZs5jhTZH1V64Malp6S4Hh1262KsDGhvj_yS0_Xvqsf2R6Ztb4jP5SkQuqqQnHDthzOKUT7hu_NKyBVJhkI');">
+                            </div>
+
+                            <div class="text-center">
+                                <p class="text-[22px] font-bold text-[#111810]">Ashwin Murali Nair</p>
+                                <p class="text-sm text-[#628d5e]">Super Admin</p>
+                                <p class="text-sm text-[#628d5e]">admin@soundwave.com</p>
+                            </div>
+                        </section>
+
+                        <!-- PROFILE DETAILS -->
+                        <section class="px-4">
+                            <h2 class="text-[22px] font-bold mb-4 text-[#111810]">Profile Details</h2>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-[#628d5e]">Full Name</p>
+                                    <p class="text-sm text-[#111810]">Ashwin Murali Nair</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-[#628d5e]">Role</p>
+                                    <p class="text-sm text-[#111810]">Super Admin</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-[#628d5e]">Email</p>
+                                    <p class="text-sm text-[#111810]">admin@soundwave.com</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-[#628d5e]">Phone</p>
+                                    <p class="text-sm text-[#111810]">—</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- SECURITY -->
+                        <section class="mt-10 px-4 pb-10">
+                            <h2 class="text-[22px] font-bold mb-3 text-[#111810]">Security</h2>
+
+                            <div class="max-w-md space-y-4">
+                                <input class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810]"
+                                    placeholder="Current password" />
+                                <input class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810]"
+                                    placeholder="New password" />
+                                <input class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810]"
+                                    placeholder="Confirm new password" />
+                                <button class="h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810]">Change
+                                    password</button>
+                            </div>
+                        </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

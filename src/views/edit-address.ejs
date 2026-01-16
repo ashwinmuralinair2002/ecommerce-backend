@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Space+Grotesk%3Awght%40400%3B500%3B700" />
+
+    <title>Stitch Design</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
+        style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+        <div class="layout-container flex h-full grow flex-col">
+            <header
+                class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f5f0] px-10 py-3">
+                <div class="flex items-center gap-4 text-[#111811]">
+                    <div class="size-4">
+                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"
+                                fill="currentColor"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-[#111811] text-lg font-bold leading-tight tracking-[-0.015em]">SoundWave</h2>
+                </div>
+            </header>
+            <div class="px-40 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
+                    <div class="flex flex-wrap gap-2 p-4">
+                        <a class="text-[#5f8c5f] text-base font-medium leading-normal"
+                            href="/account/addresses">Settings</a>
+                        <span class="text-[#5f8c5f] text-base font-medium leading-normal">/</span>
+                        <span class="text-[#111811] text-base font-medium leading-normal">Address</span>
+                    </div>
+                    <h2 class="text-[#111811] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                        Edit Address</h2>
+
+                    <form action="/account/addresses/<%= address._id %>/update" method="POST">
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Full Name</p>
+                                <input name="name"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.name || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Phone Number</p>
+                                <input name="phone"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.phone || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">House No</p>
+                                <input name="houseNo"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.houseNo || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Street</p>
+                                <input name="street"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.street || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">City</p>
+                                <input name="city"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.city || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">State</p>
+                                <input name="state"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.state || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Postal Code</p>
+                                <input name="postalCode"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.zip || '' %>" required />
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Address Label</p>
+                                <input name="label" placeholder="Home, Work, Other"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
+                                    value="<%= address.label || '' %>" />
+                            </label>
+                        </div>
+                        <div class="flex justify-center">
+                            <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 max-w-[480px] justify-center">
+                                <a href="/account/addresses"
+                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#f0f5f0] text-[#111811] text-base font-bold leading-normal tracking-[0.015em] grow"
+                                    style="text-decoration:none; text-align:center; display:flex;">
+                                    <span class="truncate">Cancel</span>
+                                </a>
+                                <button type="submit"
+                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#1ff91f] text-[#111811] text-base font-bold leading-normal tracking-[0.015em] grow">
+                                    <span class="truncate">Save Changes</span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

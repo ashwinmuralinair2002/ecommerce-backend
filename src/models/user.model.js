@@ -1,11 +1,15 @@
 const mongoose = require('mongoose');
 
 const addressSchema = new mongoose.Schema({
+    name: { type: String, trim: true },
+    phone: { type: String, trim: true },
+    houseNo: { type: String, trim: true },
     street: { type: String, required: true, trim: true },
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
     zip: { type: String, required: true, trim: true },
     country: { type: String, required: true, trim: true },
+    label: { type: String, trim: true },
     isDefault: { type: Boolean, default: false }
 });
 
@@ -71,6 +75,14 @@ const userSchema = new mongoose.Schema({
     isBlocked: {
         type: Boolean,
         default: false,
+    },
+    deleted: {
+        type: Boolean,
+        default: false,
+    },
+    adminNotes: {
+        type: String,
+        default: '',
     },
 }, {
     timestamps: true,

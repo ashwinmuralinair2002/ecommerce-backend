@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
+
+    <title>Stitch Design - <%= customer.name %> Orders</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <div class="layout-container flex h-full grow flex-col">
+            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
+                <div class="layout-content-container flex flex-col w-80">
+                    <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
+                </div>
+                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+                    <%- include('../partials/admin/navbar') %>
+
+                        <div class="flex flex-wrap gap-2 p-4">
+                            <a href="/admin/customers"
+                                class="text-[#658d5e] text-base font-medium leading-normal">Customers</a>
+                            <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
+                            <a href="/admin/customers/<%= customer._id %>"
+                                class="text-[#658d5e] text-base font-medium leading-normal">
+                                <%= customer.name %>
+                            </a>
+                            <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
+                            <span class="text-[#121810] text-base font-medium leading-normal">Orders</span>
+                        </div>
+                        <div class="flex flex-wrap justify-between gap-3 p-4">
+                            <div class="flex min-w-72 flex-col gap-3">
+                                <p class="text-[#121810] tracking-light text-[32px] font-bold leading-tight">
+                                    <%= customer.name %>
+                                </p>
+                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Orders</p>
+                            </div>
+                        </div>
+                        <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                            All Orders</h3>
+
+                        <!-- Filters (Visual only for now matching Prompt) -->
+                        <div class="flex gap-3 p-3 flex-wrap pr-4">
+                            <div
+                                class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-[#f1f5f0] pl-4 pr-4">
+                                <p class="text-[#121810] text-sm font-medium leading-normal">All</p>
+                            </div>
+                            <div
+                                class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-[#f1f5f0] pl-4 pr-4">
+                                <p class="text-[#121810] text-sm font-medium leading-normal">Delivered</p>
+                            </div>
+                            <div
+                                class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-[#f1f5f0] pl-4 pr-4">
+                                <p class="text-[#121810] text-sm font-medium leading-normal">In Transit</p>
+                            </div>
+                        </div>
+
+                        <div class="px-4 py-3 @container">
+                            <div class="flex overflow-hidden rounded-xl border border-[#dde6db] bg-white">
+                                <table class="flex-1">
+                                    <thead>
+                                        <tr class="bg-white">
+                                            <th
+                                                class="px-4 py-3 text-left text-[#121810] w-[400px] text-sm font-medium leading-normal">
+                                                Order ID</th>
+                                            <th
+                                                class="px-4 py-3 text-left text-[#121810] w-14 text-sm font-medium leading-normal">
+                                                Products</th>
+                                            <th
+                                                class="px-4 py-3 text-left text-[#121810] w-[200px] text-sm font-medium leading-normal">
+                                                Date</th>
+                                            <th
+                                                class="px-4 py-3 text-left text-[#121810] w-[150px] text-sm font-medium leading-normal">
+                                                Total</th>
+                                            <th
+                                                class="px-4 py-3 text-left text-[#121810] w-60 text-sm font-medium leading-normal">
+                                                Status</th>
+                                            <th
+                                                class="px-4 py-3 text-left text-[#121810] w-60 text-[#658d5e] text-sm font-medium leading-normal">
+                                                Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (orders.length===0) { %>
+                                            <tr>
+                                                <td colspan="6" class="text-center py-6 text-gray-500">No orders found
+                                                    for this customer.</td>
+                                            </tr>
+                                            <% } else { %>
+                                                <% orders.forEach(order=> { %>
+                                                    <tr class="border-t border-t-[#dde6db]">
+                                                        <td
+                                                            class="h-[72px] px-4 py-2 w-[400px] text-[#121810] text-sm font-normal leading-normal">
+                                                            <%= order.orderId %>
+                                                        </td>
+                                                        <td
+                                                            class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
+                                                            <div
+                                                                class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 bg-gray-200">
+                                                                <!-- Placeholder product image logic -->
+                                                            </div>
+                                                        </td>
+                                                        <td
+                                                            class="h-[72px] px-4 py-2 w-[200px] text-[#658d5e] text-sm font-normal leading-normal">
+                                                            <%= new Date(order.createdAt).toLocaleDateString() %>
+                                                        </td>
+                                                        <td
+                                                            class="h-[72px] px-4 py-2 w-[150px] text-[#658d5e] text-sm font-normal leading-normal">
+                                                            $<%= order.totalAmount.toFixed(2) %>
+                                                        </td>
+                                                        <td
+                                                            class="h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
+                                                            <div class="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-xl h-8 px-4 text-[#121810] text-sm font-medium leading-normal w-full 
+                                    <%= order.status === 'Delivered' ? 'bg-green-100 text-green-800' : 
+                                        order.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
+                                        order.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
+                                        'bg-[#f1f5f0]' %>">
+                                                                <span class="truncate">
+                                                                    <%= order.status %>
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td
+                                                            class="h-[72px] px-4 py-2 w-60 text-[#658d5e] text-sm font-bold leading-normal tracking-[0.015em]">
+                                                            <button class="hover:text-[#121810]">View Details</button>
+                                                        </td>
+                                                    </tr>
+                                                    <% }) %>
+                                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

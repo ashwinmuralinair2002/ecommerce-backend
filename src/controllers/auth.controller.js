@@ -35,6 +35,14 @@ const login = async (req, res) => {
 
     try {
         const data = await authService.loginUser(email, password);
+
+        // Set Cookie for Admin Panel / SSR access
+        res.cookie('token', data.token, {
+            httpOnly: true,
+            maxAge: 3600000, // 1 hour
+            secure: process.env.NODE_ENV === 'production'
+        });
+
         res.status(200).json({
             message: 'Login successful',
             ...data,
@@ -85,6 +93,12 @@ const resendOtp = async (req, res) => {
 // @desc    Forgot Password
 // @route   POST /api/auth/forgot-password
 const forgotPassword = async (req, res) => {
+    // Check Validation
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ error: errors.array()[0].msg });
+    }
+
     const { email } = req.body;
     if (!email) {
         return res.status(400).json({ error: 'Email is required' });

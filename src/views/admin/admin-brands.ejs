@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
+    <title>Admin · Brands</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+        function confirmBrandDelete(brandId) {
+            confirmAction({
+                title: 'Delete Brand?',
+                text: 'Are you sure you want to delete this brand?',
+                confirmButtonText: 'Yes, Delete',
+                confirmButtonColor: '#d33'
+            }, () => {
+                const form = document.getElementById('delete-form-' + brandId);
+                if (form) form.submit();
+            });
+        }
+    </script>
+</head>
+
+<body class="bg-white font-[Inter]">
+    <div class="flex min-h-screen">
+
+        <!-- SIDEBAR -->
+        <%- include('../partials/admin/sidebar', { page: 'brands' }) %>
+
+            <!-- MAIN CONTENT -->
+            <div class="flex-1 p-6 max-w-[1200px] mx-auto">
+
+                <!-- Navbar Inclusion (To match Admin Home Page Layout Requirement) -->
+                <%- include('../partials/admin/navbar') %>
+
+                    <!-- HEADER -->
+                    <div class="flex justify-between items-center mb-6 pt-6">
+                        <div>
+                            <h1 class="text-3xl font-bold text-[#121810]">Brands</h1>
+                            <p class="text-sm text-[#658d5e]">Manage product brands and their status</p>
+                        </div>
+                        <a href="/admin/brands/add" class="px-4 py-2 rounded-lg bg-[#37ff14] text-[#121810] font-bold">
+                            Add Brand
+                        </a>
+                    </div>
+
+                    <!-- SEARCH -->
+                    <div class="mb-4">
+                        <input type="text" name="search" placeholder="Search brand name"
+                            class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 focus:outline-none" />
+                    </div>
+
+                    <!-- TABLE -->
+                    <div class="overflow-hidden rounded-xl border border-[#dce7da]">
+                        <table class="w-full">
+                            <thead class="bg-white border-b">
+                                <tr>
+                                    <th class="p-3 text-left">Brand</th>
+                                    <th class="p-3 text-left">Products</th>
+                                    <th class="p-3 text-left">Status</th>
+                                    <th class="p-3 text-left">Last Updated</th>
+                                    <th class="p-3 text-left">Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <% brands.forEach(brand=> { %>
+                                    <tr class="border-t border-[#dce7da]">
+                                        <td class="p-3 flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-full bg-cover bg-center"
+                                                style="background-image:url('<%= brand.logoUrl %>')"></div>
+                                            <span class="font-medium text-[#121810]">
+                                                <%= brand.name %>
+                                            </span>
+                                        </td>
+
+                                        <td class="p-3 text-[#658d5e]">
+                                            <%= brand.productCount %>
+                                        </td>
+
+                                        <td class="p-3">
+                                            <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
+                                                <button class="px-4 py-1 rounded-lg text-sm font-medium
+                        <%= brand.isActive ? 'bg-[#f0f5f0]' : 'bg-[#ffecec] text-red-600' %>">
+                                                    <%= brand.isActive ? 'Active' : 'Inactive' %>
+                                                </button>
+                                            </form>
+                                        </td>
+
+                                        <td class="p-3 text-[#658d5e]">
+                                            <%= brand.updatedAt.toDateString() %>
+                                        </td>
+
+                                        <td class="p-3 flex gap-3 text-sm font-medium text-[#658d5e]">
+                                            <!-- View/Edit link placeholder - User asked for GET /admin/brands/:id -->
+                                            <a href="/admin/brands/<%= brand._id %>">View</a>
+
+                                            <button type="button" class="text-red-600"
+                                                onclick="confirmBrandDelete('<%= brand._id %>')">Delete</button>
+                                            <form id="delete-form-<%= brand._id %>" method="POST"
+                                                action="/admin/brands/<%= brand._id %>/delete" style="display:none;">
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+
+            </div>
+    </div>
+</body>
+
+</html>

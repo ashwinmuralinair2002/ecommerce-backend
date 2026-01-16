@@ -108,6 +108,22 @@ const resendOtp = async (email) => {
 
 // Login user
 const loginUser = async (email, password) => {
+    // Check for Admin
+    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+        const token = jwt.sign({ id: 'admin', role: 'admin' }, process.env.JWT_SECRET || 'secret', {
+            expiresIn: '1h',
+        });
+        return {
+            token,
+            user: {
+                id: 'admin',
+                name: 'Ashwin Murali Nair',
+                email: email,
+                role: 'admin'
+            },
+        };
+    }
+
     // Check for user
     const user = await User.findOne({ email });
     if (!user) {

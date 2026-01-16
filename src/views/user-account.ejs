@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700"
+    />
+
+    <title>SoundWave | User Account</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+
+  <body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+
+      <!-- ================= HEADER ================= -->
+      <header class="flex items-center justify-between border-b border-[#e6f4e6] px-10 py-3">
+        <div class="flex items-center gap-4 text-[#0d1c0d]">
+          <div class="size-4">
+            <svg viewBox="0 0 48 48" fill="currentColor">
+              <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"/>
+            </svg>
+          </div>
+          <h2 class="text-lg font-bold">SoundWave</h2>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <input placeholder="Search" class="h-10 w-56 rounded-lg bg-[#e6f4e6] px-4 text-sm focus:outline-none"/>
+          <button class="h-10 w-10 rounded-lg bg-[#e6f4e6]">🛒</button>
+          <div class="h-10 w-10 rounded-full bg-[#e6f4e6] flex items-center justify-center">👤</div>
+        </div>
+      </header>
+
+      <!-- ================= CONTENT ================= -->
+      <main class="flex flex-1 gap-6 px-6 py-5">
+
+        <!-- SIDEBAR -->
+        <aside class="w-80 bg-[#f8fcf8] p-4">
+          <div class="space-y-2">
+            <div class="bg-[#e6f4e6] px-3 py-2 rounded-lg font-medium">Account Details</div>
+            <div class="px-3 py-2">Address</div>
+            <div class="px-3 py-2">Payment Details</div>
+            <div class="px-3 py-2">Wallet</div>
+            <div class="px-3 py-2">Your Orders</div>
+          </div>
+        </aside>
+
+        <!-- MAIN PANEL -->
+        <section class="flex-1 bg-white rounded-lg p-6">
+          <h1 class="text-2xl font-bold mb-6">Account Details</h1>
+
+          <h3 class="font-bold mb-3">Profile Photo</h3>
+          <div class="border-2 border-dashed rounded-lg p-10 text-center mb-6">
+            <p class="font-medium">Upload Profile Photo</p>
+            <button class="mt-4 px-4 py-2 rounded-lg bg-[#e6f4e6]">Upload</button>
+          </div>
+
+          <h3 class="font-bold mb-3">Personal Information</h3>
+
+          <div class="space-y-4 max-w-md">
+            <input class="w-full h-12 rounded-lg border px-4" placeholder="Name"/>
+            <input class="w-full h-12 rounded-lg border px-4" placeholder="Email"/>
+            <input class="w-full h-12 rounded-lg border px-4" placeholder="Phone Number"/>
+          </div>
+
+          <div class="mt-6 text-right">
+            <button class="px-4 py-2 rounded-lg bg-[#e6f4e6]">Delete Account</button>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </body>
+</html>

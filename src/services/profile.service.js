@@ -108,12 +108,18 @@ const updateAddress = async (userId, addressId, addressData) => {
     }
 
     // Update fields
+    // Update fields
     if (addressData.street) address.street = addressData.street;
     if (addressData.city) address.city = addressData.city;
     if (addressData.state) address.state = addressData.state;
     if (addressData.zip) address.zip = addressData.zip;
     if (addressData.country) address.country = addressData.country;
     if (addressData.isDefault !== undefined) address.isDefault = addressData.isDefault;
+    if (addressData.name) address.name = addressData.name;
+    if (addressData.phone) address.phone = addressData.phone;
+    if (addressData.houseNo) address.houseNo = addressData.houseNo;
+    if (addressData.label) address.label = addressData.label;
+
 
     await user.save();
     return user.addresses;
