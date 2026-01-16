@@ -1,11 +1,10 @@
 const express = require('express');
-const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
+const { ensureAdminAuthenticated } = require('../middleware/admin-auth.middleware');
 const { getUsers, blockUser } = require('../controllers/admin.controller');
 
 const router = express.Router();
 
-router.use(verifyToken);
-router.use(isAdmin);
+router.use(ensureAdminAuthenticated);
 
 // @desc    Get all users (Admin only)
 // @route   GET /api/admin/users

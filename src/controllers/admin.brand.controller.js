@@ -107,12 +107,7 @@ exports.getBrandDetails = async (req, res) => {
             });
         }
 
-        const metrics = {
-            totalProducts: brand.productCount,
-            totalSales: 45000,
-            avgRating: 4.5,
-            activePromos: 2
-        };
+        const metrics = null;
 
         res.render('admin/brand-details', { brand, products, metrics });
     } catch (error) {

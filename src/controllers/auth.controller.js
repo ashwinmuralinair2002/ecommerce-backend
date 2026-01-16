@@ -43,6 +43,17 @@ const login = async (req, res) => {
             secure: process.env.NODE_ENV === 'production'
         });
 
+        // Admin Session Handling (Strict Separation)
+        if (data.user.role === 'admin') {
+            req.session.isAdmin = true;
+            req.session.adminEmail = data.user.email; // Store email for DB lookup
+            // Ensure userId is NOT set for admin to prevent mixing
+            req.session.userId = null;
+        } else {
+            // For regular users, we might rely on the token, but if we used session:
+            // req.session.userId = data.user.id; 
+        }
+
         res.status(200).json({
             message: 'Login successful',
             ...data,
@@ -136,6 +147,12 @@ const resetPassword = async (req, res) => {
 
 const logout = (req, res) => {
     res.clearCookie('token');
+
+    // Clear Admin Flag
+    if (req.session.isAdmin) {
+        delete req.session.isAdmin;
+    }
+
     req.logout((err) => {
         if (err) {
             console.error('Logout Error:', err);

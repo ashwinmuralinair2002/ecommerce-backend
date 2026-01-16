@@ -1,43 +1,41 @@
-const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
-const protectAdmin = async (req, res, next) => {
-    let token;
+const ensureAdminAuthenticated = async (req, res, next) => {
+    // Strict Admin Session Check
+    if (req.session && req.session.isAdmin === true) {
 
-    if (req.cookies.token) {
-        token = req.cookies.token;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-        token = req.headers.authorization.split(' ')[1];
-    }
+        try {
+            // Attempt to find Admin in DB to support Profile Persistence
+            const adminEmail = req.session.adminEmail || process.env.ADMIN_EMAIL;
+            const dbAdmin = await User.findOne({ email: adminEmail });
 
-    if (!token) {
-        return res.redirect('/login');
-    }
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Handle Hardcoded Admin
-        if (decoded.role === 'admin' && decoded.id === 'admin') {
-            req.user = { id: 'admin', role: 'admin', name: 'Ashwin Murali Nair', email: process.env.ADMIN_EMAIL };
-            return next();
+            if (dbAdmin && dbAdmin.role === 'admin') {
+                req.user = dbAdmin; // Use DB Record
+            } else {
+                // Fallback to Hardcoded Mock Object if not in DB yet
+                req.user = {
+                    id: 'admin',
+                    role: 'admin',
+                    name: 'Ashwin Murali Nair',
+                    email: process.env.ADMIN_EMAIL || 'admin@example.com'
+                };
+            }
+        } catch (error) {
+            console.error('Admin DB Lookup Error:', error);
+            // Fallback on error to ensure access logic doesn't break
+            req.user = {
+                id: 'admin',
+                role: 'admin',
+                name: 'Ashwin Murali Nair',
+                email: process.env.ADMIN_EMAIL || 'admin@example.com'
+            };
         }
 
-        const user = await User.findById(decoded.id).select('-password');
-
-        if (!user || user.role !== 'admin') {
-            // Not admin or not found
-            return res.redirect('/login');
-        }
-
-        req.user = user;
-        next();
-
-    } catch (error) {
-        console.error('Admin Auth Error:', error.message);
-        res.clearCookie('token');
-        return res.redirect('/login');
+        return next();
     }
+
+    // Auth Failed
+    res.redirect('/login');
 };
 
-module.exports = { protectAdmin };
+module.exports = { ensureAdminAuthenticated };

@@ -29,7 +29,7 @@
                         <!-- Profile Summary -->
                         <section class="flex flex-col items-center gap-4 mb-8">
                             <div class="w-32 h-32 rounded-full bg-cover bg-center"
-                                style="background-image:url('https://lh3.googleusercontent.com/aida-public/AB6AXuBQqtJGrejxVVUegjYs8AI6PEY5y939l1asgdfvN4aYQpTGr6pUmSMtwXb9Og-sPxsI0QeyL0UXMFoMGAbfV2jnUNI9_LuV0PS9PhSABQQu9Bq9VBwXPfkhmN31NjNdAxFFwyOWTKpnOH4ViWFkZS_OQ_IQdxlDu9l4x0GGtEMoLBOF3e3I2RDUa98wIgZs5jhTZH1V64Malp6S4Hh1262KsDGhvj_yS0_Xvqsf2R6Ztb4jP5SkQuqqQnHDthzOKUT7hu_NKyBVJhkI');">
+                                style="background-image:url('/images/admin/profile.jpg');">
                             </div>
 
                             <div class="text-center">
@@ -41,12 +41,24 @@
 
                         <!-- PROFILE DETAILS -->
                         <section class="px-4">
-                            <h2 class="text-[22px] font-bold mb-4 text-[#111810]">Profile Details</h2>
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-[22px] font-bold text-[#111810]">Profile Details</h2>
+                                <button id="editInfoBtn" onclick="toggleEditMode()"
+                                    class="text-sm font-bold text-[#27ff14] bg-[#111810] px-4 py-2 rounded-lg hover:bg-[#1f2b1d] transition">
+                                    Edit Info
+                                </button>
+                            </div>
 
-                            <div class="grid grid-cols-2 gap-4">
+                            <!-- Inline Messaging Container -->
+                            <div id="messageContainer" class="hidden mb-4 p-3 rounded-xl text-sm font-medium"></div>
+
+                            <!-- View Mode -->
+                            <div id="viewMode" class="grid grid-cols-2 gap-4">
                                 <div>
                                     <p class="text-sm text-[#628d5e]">Full Name</p>
-                                    <p class="text-sm text-[#111810]">Ashwin Murali Nair</p>
+                                    <p class="text-sm text-[#111810]" id="viewName">
+                                        <%= user ? user.name : 'Ashwin Murali Nair' %>
+                                    </p>
                                 </div>
                                 <div>
                                     <p class="text-sm text-[#628d5e]">Role</p>
@@ -54,14 +66,141 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-[#628d5e]">Email</p>
-                                    <p class="text-sm text-[#111810]">admin@soundwave.com</p>
+                                    <p class="text-sm text-[#111810]" id="viewEmail">
+                                        <%= user ? user.email : 'admin@soundwave.com' %>
+                                    </p>
                                 </div>
                                 <div>
                                     <p class="text-sm text-[#628d5e]">Phone</p>
                                     <p class="text-sm text-[#111810]">—</p>
                                 </div>
                             </div>
+
+                            <!-- Edit Mode (Hidden by default) -->
+                            <form id="editForm" class="hidden grid grid-cols-1 gap-4" onsubmit="saveAdminInfo(event)">
+                                <div>
+                                    <label class="block text-sm text-[#628d5e] mb-1">Full Name</label>
+                                    <input type="text" id="editName" name="name"
+                                        value="<%= user ? user.name : 'Ashwin Murali Nair' %>"
+                                        class="w-full h-10 rounded-xl bg-[#f0f5f0] px-3 border-none text-[#111810] focus:ring-1 focus:ring-[#27ff14]" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-[#628d5e] mb-1">Email</label>
+                                    <input type="email" id="editEmail" name="email"
+                                        value="<%= user ? user.email : 'admin@soundwave.com' %>"
+                                        class="w-full h-10 rounded-xl bg-[#f0f5f0] px-3 border-none text-[#111810] focus:ring-1 focus:ring-[#27ff14]" />
+                                </div>
+
+                                <div class="flex gap-3 mt-2">
+                                    <button type="submit" id="saveBtn"
+                                        class="h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010]">
+                                        Save Changes
+                                    </button>
+                                    <button type="button" onclick="cancelEdit()"
+                                        class="h-10 px-6 rounded-xl bg-[#f0f5f0] font-bold text-[#111810] hover:bg-[#e0e5e0]">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
                         </section>
+
+                        <script>
+                            const originalName = "<%= user ? user.name : 'Ashwin Murali Nair' %>";
+                            const originalEmail = "<%= user ? user.email : 'admin@soundwave.com' %>";
+
+                            function toggleEditMode() {
+                                document.getElementById('viewMode').classList.add('hidden');
+                                document.getElementById('editInfoBtn').classList.add('hidden');
+                                document.getElementById('editForm').classList.remove('hidden');
+
+                                // Reset message
+                                const msgContainer = document.getElementById('messageContainer');
+                                msgContainer.classList.add('hidden');
+                            }
+
+                            function cancelEdit() {
+                                document.getElementById('viewMode').classList.remove('hidden');
+                                document.getElementById('editInfoBtn').classList.remove('hidden');
+                                document.getElementById('editForm').classList.add('hidden');
+
+                                // Restore values
+                                document.getElementById('editName').value = originalName;
+                                document.getElementById('editEmail').value = originalEmail;
+                            }
+
+                            async function saveAdminInfo(e) {
+                                e.preventDefault();
+                                const name = document.getElementById('editName').value.trim();
+                                const email = document.getElementById('editEmail').value.trim();
+                                const msgContainer = document.getElementById('messageContainer');
+                                const saveBtn = document.getElementById('saveBtn');
+
+                                // Client-side Validation (Regex)
+                                const nameRegex = /^[a-zA-Z\s]+$/;
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                                if (name.length < 2 || !nameRegex.test(name)) {
+                                    showMessage('Name must be at least 2 characters and allow only letters.', 'error');
+                                    return;
+                                }
+                                if (!emailRegex.test(email)) {
+                                    showMessage('Please enter a valid email address.', 'error');
+                                    return;
+                                }
+
+                                // Disable button
+                                saveBtn.disabled = true;
+                                saveBtn.innerText = 'Saving...';
+
+                                try {
+                                    const response = await fetch('/admin/profile/update', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ name, email })
+                                    });
+
+                                    const result = await response.json();
+
+                                    if (response.ok) {
+                                        showMessage('Profile updated successfully!', 'success');
+
+                                        // Update View Mode values
+                                        document.getElementById('viewName').innerText = name;
+                                        document.getElementById('viewEmail').innerText = email;
+
+                                        // Update Header Name (Visual consistency)
+                                        const headerName = document.querySelector('.text-\\[22px\\].font-bold.text-\\[\\#111810\\]');
+                                        if (headerName) headerName.innerText = name;
+
+                                        setTimeout(() => {
+                                            location.reload(); // Refresh to ensure session/server sync is perfect
+                                        }, 1000);
+                                    } else {
+                                        showMessage(result.error || 'Failed to update profile', 'error');
+                                        saveBtn.disabled = false;
+                                        saveBtn.innerText = 'Save Changes';
+                                    }
+                                } catch (error) {
+                                    console.error(error);
+                                    showMessage('An unexpected error occurred.', 'error');
+                                    saveBtn.disabled = false;
+                                    saveBtn.innerText = 'Save Changes';
+                                }
+                            }
+
+                            function showMessage(text, type) {
+                                const container = document.getElementById('messageContainer');
+                                container.innerText = text;
+                                container.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+
+                                if (type === 'error') {
+                                    container.classList.add('bg-red-100', 'text-red-800');
+                                } else {
+                                    container.classList.add('bg-green-100', 'text-green-800');
+                                }
+                                container.classList.remove('hidden');
+                            }
+                        </script>
 
                         <!-- SECURITY -->
                         <section class="mt-10 px-4 pb-10">

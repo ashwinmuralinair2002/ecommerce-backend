@@ -7,7 +7,24 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
     <title>Admin · Brand</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function confirmAction(options, actionCallback) {
+            Swal.fire({
+                title: options.title,
+                text: options.text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: options.confirmButtonColor || '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: options.confirmButtonText
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    actionCallback();
+                }
+            });
+        }
+
         function confirmBrandDelete(brandId) {
             confirmAction({
                 title: 'Delete Brand?',
@@ -92,31 +109,78 @@
                     </div>
 
                     <!-- METRICS -->
+                    <!-- METRICS -->
                     <h2 class="text-xl font-bold mt-10 mb-4">Key Metrics</h2>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div class="border p-4 rounded-lg">
-                            <p>Total Products</p>
-                            <p class="text-2xl font-bold">
-                                <%= metrics.totalProducts %>
-                            </p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-gray-500 text-sm font-medium">Total Products</h3>
+                                <span class="p-2 bg-blue-50 text-blue-600 rounded-full">
+                                    <i class="ri-shopping-bag-3-line"></i>
+                                </span>
+                            </div>
+                            <div class="flex items-baseline">
+                                <h2 class="text-2xl font-bold text-gray-800">
+                                    <%= (metrics && metrics.totalProducts) || brand.productCount || 0 %>
+                                </h2>
+                            </div>
                         </div>
-                        <div class="border p-4 rounded-lg">
-                            <p>Total Sales</p>
-                            <p class="text-2xl font-bold">₹<%= metrics.totalSales %>
-                            </p>
-                        </div>
-                        <div class="border p-4 rounded-lg">
-                            <p>Avg Rating</p>
-                            <p class="text-2xl font-bold">
-                                <%= metrics.avgRating %>
-                            </p>
-                        </div>
-                        <div class="border p-4 rounded-lg">
-                            <p>Active Promos</p>
-                            <p class="text-2xl font-bold">
-                                <%= metrics.activePromos %>
-                            </p>
-                        </div>
+
+                        <% if (locals.metrics && metrics.totalSales) { %>
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-gray-500 text-sm font-medium">Total Sales</h3>
+                                    <span class="p-2 bg-green-50 text-green-600 rounded-full">
+                                        <i class="ri-money-dollar-circle-line"></i>
+                                    </span>
+                                </div>
+                                <div class="flex items-baseline">
+                                    <h2 class="text-2xl font-bold text-gray-800">₹<%=
+                                            metrics.totalSales.toLocaleString() %>
+                                    </h2>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-gray-500 text-sm font-medium">Avg. Rating</h3>
+                                    <span class="p-2 bg-yellow-50 text-yellow-600 rounded-full">
+                                        <i class="ri-star-line"></i>
+                                    </span>
+                                </div>
+                                <div class="flex items-baseline">
+                                    <h2 class="text-2xl font-bold text-gray-800">
+                                        <%= metrics.avgRating %>
+                                    </h2>
+                                    <span class="ml-2 text-sm text-gray-500">/ 5.0</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-gray-500 text-sm font-medium">Active Promos</h3>
+                                    <span class="p-2 bg-purple-50 text-purple-600 rounded-full">
+                                        <i class="ri-price-tag-3-line"></i>
+                                    </span>
+                                </div>
+                                <div class="flex items-baseline">
+                                    <h2 class="text-2xl font-bold text-gray-800">
+                                        <%= metrics.activePromos %>
+                                    </h2>
+                                </div>
+                            </div>
+                            <% } else { %>
+                                <div
+                                    class="bg-gray-50 p-6 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center text-center col-span-1 md:col-span-3">
+                                    <div class="text-gray-400 mb-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                        </svg>
+                                    </div>
+                                    <p class="text-sm text-gray-500">Sales and rating data will appear here once
+                                        available.</p>
+                                </div>
+                                <% } %>
                     </div>
 
                     <!-- PRODUCTS -->

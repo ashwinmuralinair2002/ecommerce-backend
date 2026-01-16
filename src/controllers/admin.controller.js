@@ -225,5 +225,6 @@ module.exports = {
     renderEditCustomerPage,
     updateCustomer,
     updateAdminNotes,
-    getCustomerOrders
+    getCustomerOrders,
+    updateAdminProfile
 };

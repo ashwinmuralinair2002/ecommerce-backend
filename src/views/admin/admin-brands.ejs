@@ -7,7 +7,24 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
     <title>Admin · Brands</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function confirmAction(options, actionCallback) {
+            Swal.fire({
+                title: options.title,
+                text: options.text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: options.confirmButtonColor || '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: options.confirmButtonText
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    actionCallback();
+                }
+            });
+        }
+
         function confirmBrandDelete(brandId) {
             confirmAction({
                 title: 'Delete Brand?',

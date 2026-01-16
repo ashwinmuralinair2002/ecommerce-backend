@@ -18,6 +18,7 @@ const updateProfile = async (userId, data) => {
     }
 
     if (data.name) user.name = data.name;
+    if (data.phone) user.phone = data.phone;
 
     await user.save();
     return {

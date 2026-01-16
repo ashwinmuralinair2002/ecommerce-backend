@@ -43,14 +43,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.static(path.join(__dirname, 'public'))); // For uploads
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-// Admin Dashboard
-app.get('/admin/dashboard',
-    require('./middleware/auth-check.middleware').ensureAuthenticated,
-    require('./middleware/auth.middleware').isAdmin,
-    (req, res) => {
-        res.render('admin/dashboard');
-    }
-);
+// Admin Dashboard Route Removed (Duplicate/Incorrect) - Handled below using correct middleware
 
 // Protected routes using JWT for API calls
 app.use('/api/auth', authRoutes);
@@ -122,10 +115,10 @@ app.get('/account/addresses/:id/edit', require('./middleware/auth-check.middlewa
     res.render('edit-address', { user: req.user, address });
 });
 
-const adminAuth = require('./middleware/admin-auth.middleware');
+const { ensureAdminAuthenticated } = require('./middleware/admin-auth.middleware');
 
 app.get('/admin/dashboard',
-    adminAuth.protectAdmin,
+    ensureAdminAuthenticated,
     (req, res) => {
         res.render('admin/dashboard');
     }
@@ -133,27 +126,29 @@ app.get('/admin/dashboard',
 
 const adminController = require('./controllers/admin.controller');
 
-app.get('/admin/customers', adminAuth.protectAdmin, adminController.getCustomersPage);
-app.get('/admin/customers/export', adminAuth.protectAdmin, adminController.exportCustomers);
-app.get('/admin/customers/:id', adminAuth.protectAdmin, adminController.getCustomerDetails);
-app.get('/admin/customers/:id/orders', adminAuth.protectAdmin, adminController.getCustomerOrders);
-app.get('/admin/customers/:id/edit', adminAuth.protectAdmin, adminController.renderEditCustomerPage);
-app.post('/admin/customers/:id/update', adminAuth.protectAdmin, adminController.updateCustomer);
-app.post('/admin/customers/:id/notes', adminAuth.protectAdmin, adminController.updateAdminNotes);
-app.post('/admin/customers/:id/toggle-block', adminAuth.protectAdmin, adminController.toggleBlockUser);
-app.post('/admin/customers/:id/delete', adminAuth.protectAdmin, adminController.softDeleteUser);
+app.get('/admin/customers', ensureAdminAuthenticated, adminController.getCustomersPage);
+app.get('/admin/customers/export', ensureAdminAuthenticated, adminController.exportCustomers);
+app.get('/admin/customers/:id', ensureAdminAuthenticated, adminController.getCustomerDetails);
+app.get('/admin/customers/:id/orders', ensureAdminAuthenticated, adminController.getCustomerOrders);
+app.get('/admin/customers/:id/edit', ensureAdminAuthenticated, adminController.renderEditCustomerPage);
+app.post('/admin/customers/:id/update', ensureAdminAuthenticated, adminController.updateCustomer);
+app.post('/admin/customers/:id/notes', ensureAdminAuthenticated, adminController.updateAdminNotes);
+app.post('/admin/customers/:id/toggle-block', ensureAdminAuthenticated, adminController.toggleBlockUser);
+app.get('/admin/customers/:id/delete', ensureAdminAuthenticated, adminController.softDeleteUser);
+app.post('/admin/customers/:id/delete', ensureAdminAuthenticated, adminController.softDeleteUser); // Fix: Ensure POST method exists for deletion
+app.post('/admin/profile/update', ensureAdminAuthenticated, adminController.updateAdminProfile);
 
 const brandController = require('./controllers/admin.brand.controller');
 const upload = require('./middleware/upload.middleware');
 
-app.get('/admin/brands', adminAuth.protectAdmin, brandController.getBrands);
-app.get('/admin/brands/add', adminAuth.protectAdmin, brandController.renderAddBrand);
-app.post('/admin/brands', adminAuth.protectAdmin, upload.single('logo'), brandController.addBrand);
-app.get('/admin/brands/:id', adminAuth.protectAdmin, brandController.getBrandDetails);
-app.get('/admin/brands/:id/edit', adminAuth.protectAdmin, brandController.renderEditBrand);
-app.post('/admin/brands/:id/edit', adminAuth.protectAdmin, brandController.editBrand);
-app.post('/admin/brands/:id/toggle-status', adminAuth.protectAdmin, brandController.toggleBrandStatus);
-app.post('/admin/brands/:id/delete', adminAuth.protectAdmin, brandController.deleteBrand);
+app.get('/admin/brands', ensureAdminAuthenticated, brandController.getBrands);
+app.get('/admin/brands/add', ensureAdminAuthenticated, brandController.renderAddBrand);
+app.post('/admin/brands', ensureAdminAuthenticated, upload.single('logo'), brandController.addBrand);
+app.get('/admin/brands/:id', ensureAdminAuthenticated, brandController.getBrandDetails);
+app.get('/admin/brands/:id/edit', ensureAdminAuthenticated, brandController.renderEditBrand);
+app.post('/admin/brands/:id/edit', ensureAdminAuthenticated, brandController.editBrand);
+app.post('/admin/brands/:id/toggle-status', ensureAdminAuthenticated, brandController.toggleBrandStatus);
+app.post('/admin/brands/:id/delete', ensureAdminAuthenticated, brandController.deleteBrand);
 
 app.post('/account/addresses/:id/update', require('./middleware/auth-check.middleware').ensureAuthenticated, async (req, res) => {
     const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
