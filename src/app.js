@@ -57,7 +57,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 // app.use('/api/admin', adminRoutes);
 
-const { ensureAuthenticated, ensureOtpVerified } = require('./middleware/auth-check.middleware');
+const { ensureAuthenticated, ensureOtpVerified, ensureGuest } = require('./middleware/auth-check.middleware');
 
 app.get('/', getHomePage);
 app.get('/home', ensureAuthenticated, ensureOtpVerified, getPostLoginHomePage);
@@ -183,19 +183,19 @@ app.get('/login', (req, res) => {
     res.render('login');
 });
 
-app.get('/signup', (req, res) => {
+app.get('/signup', ensureGuest, (req, res) => {
     res.render('auth/signup');
 });
 
-app.get('/verify-otp', (req, res) => {
+app.get('/verify-otp', ensureGuest, (req, res) => {
     res.render('auth/otp');
 });
 
-app.get('/forgot-password', (req, res) => {
+app.get('/forgot-password', ensureGuest, (req, res) => {
     res.render('auth/forgot-password');
 });
 
-app.get('/reset-password', (req, res) => {
+app.get('/reset-password', ensureGuest, (req, res) => {
     res.render('auth/reset-password');
 });
 

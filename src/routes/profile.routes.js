@@ -7,7 +7,8 @@ const {
     verifyEmailChange,
     addAddress,
     updateAddress,
-    deleteAddress
+    deleteAddress,
+    deleteAccount
 } = require('../controllers/profile.controller');
 
 const router = express.Router();
@@ -23,5 +24,7 @@ router.post('/email/verify', verifyEmailChange);
 router.post('/address', addAddress);
 router.put('/address/:id', updateAddress);
 router.delete('/address/:id', deleteAddress);
+
+router.delete('/delete', deleteAccount);
 
 module.exports = router;

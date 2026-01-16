@@ -88,6 +88,30 @@ const deleteAddress = async (req, res) => {
     }
 };
 
+// @desc    Delete Account
+// @route   DELETE /api/profile/delete
+const deleteAccount = async (req, res) => {
+    try {
+        await profileService.deleteUser(req.user.id);
+
+        // Logout user after deletion
+        res.clearCookie('token');
+        req.logout((err) => {
+            if (err) {
+                console.error('Logout Error during deletion:', err);
+                // Even if logout fails, response with success as user is deleted
+                return res.json({ message: 'Account deleted' });
+            }
+            req.session.destroy((err) => {
+                if (err) console.error('Session Destroy Error:', err);
+                res.json({ message: 'Account deleted successfully' });
+            });
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getProfile,
     updateProfile,
@@ -95,5 +119,6 @@ module.exports = {
     verifyEmailChange,
     addAddress,
     updateAddress,
-    deleteAddress
+    deleteAddress,
+    deleteAccount
 };

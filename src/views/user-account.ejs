@@ -1,78 +1,232 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
-    <link
-      rel="stylesheet"
-      as="style"
-      onload="this.rel='stylesheet'"
-      href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700"
-    />
 
-    <title>SoundWave | User Account</title>
+<head>
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+  <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+    href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
 
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  </head>
+  <title>SoundWave | User Account</title>
 
-  <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="/js/utils.js"></script>
+  <script>
+    function confirmDeleteAccount() {
+      confirmAction({
+        title: 'Delete Account?',
+        text: 'This action is permanent and cannot be undone.',
+        confirmButtonText: 'Yes, delete it',
+        confirmButtonColor: '#ef4444', // Red-500
+      }, async () => {
+        try {
+          const response = await fetch('/api/profile/delete', { method: 'DELETE' });
+          const data = await response.json();
 
-      <!-- ================= HEADER ================= -->
-      <header class="flex items-center justify-between border-b border-[#e6f4e6] px-10 py-3">
-        <div class="flex items-center gap-4 text-[#0d1c0d]">
-          <div class="size-4">
-            <svg viewBox="0 0 48 48" fill="currentColor">
-              <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z"/>
-            </svg>
-          </div>
-          <h2 class="text-lg font-bold">SoundWave</h2>
+          if (response.ok) {
+            // Redirect to landing page on success (session destroyed by backend)
+            window.location.href = '/';
+          } else {
+            showMessage(data.error || 'Failed to delete account', 'error');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          showMessage('An unexpected error occurred', 'error');
+        }
+      });
+    }
+
+    // Edit Profile Logic
+    let originalData = {};
+
+    function toggleEdit() {
+      const inputs = document.querySelectorAll('.profile-input');
+      const editBtn = document.getElementById('edit-btn');
+      const actionBtns = document.getElementById('action-btns');
+
+      const isEditing = !inputs[0].readOnly;
+
+      if (!isEditing) {
+        // Enable Editing
+        originalData = {
+          name: inputs[0].value,
+          email: inputs[1].value
+          // Phone is usually not editable solely here or has separate flow, keeping logic generic
+        };
+
+        inputs.forEach(input => {
+          if (input.name !== 'phone') { // Assuming phone might be restricted
+            input.readOnly = false;
+            input.classList.remove('bg-gray-50');
+            input.classList.add('bg-white', 'border-green-500');
+          }
+        });
+
+        editBtn.classList.add('hidden');
+        actionBtns.classList.remove('hidden');
+      } else {
+        // Cancel Editing
+        cancelEdit();
+      }
+    }
+
+    function cancelEdit() {
+      const inputs = document.querySelectorAll('.profile-input');
+      const editBtn = document.getElementById('edit-btn');
+      const actionBtns = document.getElementById('action-btns');
+
+      inputs.forEach((input, index) => {
+        input.readOnly = true;
+        input.classList.add('bg-gray-50');
+        input.classList.remove('bg-white', 'border-green-500');
+
+        if (input.name === 'name') input.value = originalData.name;
+        if (input.name === 'email') input.value = originalData.email;
+      });
+
+      editBtn.classList.remove('hidden');
+      actionBtns.classList.add('hidden');
+    }
+
+    async function saveProfile() {
+      const inputs = document.querySelectorAll('.profile-input');
+      const name = inputs[0].value.trim();
+      const email = inputs[1].value.trim();
+
+      if (!name || !email) {
+        showMessage('Name and Email are required', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email }) // Phone updates usually require OTP, omitting for now
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showMessage('Profile updated successfully', 'success');
+
+          // Update Original Data
+          originalData.name = data.name;
+          originalData.email = data.email;
+
+          // Return to Read-only
+          const editBtn = document.getElementById('edit-btn');
+          const actionBtns = document.getElementById('action-btns');
+
+          inputs.forEach(input => {
+            input.readOnly = true;
+            input.classList.add('bg-gray-50');
+            input.classList.remove('bg-white', 'border-green-500');
+          });
+
+          editBtn.classList.remove('hidden');
+          actionBtns.classList.add('hidden');
+        } else {
+          showMessage(data.error || 'Failed to update profile', 'error');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showMessage('An unexpected error occurred', 'error');
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+
+    <!-- ================= HEADER ================= -->
+    <header class="flex items-center justify-between border-b border-[#e6f4e6] px-10 py-3">
+      <div class="flex items-center gap-4 text-[#0d1c0d]">
+        <div class="size-4">
+          <svg viewBox="0 0 48 48" fill="currentColor">
+            <path
+              d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z" />
+          </svg>
+        </div>
+        <h2 class="text-lg font-bold">SoundWave</h2>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <input placeholder="Search" class="h-10 w-56 rounded-lg bg-[#e6f4e6] px-4 text-sm focus:outline-none" />
+        <button class="h-10 w-10 rounded-lg bg-[#e6f4e6]">🛒</button>
+        <div class="h-10 w-10 rounded-full bg-[#e6f4e6] flex items-center justify-center">👤</div>
+      </div>
+    </header>
+
+    <!-- ================= CONTENT ================= -->
+    <main class="flex flex-1 gap-6 px-6 py-5">
+
+      <!-- SIDEBAR -->
+      <aside class="w-80 bg-[#f8fcf8] p-4">
+        <div class="space-y-2">
+          <div class="bg-[#e6f4e6] px-3 py-2 rounded-lg font-medium">Account Details</div>
+          <div class="px-3 py-2">Address</div>
+          <div class="px-3 py-2">Payment Details</div>
+          <div class="px-3 py-2">Wallet</div>
+          <div class="px-3 py-2">Your Orders</div>
+          <a href="/api/auth/logout"
+            class="block px-3 py-2 text-red-600 hover:bg-[#e6f4e6] rounded-lg transition-colors">Logout</a>
+        </div>
+      </aside>
+
+      <!-- MAIN PANEL -->
+      <section class="flex-1 bg-white rounded-lg p-6">
+        <h1 class="text-2xl font-bold mb-6">Account Details</h1>
+
+        <h3 class="font-bold mb-3">Profile Photo</h3>
+        <div class="border-2 border-dashed rounded-lg p-10 text-center mb-6">
+          <p class="font-medium">Upload Profile Photo</p>
+          <button class="mt-4 px-4 py-2 rounded-lg bg-[#e6f4e6]">Upload</button>
         </div>
 
-        <div class="flex items-center gap-4">
-          <input placeholder="Search" class="h-10 w-56 rounded-lg bg-[#e6f4e6] px-4 text-sm focus:outline-none"/>
-          <button class="h-10 w-10 rounded-lg bg-[#e6f4e6]">🛒</button>
-          <div class="h-10 w-10 rounded-full bg-[#e6f4e6] flex items-center justify-center">👤</div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold">Personal Information</h3>
+          <button id="edit-btn" onclick="toggleEdit()" class="text-sm text-green-600 font-bold hover:underline">Edit
+            Profile</button>
+          <div id="action-btns" class="hidden flex gap-2">
+            <button onclick="saveProfile()" class="text-sm text-green-600 font-bold hover:underline">Save</button>
+            <button onclick="cancelEdit()" class="text-sm text-gray-500 font-bold hover:underline">Cancel</button>
+          </div>
         </div>
-      </header>
 
-      <!-- ================= CONTENT ================= -->
-      <main class="flex flex-1 gap-6 px-6 py-5">
+        <div class="space-y-4 max-w-md">
+          <input name="name" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Name"
+            value="<%= user.name %>" readonly />
+          <input name="email" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Email"
+            value="<%= user.email %>" readonly />
+          <input name="phone" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50 text-gray-500"
+            placeholder="Phone Number" value="<%= user.phone || '' %>" readonly />
 
-        <!-- SIDEBAR -->
-        <aside class="w-80 bg-[#f8fcf8] p-4">
-          <div class="space-y-2">
-            <div class="bg-[#e6f4e6] px-3 py-2 rounded-lg font-medium">Account Details</div>
-            <div class="px-3 py-2">Address</div>
-            <div class="px-3 py-2">Payment Details</div>
-            <div class="px-3 py-2">Wallet</div>
-            <div class="px-3 py-2">Your Orders</div>
-          </div>
-        </aside>
-
-        <!-- MAIN PANEL -->
-        <section class="flex-1 bg-white rounded-lg p-6">
-          <h1 class="text-2xl font-bold mb-6">Account Details</h1>
-
-          <h3 class="font-bold mb-3">Profile Photo</h3>
-          <div class="border-2 border-dashed rounded-lg p-10 text-center mb-6">
-            <p class="font-medium">Upload Profile Photo</p>
-            <button class="mt-4 px-4 py-2 rounded-lg bg-[#e6f4e6]">Upload</button>
+          <!-- Delete Account Button (Repositioned) -->
+          <div class="pt-4">
+            <button onclick="confirmDeleteAccount()"
+              class="w-full h-10 rounded-lg bg-red-100 text-red-700 font-bold hover:bg-red-200 transition-colors">
+              Delete Account
+            </button>
+            <p class="text-xs text-red-500 mt-1 text-center">This action is permanent and cannot be undone.</p>
           </div>
 
-          <h3 class="font-bold mb-3">Personal Information</h3>
-
-          <div class="space-y-4 max-w-md">
-            <input class="w-full h-12 rounded-lg border px-4" placeholder="Name"/>
-            <input class="w-full h-12 rounded-lg border px-4" placeholder="Email"/>
-            <input class="w-full h-12 rounded-lg border px-4" placeholder="Phone Number"/>
+          <!-- Sign Out Button -->
+          <div class="pt-2">
+            <a href="/api/auth/logout"
+              class="flex items-center justify-center w-full h-10 rounded-lg bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition-colors">
+              Sign Out
+            </a>
           </div>
+        </div>
 
-          <div class="mt-6 text-right">
-            <button class="px-4 py-2 rounded-lg bg-[#e6f4e6]">Delete Account</button>
-          </div>
-        </section>
+        <!-- Original Delete Button Location (Removed) -->
+      </section>
 
-      </main>
-    </div>
-  </body>
+    </main>
+  </div>
+</body>
+
 </html>

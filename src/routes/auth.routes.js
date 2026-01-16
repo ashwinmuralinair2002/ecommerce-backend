@@ -22,6 +22,7 @@ router.post('/forgot-password', [
     check('email', 'Please include a valid email').isEmail()
 ], forgotPassword);
 router.post('/reset-password', resetPassword);
+router.get('/logout', require('../controllers/auth.controller').logout);
 
 // Google Auth Routes
 const passport = require('passport');

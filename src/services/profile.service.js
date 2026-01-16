@@ -137,7 +137,18 @@ const deleteAddress = async (userId, addressId) => {
     user.addresses.pull(addressId);
 
     await user.save();
+    await user.save();
     return user.addresses;
+};
+
+// Delete User Account
+const deleteUser = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // In a real app we might soft-delete or archive, but for now we hard delete based on request
+    await User.findByIdAndDelete(userId);
+    return { message: 'User deleted successfully' };
 };
 
 module.exports = {
@@ -147,5 +158,6 @@ module.exports = {
     verifyEmailChange,
     addAddress,
     updateAddress,
-    deleteAddress
+    deleteAddress,
+    deleteUser
 };

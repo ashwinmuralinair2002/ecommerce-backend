@@ -58,4 +58,12 @@ const ensureOtpVerified = (req, res, next) => {
     res.redirect('/verify-otp');
 };
 
-module.exports = { ensureAuthenticated, ensureOtpVerified };
+const ensureGuest = (req, res, next) => {
+    // Check if user is authenticated via Passport or Token presence
+    if ((req.isAuthenticated && req.isAuthenticated()) || req.cookies.token || req.user) {
+        return res.redirect('/home');
+    }
+    next();
+};
+
+module.exports = { ensureAuthenticated, ensureOtpVerified, ensureGuest };

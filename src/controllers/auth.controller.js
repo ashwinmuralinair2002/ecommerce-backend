@@ -134,11 +134,26 @@ const resetPassword = async (req, res) => {
     }
 }
 
+const logout = (req, res) => {
+    res.clearCookie('token');
+    req.logout((err) => {
+        if (err) {
+            console.error('Logout Error:', err);
+            return res.redirect('/home');
+        }
+        req.session.destroy((err) => {
+            if (err) console.error('Session Destroy Error:', err);
+            res.redirect('/');
+        });
+    });
+};
+
 module.exports = {
     signup,
     login,
     verifyOtp,
     resendOtp,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    logout
 };
