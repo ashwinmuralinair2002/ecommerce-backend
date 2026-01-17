@@ -1,3 +1,4 @@
+// Authentication business logic including OTP and hashing
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');

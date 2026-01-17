@@ -1,3 +1,4 @@
+// Script to generate sample orders for users
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const Order = require('../models/order.model');

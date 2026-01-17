@@ -1,3 +1,4 @@
+// JWT authentication middleware for API protection
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 

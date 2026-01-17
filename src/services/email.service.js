@@ -1,3 +1,4 @@
+// Utility service for sending emails via Nodemailer
 const nodemailer = require('nodemailer');
 
 const sendEmail = async (to, subject, text) => {

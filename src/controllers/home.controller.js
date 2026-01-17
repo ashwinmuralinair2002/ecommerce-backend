@@ -1,3 +1,4 @@
+// Home page controller for public and authenticated views
 // Public Landing Page
 exports.getHomePage = (req, res) => {
     // If user is already logged in and verified, strictly redirect to /home?

@@ -1,3 +1,4 @@
+// Order schema definition and model
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({

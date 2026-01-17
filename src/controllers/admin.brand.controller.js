@@ -1,3 +1,4 @@
+// Brand management controller for admin dashboard
 const Brand = require('../models/brand.model');
 
 // @desc    Get All Brands

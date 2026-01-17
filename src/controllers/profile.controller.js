@@ -1,3 +1,4 @@
+// User profile controller for account management
 const profileService = require('../services/profile.service');
 
 // @desc    Get User Profile

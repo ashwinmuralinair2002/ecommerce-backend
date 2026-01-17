@@ -1,3 +1,4 @@
+// Admin management controller for customer and system operations
 const User = require('../models/user.model');
 const Order = require('../models/order.model');
 const { Parser } = require('json2csv');

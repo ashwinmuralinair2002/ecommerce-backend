@@ -1,3 +1,4 @@
+// Authentication controller handling signup, login, and OTP
 const { validationResult } = require('express-validator');
 const authService = require('../services/auth.service');
 

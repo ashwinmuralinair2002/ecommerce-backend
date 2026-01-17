@@ -1,3 +1,4 @@
+// Admin authentication middleware ensuring admin session
 const User = require('../models/user.model');
 
 const ensureAdminAuthenticated = async (req, res, next) => {

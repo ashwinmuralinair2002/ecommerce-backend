@@ -1,3 +1,4 @@
+// Admin API routes
 const express = require('express');
 const { ensureAdminAuthenticated } = require('../middleware/admin-auth.middleware');
 const { getUsers, blockUser } = require('../controllers/admin.controller');

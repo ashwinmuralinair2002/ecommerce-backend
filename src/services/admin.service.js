@@ -1,3 +1,4 @@
+// Service layer for admin-related business logic
 const User = require('../models/user.model');
 
 // Get All Users (Search, Pagination, Sort)

@@ -1,3 +1,4 @@
+// User profile and address management service
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 

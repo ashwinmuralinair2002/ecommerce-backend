@@ -1,3 +1,4 @@
+// Server entry point and port listener
 const app = require('./app');
 
 const PORT = process.env.PORT || 5000;

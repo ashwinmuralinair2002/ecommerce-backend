@@ -1,3 +1,4 @@
+// User profile management routes
 const express = require('express');
 const { verifyToken } = require('../middleware/auth.middleware');
 const {

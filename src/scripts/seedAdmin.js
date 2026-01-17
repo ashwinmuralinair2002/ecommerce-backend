@@ -1,3 +1,4 @@
+// Script to seed initial admin credentials
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');

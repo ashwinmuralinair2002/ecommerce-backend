@@ -1,3 +1,4 @@
+// Authentication routes configuration
 const express = require('express');
 const { check } = require('express-validator');
 const { signup, login, verifyOtp, resendOtp, forgotPassword, resetPassword } = require('../controllers/auth.controller');

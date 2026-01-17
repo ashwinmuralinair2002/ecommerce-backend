@@ -1,3 +1,4 @@
+// Authentication check middleware for view protection
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 
