@@ -25,7 +25,8 @@
                                 class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] pb-3 pt-5">
                                 Edit Brand</h2>
 
-                            <form action="/admin/brands/<%= brand._id %>/edit" method="POST">
+                            <form action="/admin/brands/<%= brand._id %>/edit" method="POST"
+                                enctype="multipart/form-data">
                                 <div class="flex flex-col gap-4 py-3">
                                     <label class="flex flex-col w-full">
                                         <p class="text-[#121810] text-base font-medium leading-normal pb-2">Brand Name
@@ -40,6 +41,46 @@
                                         <textarea name="description"
                                             class="form-textarea flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-24 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"><%= brand.description || '' %></textarea>
                                     </label>
+
+                                    <div class="flex flex-col gap-4 border border-[#dce7da] rounded-xl p-4 bg-gray-50">
+                                        <p class="text-[#121810] text-base font-medium leading-normal">Brand Logo</p>
+
+                                        <!-- Current Logo Preview -->
+                                        <% if (brand.logoUrl) { %>
+                                            <div
+                                                class="w-full flex justify-center py-2 bg-white rounded-lg border border-gray-100">
+                                                <img src="<%= brand.logoUrl %>" alt="Current Logo"
+                                                    class="h-16 object-contain">
+                                            </div>
+                                            <% } %>
+
+                                                <label class="flex flex-col w-full">
+                                                    <span
+                                                        class="text-xs font-semibold text-[#658d5e] uppercase tracking-wide mb-1">Upload
+                                                        New Logo (File)</span>
+                                                    <input type="file" name="logo" accept="image/*"
+                                                        class="block w-full text-sm text-[#121810] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#121810] hover:file:bg-[#dce7da]" />
+                                                </label>
+
+                                                <div class="relative">
+                                                    <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                                                        <div class="w-full border-t border-gray-300"></div>
+                                                    </div>
+                                                    <div class="relative flex justify-center">
+                                                        <span class="bg-gray-50 px-2 text-sm text-gray-500">OR</span>
+                                                    </div>
+                                                </div>
+
+                                                <label class="flex flex-col w-full">
+                                                    <span
+                                                        class="text-xs font-semibold text-[#658d5e] uppercase tracking-wide mb-1">Update
+                                                        Logo URL</span>
+                                                    <input name="logoUrl" type="url"
+                                                        placeholder="https://example.com/logo.png"
+                                                        value="<%= brand.logoUrl && brand.logoUrl.startsWith('http') ? brand.logoUrl : '' %>"
+                                                        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-12 px-4 text-base font-normal leading-normal" />
+                                                </label>
+                                    </div>
 
                                     <div class="flex gap-3 justify-end pt-4">
                                         <a href="/admin/brands"

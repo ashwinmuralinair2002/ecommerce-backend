@@ -30,10 +30,10 @@ exports.addBrand = async (req, res) => {
     try {
         const { name, description, website, contactEmail, isActive } = req.body;
 
-        // 1. Validate file upload
-        if (!req.file) {
+        // 1. Validate file upload OR URL
+        if (!req.file && !req.body.logoUrl) {
             return res.render('admin/brands/add-brand', {
-                error: 'Please upload a brand logo.',
+                error: 'Please upload a brand logo or provide a URL.',
                 oldInput: req.body
             });
         }
@@ -48,7 +48,12 @@ exports.addBrand = async (req, res) => {
         }
 
         // 3. Create Brand
-        const logoUrl = `/uploads/brands/${req.file.filename}`;
+        let logoUrl = '';
+        if (req.file) {
+            logoUrl = `/uploads/brands/${req.file.filename}`;
+        } else if (req.body.logoUrl) {
+            logoUrl = req.body.logoUrl;
+        }
 
         const newBrand = new Brand({
             name,
@@ -120,12 +125,22 @@ exports.getBrandDetails = async (req, res) => {
 // @route   POST /admin/brands/:id/edit
 exports.editBrand = async (req, res) => {
     try {
-        const { name, description, logo } = req.body;
+        if (!req.body) {
+            throw new Error('req.body is undefined - Body parsing failed');
+        }
+
+        const { name, description, logoUrl } = req.body;
         const brand = await Brand.findById(req.params.id);
 
         brand.name = name || brand.name;
         brand.description = description || brand.description;
-        if (logo) brand.logoUrl = logo;
+
+        // Priority: 1. New File Upload, 2. New URL input, 3. Keep existing
+        if (req.file) {
+            brand.logoUrl = `/uploads/brands/${req.file.filename}`;
+        } else if (logoUrl && logoUrl.trim() !== '') {
+            brand.logoUrl = logoUrl;
+        }
 
         await brand.save();
         res.redirect('/admin/brands');
@@ -158,14 +173,7 @@ exports.deleteBrand = async (req, res) => {
         const brand = await Brand.findById(req.params.id);
         if (!brand) return res.status(404).send('Brand not found');
 
-        if (brand.productCount > 0) {
-            // "Do NOT allow deleting a brand that has products"
-            // For now, doing a simple alert/redirect or text response as requested "return validation error"
-            // Since it's a POST form submit, simple text is easiest MVP? Or flash?
-            // "return validation error" implies maybe staying on page with error.
-            // For this specific turn, I'll send a 400 or simple error page.
-            return res.status(400).send('Cannot delete brand with associated products.');
-        }
+        // if (brand.productCount > 0) { ... } validation removed to allow force delete
 
         brand.isDeleted = true;
         await brand.save();

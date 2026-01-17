@@ -216,6 +216,63 @@ const getCustomerOrders = async (req, res) => {
     }
 };
 
+// @desc    Update Admin Profile
+// @route   POST /admin/profile/update
+const updateAdminProfile = async (req, res) => {
+    try {
+        const { name, email, phone } = req.body;
+
+        // Basic Validation
+        if (!email || !email.includes('@')) {
+            // For form submission, we might want a better error handling strategy (flash), 
+            // but for now redirecting back is consistent with existing error handling flow.
+            console.error('Update Failed: Invalid Email');
+            if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
+                return res.redirect('back');
+            }
+            return res.status(400).json({ error: 'Invalid email' });
+        }
+
+        // Case 1: DB-Based Admin (Has a valid MongoDB _id)
+        if (req.user && req.user._id) {
+            const user = await User.findById(req.user._id);
+            if (!user) {
+                return res.status(404).json({ error: 'User not found in DB' });
+            }
+
+            user.name = name || user.name;
+            user.email = email || user.email;
+            user.phone = phone || user.phone;
+
+            await user.save();
+        }
+        // Case 2: Env-Based Admin (No DB record, just Session/Env identity)
+        else {
+            // Update Session to reflect changes in UI for this session
+            if (req.session) {
+                req.session.adminName = name || req.user.name;
+                req.session.adminEmail = email || req.user.email;
+                req.session.adminPhone = phone || req.user.phone;
+
+                // Force save to ensure persistence before redirect/reload
+                req.session.save(err => {
+                    if (err) console.error('Session Save Error:', err);
+                });
+            }
+        }
+
+        // If request is from a form submission, redirect back
+        if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
+            return res.redirect('back');
+        }
+
+        res.json({ success: true, user: req.user });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Server Error');
+    }
+};
+
 module.exports = {
     getCustomersPage,
     toggleBlockUser,

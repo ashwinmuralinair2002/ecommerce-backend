@@ -49,8 +49,15 @@
                                 <div class="border-2 border-dashed rounded-xl p-8 text-center">
                                     <p class="font-bold mb-1">Brand Logo</p>
                                     <p class="text-sm mb-4">Upload brand logo image</p>
-                                    <input type="file" name="logo" accept="image/*" required
-                                        class="block w-full text-sm" />
+                                    <input type="file" name="logo" accept="image/*" class="block w-full text-sm" />
+                                </div>
+
+                                <!-- BRAND LOGO URL -->
+                                <div>
+                                    <label class="block font-medium mb-2">Or Logo URL</label>
+                                    <input name="logoUrl" placeholder="https://example.com/logo.png"
+                                        class="w-full rounded-xl bg-[#e8f4e6] h-14 px-4 outline-none"
+                                        value="<%= locals.oldInput ? oldInput.logoUrl : '' %>" />
                                 </div>
 
                                 <!-- WEBSITE -->

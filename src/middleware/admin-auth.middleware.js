@@ -12,12 +12,13 @@ const ensureAdminAuthenticated = async (req, res, next) => {
             if (dbAdmin && dbAdmin.role === 'admin') {
                 req.user = dbAdmin; // Use DB Record
             } else {
-                // Fallback to Hardcoded Mock Object if not in DB yet
+                // Fallback to Session or Env values
                 req.user = {
                     id: 'admin',
                     role: 'admin',
-                    name: 'Ashwin Murali Nair',
-                    email: process.env.ADMIN_EMAIL || 'admin@example.com'
+                    name: req.session.adminName || process.env.ADMIN_NAME || 'Ashwin Murali Nair',
+                    email: req.session.adminEmail || process.env.ADMIN_EMAIL || 'admin@example.com',
+                    phone: req.session.adminPhone || '' // Support phone from session
                 };
             }
         } catch (error) {
@@ -26,8 +27,9 @@ const ensureAdminAuthenticated = async (req, res, next) => {
             req.user = {
                 id: 'admin',
                 role: 'admin',
-                name: 'Ashwin Murali Nair',
-                email: process.env.ADMIN_EMAIL || 'admin@example.com'
+                name: req.session.adminName || process.env.ADMIN_NAME || 'Ashwin Murali Nair',
+                email: req.session.adminEmail || process.env.ADMIN_EMAIL || 'admin@example.com',
+                phone: req.session.adminPhone || ''
             };
         }
 

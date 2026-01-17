@@ -155,6 +155,7 @@ const loginUser = async (email, password) => {
             id: user._id,
             name: user.name,
             email: user.email,
+            role: user.role // Critical for Admin Check
         },
     };
 };

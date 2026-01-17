@@ -24,6 +24,18 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request Logger
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    next();
+});
+
+// Global User Middleware (Available in all views)
+app.use((req, res, next) => {
+    res.locals.user = req.user || null;
+    next();
+});
+
 // Session Middleware (Required for Google Strategy State)
 app.use(session({
     secret: process.env.JWT_SECRET || 'secret',
@@ -115,6 +127,42 @@ app.get('/account/addresses/:id/edit', require('./middleware/auth-check.middlewa
     res.render('edit-address', { user: req.user, address });
 });
 
+app.post('/account/addresses/:id/update', require('./middleware/auth-check.middleware').ensureAuthenticated, async (req, res) => {
+    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
+
+    try {
+        const profileService = require('./services/profile.service');
+        const addressData = {
+            name,
+            phone,
+            houseNo,
+            street,
+            city,
+            state,
+            zip: postalCode,
+            country: 'India',
+            label
+        };
+
+        await profileService.updateAddress(req.user.id, req.params.id, addressData);
+        res.redirect('/account/addresses');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error updating address: ' + error.message);
+    }
+});
+
+app.post('/account/addresses/:id/delete', require('./middleware/auth-check.middleware').ensureAuthenticated, async (req, res) => {
+    try {
+        const profileService = require('./services/profile.service');
+        await profileService.deleteAddress(req.user.id, req.params.id);
+        res.redirect('/account/addresses');
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error deleting address: ' + error.message);
+    }
+});
+
 const { ensureAdminAuthenticated } = require('./middleware/admin-auth.middleware');
 
 app.get('/admin/dashboard',
@@ -146,34 +194,11 @@ app.get('/admin/brands/add', ensureAdminAuthenticated, brandController.renderAdd
 app.post('/admin/brands', ensureAdminAuthenticated, upload.single('logo'), brandController.addBrand);
 app.get('/admin/brands/:id', ensureAdminAuthenticated, brandController.getBrandDetails);
 app.get('/admin/brands/:id/edit', ensureAdminAuthenticated, brandController.renderEditBrand);
-app.post('/admin/brands/:id/edit', ensureAdminAuthenticated, brandController.editBrand);
+app.post('/admin/brands/:id/edit', ensureAdminAuthenticated, upload.single('logo'), brandController.editBrand);
 app.post('/admin/brands/:id/toggle-status', ensureAdminAuthenticated, brandController.toggleBrandStatus);
 app.post('/admin/brands/:id/delete', ensureAdminAuthenticated, brandController.deleteBrand);
 
-app.post('/account/addresses/:id/update', require('./middleware/auth-check.middleware').ensureAuthenticated, async (req, res) => {
-    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
 
-    try {
-        const profileService = require('./services/profile.service');
-        const addressData = {
-            name,
-            phone,
-            houseNo,
-            street,
-            city,
-            state,
-            zip: postalCode,
-            country: 'India',
-            label
-        };
-
-        await profileService.updateAddress(req.user.id, req.params.id, addressData);
-        res.redirect('/account/addresses');
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error updating address: ' + error.message);
-    }
-});
 app.get('/login', (req, res) => {
     res.render('login');
 });
