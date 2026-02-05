@@ -1,5 +1,6 @@
 // User profile controller for account management
 const profileService = require('../services/profile.service');
+const bcrypt = require('bcryptjs');
 
 // @desc    Get User Profile
 // @route   GET /api/profile
@@ -23,6 +24,31 @@ const updateProfile = async (req, res) => {
     }
 };
 
+// @desc    Upload Profile Photo
+// @route   POST /api/profile/upload-photo
+const uploadProfilePhoto = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    try {
+        // req.file.path contains the Cloudinary URL
+        const imageUrl = req.file.path;
+
+        // Update user record directly here or via service
+        // Since it's a simple field update, we can use service.updateProfile logic if it supports arbitrary fields,
+        // OR creates a specific service method.
+        // Let's create a specific one or reuse updates.
+        // Reusing updateProfile might be cleaner if we pass { profileImage: imageUrl }
+
+        const user = await profileService.updateProfile(req.user.id, { profileImage: imageUrl });
+
+        res.json({ message: 'Profile photo uploaded', profileImage: imageUrl, user });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // @desc    Request Email Change
 // @route   POST /api/profile/email/request
 const requestEmailChange = async (req, res) => {
@@ -31,7 +57,10 @@ const requestEmailChange = async (req, res) => {
 
     try {
         const result = await profileService.requestEmailChange(req.user.id, newEmail);
-        res.json(result);
+        req.session.otpEmail = newEmail;
+        req.session.save(() => {
+            res.json(result);
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -45,6 +74,9 @@ const verifyEmailChange = async (req, res) => {
 
     try {
         const result = await profileService.verifyEmailChange(req.user.id, otp);
+        if (req.session.otpEmail) {
+            req.session.otpEmail = null;
+        }
         res.json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -113,6 +145,82 @@ const deleteAccount = async (req, res) => {
     }
 };
 
+// @desc    Request Password Change
+// @route   POST /api/profile/password/request
+const requestPasswordChange = async (req, res) => {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({ error: 'New passwords do not match' });
+    }
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    }
+
+    try {
+        // Service validates old password and returns success if valid
+        const result = await profileService.requestPasswordChange(req.user.id, oldPassword, newPassword);
+
+        // Store HASHED new password in session temporarily
+        // We hash it here so it's not plaintext in session store
+        const salt = await bcrypt.genSalt(10);
+        const tempPasswordHash = await bcrypt.hash(newPassword, salt);
+
+        req.session.tempPasswordHash = tempPasswordHash;
+        req.session.otpEmail = req.user.email; // Ensure email is in session for OTP page
+
+        req.session.save(() => {
+            res.json(result);
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// @desc    Verify Password Change
+// @route   POST /api/profile/password/verify
+const verifyPasswordChange = async (req, res) => {
+    const { otp } = req.body;
+    const tempPasswordHash = req.session.tempPasswordHash;
+
+    if (!otp) return res.status(400).json({ error: 'OTP is required' });
+    if (!tempPasswordHash) return res.status(400).json({ error: 'Session expired. Please request password change again.' });
+
+    try {
+        const result = await profileService.verifyPasswordChange(req.user.id, otp, tempPasswordHash);
+
+        // Clear session data
+        req.session.tempPasswordHash = null;
+        if (req.session.otpEmail) req.session.otpEmail = null;
+
+        res.json(result);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// @desc    Resend Password Change OTP
+// @route   POST /api/profile/password/resend
+const resendPasswordChangeOtp = async (req, res) => {
+    // Check if user is in valid password change flow (session has temp hash)
+    if (!req.session.tempPasswordHash) {
+        return res.status(400).json({ error: 'Session expired. Please request password change again.' });
+    }
+
+    try {
+        const result = await profileService.resendPasswordChangeOtp(req.user.id);
+        req.session.otpEmail = req.user.email; // Ensure email is in session
+        req.session.save(() => {
+            res.json(result);
+        });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getProfile,
     updateProfile,
@@ -121,5 +229,9 @@ module.exports = {
     addAddress,
     updateAddress,
     deleteAddress,
-    deleteAccount
+    deleteAccount,
+    requestPasswordChange,
+    verifyPasswordChange,
+    resendPasswordChangeOtp,
+    uploadProfilePhoto
 };

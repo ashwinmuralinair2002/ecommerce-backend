@@ -17,6 +17,7 @@ const app = express();
 const cookieParser = require('cookie-parser');
 
 // Connect to Database
+console.log('--- APP IDENTITY VERIFIED: faa11254 ---');
 connectDB();
 
 // Middleware
@@ -56,9 +57,58 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.static(path.join(__dirname, 'public'))); // For uploads
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
+// DEV MODE OVERRIDE: Intercept responses to inject OTP
+const User = require('./models/user.model');
+app.use((req, res, next) => {
+    const originalJson = res.json;
+    res.json = function (body) {
+        if (process.env.NODE_ENV !== 'production' && body) {
+            const isAuthSignup = req.url.includes('/signup') && body.user && body.user.email;
+            const isAuthResend = req.url.includes('/resend-otp') && req.body.email; // Body parsed by now
+
+            // Note: req.url for app.use('/api/auth') might be just '/signup' or full path depending on mounting.
+            // But we are at app level middleware before mounting?
+            // Actually app.use middleware sees full url if mounted at root?
+            // Let's assume req.originalUrl is safer.
+
+            const target = req.originalUrl;
+            const isTarget = target.includes('/api/auth/signup') || target.includes('/api/auth/resend-otp');
+
+            if (isTarget) {
+                const targetEmail = (body.user && body.user.email) || (req.body && req.body.email);
+                if (targetEmail) {
+                    console.error('--- INTERCEPTING RESPONSE FOR:', targetEmail, '---');
+                    User.findOne({ email: targetEmail }).then(user => {
+                        if (user && user.otp) {
+                            body.devOtp = user.otp;
+                            console.error('--- INJECTED OTP:', user.otp, '---');
+                        }
+                        originalJson.call(this, body);
+                    }).catch(err => {
+                        console.error('--- OTP INJECTION FAILED:', err);
+                        originalJson.call(this, body);
+                    });
+                    return;
+                }
+            }
+        }
+        return originalJson.call(this, body);
+    };
+    next();
+});
+
 // Admin Dashboard Route Removed (Duplicate/Incorrect) - Handled below using correct middleware
 
 // Protected routes using JWT for API calls
+// const authRoutes = require('./routes/auth.routes'); // Already imported above
+console.log('--- AUTH ROUTES IMPORTED ---', typeof authRoutes);
+if (authRoutes.stack) {
+    authRoutes.stack.forEach(r => {
+        if (r.route && r.route.path) {
+            console.log('ROUTE:', r.route.path);
+        }
+    });
+}
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 // app.use('/api/admin', adminRoutes);
@@ -176,6 +226,8 @@ app.get('/admin/dashboard',
 const adminController = require('./controllers/admin.controller');
 
 app.get('/admin/customers', ensureAdminAuthenticated, adminController.getCustomersPage);
+app.get('/admin/customers/add', ensureAdminAuthenticated, adminController.renderAddCustomerPage);
+app.post('/admin/customers/add', ensureAdminAuthenticated, adminController.addCustomer);
 app.get('/admin/customers/export', ensureAdminAuthenticated, adminController.exportCustomers);
 app.get('/admin/customers/:id', ensureAdminAuthenticated, adminController.getCustomerDetails);
 app.get('/admin/customers/:id/orders', ensureAdminAuthenticated, adminController.getCustomerOrders);
@@ -186,16 +238,18 @@ app.post('/admin/customers/:id/toggle-block', ensureAdminAuthenticated, adminCon
 app.get('/admin/customers/:id/delete', ensureAdminAuthenticated, adminController.softDeleteUser);
 app.post('/admin/customers/:id/delete', ensureAdminAuthenticated, adminController.softDeleteUser); // Fix: Ensure POST method exists for deletion
 app.post('/admin/profile/update', ensureAdminAuthenticated, adminController.updateAdminProfile);
+app.get('/admin/change-password', ensureAdminAuthenticated, adminController.getChangePasswordPage);
+app.post('/admin/change-password', ensureAdminAuthenticated, adminController.changeAdminPassword);
 
 const brandController = require('./controllers/admin.brand.controller');
-const upload = require('./middleware/upload.middleware');
+const brandUpload = require('./middleware/brand-upload.middleware');
 
 app.get('/admin/brands', ensureAdminAuthenticated, brandController.getBrands);
 app.get('/admin/brands/add', ensureAdminAuthenticated, brandController.renderAddBrand);
-app.post('/admin/brands', ensureAdminAuthenticated, upload.single('logo'), brandController.addBrand);
+app.post('/admin/brands', ensureAdminAuthenticated, brandUpload.single('logo'), brandController.addBrand);
 app.get('/admin/brands/:id', ensureAdminAuthenticated, brandController.getBrandDetails);
 app.get('/admin/brands/:id/edit', ensureAdminAuthenticated, brandController.renderEditBrand);
-app.post('/admin/brands/:id/edit', ensureAdminAuthenticated, upload.single('logo'), brandController.editBrand);
+app.post('/admin/brands/:id/edit', ensureAdminAuthenticated, brandUpload.single('logo'), brandController.editBrand);
 app.post('/admin/brands/:id/toggle-status', ensureAdminAuthenticated, brandController.toggleBrandStatus);
 app.post('/admin/brands/:id/delete', ensureAdminAuthenticated, brandController.deleteBrand);
 
@@ -208,8 +262,14 @@ app.get('/signup', ensureGuest, (req, res) => {
     res.render('auth/signup');
 });
 
-app.get('/verify-otp', ensureGuest, (req, res) => {
-    res.render('auth/otp');
+app.get('/verify-otp', (req, res) => {
+    // Pass session email (primary) or query email (fallback)
+    const email = req.session.otpEmail || req.query.email || '';
+    res.render('auth/otp', { email });
+});
+
+app.get('/account/change-password', require('./middleware/auth-check.middleware').ensureAuthenticated, (req, res) => {
+    res.render('change-password', { user: req.user });
 });
 
 app.get('/forgot-password', ensureGuest, (req, res) => {
@@ -225,5 +285,11 @@ app.get('/password-success', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error('Unhandled Error:', err);
+    res.status(500).json({ error: err.message || 'Server Error' });
+});
 
 module.exports = app;

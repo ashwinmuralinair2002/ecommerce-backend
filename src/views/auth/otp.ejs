@@ -3,6 +3,7 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
@@ -52,7 +53,7 @@
                 </h2>
 
                 <p class="text-center text-base text-[#0d1c0d] mb-6">
-                    We've sent a 6-digit code to your email address.
+                    We've sent a 6-digit code to your email address<%= email ? ' (' + email + ')' : '' %>.
                 </p>
 
                 <div class="flex justify-center gap-4 mb-6">
@@ -83,7 +84,7 @@
                 </p>
 
                 <script>
-                    let timeLeft = 59;
+                    let timeLeft = 29;
                     const timerSpan = document.getElementById("timer");
                     const resendOtp = document.getElementById("resendOtp");
 
@@ -119,7 +120,8 @@
 
                     // Get Email and Mode from URL
                     const urlParams = new URLSearchParams(window.location.search);
-                    const email = urlParams.get('email');
+                    // Prioritize rendered email from session, fallback to URL (backward compat)
+                    const email = "<%= email %>" || urlParams.get('email');
                     const mode = urlParams.get('mode');
 
                     if (!email) {
@@ -163,6 +165,58 @@
                         // --- RESET PASSWORD MODE ---
                         if (mode === 'reset') {
                             window.location.href = `/reset-password?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
+                            return;
+                        }
+
+                        // --- PASSWORD CHANGE MODE ---
+                        if (mode === 'password_change') {
+                            verifyButton.disabled = true;
+                            verifyButton.textContent = 'Verifying...';
+
+                            try {
+                                const response = await fetch('/api/profile/password/verify', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ otp })
+                                });
+                                const data = await response.json();
+
+                                if (!response.ok) throw new Error(data.error || 'Verification failed');
+
+                                showMessage('Password updated successfully!', 'success');
+                                setTimeout(() => window.location.href = '/account', 1500);
+                                return;
+                            } catch (error) {
+                                showMessage(error.message, 'error');
+                                verifyButton.disabled = false;
+                                verifyButton.textContent = 'Verify OTP';
+                            }
+                            return;
+                        }
+
+                        // --- EMAIL CHANGE MODE ---
+                        if (mode === 'email_change') {
+                            verifyButton.disabled = true;
+                            verifyButton.textContent = 'Verifying...';
+
+                            try {
+                                const response = await fetch('/api/profile/email/verify', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ otp })
+                                });
+                                const data = await response.json();
+
+                                if (!response.ok) throw new Error(data.error || 'Verification failed');
+
+                                showMessage('Email updated successfully!', 'success');
+                                setTimeout(() => window.location.href = '/user/account', 1500);
+                                return;
+                            } catch (error) {
+                                showMessage(error.message, 'error');
+                                verifyButton.disabled = false;
+                                verifyButton.textContent = 'Verify OTP';
+                            }
                             return;
                         }
 
@@ -214,6 +268,21 @@
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ email })
                                 });
+                            } else if (mode === 'email_change') {
+                                // Re-request email change (generates new OTP)
+                                response = await fetch('/api/profile/email/request', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ newEmail: email })
+                                });
+                            } else if (mode === 'password_change') {
+                                // Password Change Resend
+                                response = await fetch('/api/profile/password/resend', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    // No body needed as it uses session, but passing empty object just in case
+                                    body: JSON.stringify({})
+                                });
                             } else {
                                 // Default Signup Resend
                                 response = await fetch('/api/auth/resend-otp', {
@@ -230,6 +299,10 @@
                                     throw new Error(data.error || 'Please wait before resending.');
                                 }
                                 throw new Error(data.error || 'Resend failed');
+                            }
+
+                            if (data.devOtp) {
+                                alert(`[DEV MODE] Your OTP is: ${data.devOtp}`);
                             }
 
                             showMessage('OTP Resent! Please check your email.', 'success');

@@ -20,6 +20,15 @@ const userSchema = new mongoose.Schema({
         required: true,
         trim: true,
     },
+    phone: {
+        type: String,
+        trim: true,
+        default: '',
+    },
+    profileImage: {
+        type: String, // Cloudinary URL
+        default: null
+    },
     email: {
         type: String,
         required: true,

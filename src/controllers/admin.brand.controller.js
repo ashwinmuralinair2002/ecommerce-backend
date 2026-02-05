@@ -1,18 +1,49 @@
 // Brand management controller for admin dashboard
-const Brand = require('../models/brand.model');
+const Brand = require('../models/Brand');
+const cloudinary = require('../config/cloudinary');
 
-// @desc    Get All Brands
+// @desc    Get All Brands (with Pagination)
 // @route   GET /admin/brands
 exports.getBrands = async (req, res) => {
     try {
-        const brands = await Brand.find({ isDeleted: false }).sort({ createdAt: -1 });
+        const { page = 1, search = '' } = req.query;
+        const limit = 5; // 5 brands per page
+        const currentPage = parseInt(page) || 1;
+
+        const query = { isDeleted: false };
+
+        // Search Logic
+        if (search) {
+            query.name = { $regex: search, $options: 'i' };
+        }
+
+        // Get total count for pagination
+        const totalBrands = await Brand.countDocuments(query);
+        const totalPages = Math.ceil(totalBrands / limit);
+        const skip = (currentPage - 1) * limit;
+
+        const brands = await Brand.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
         // Ensure logoUrl defaults if missing (for old data)
         brands.forEach(b => {
-            if (!b.logoUrl) b.logoUrl = 'https://via.placeholder.com/40';
+            if (!b.logoUrl) b.logoUrl = '';
             if (b.productCount === undefined) b.productCount = 0;
         });
 
-        res.render('admin/admin-brands', { brands });
+        res.render('admin/admin-brands', {
+            brands,
+            search, // Pass search term to view
+            pagination: {
+                currentPage,
+                totalPages,
+                totalBrands,
+                hasNextPage: currentPage < totalPages,
+                hasPrevPage: currentPage > 1
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).send('Server Error');
@@ -48,10 +79,10 @@ exports.addBrand = async (req, res) => {
             });
         }
 
-        // 3. Create Brand
+        // 3. Create Brand - use Cloudinary URL from req.file.path
         let logoUrl = '';
         if (req.file) {
-            logoUrl = `/uploads/brands/${req.file.filename}`;
+            logoUrl = req.file.path; // Cloudinary URL
         } else if (req.body.logoUrl) {
             logoUrl = req.body.logoUrl;
         }
@@ -136,9 +167,22 @@ exports.editBrand = async (req, res) => {
         brand.name = name || brand.name;
         brand.description = description || brand.description;
 
-        // Priority: 1. New File Upload, 2. New URL input, 3. Keep existing
+        // Priority: 1. New File Upload (Cloudinary), 2. New URL input, 3. Keep existing
         if (req.file) {
-            brand.logoUrl = `/uploads/brands/${req.file.filename}`;
+            // Delete old image from Cloudinary if it exists and is a Cloudinary URL
+            if (brand.logoUrl && brand.logoUrl.includes('cloudinary.com')) {
+                try {
+                    // Extract public_id from URL
+                    const urlParts = brand.logoUrl.split('/');
+                    const filename = urlParts[urlParts.length - 1];
+                    const publicId = 'soundwave_brands/' + filename.split('.')[0];
+                    await cloudinary.uploader.destroy(publicId);
+                    console.log('[Brand] Old Cloudinary image deleted:', publicId);
+                } catch (deleteErr) {
+                    console.error('[Brand] Failed to delete old Cloudinary image:', deleteErr.message);
+                }
+            }
+            brand.logoUrl = req.file.path; // Cloudinary URL
         } else if (logoUrl && logoUrl.trim() !== '') {
             brand.logoUrl = logoUrl;
         }
@@ -160,7 +204,8 @@ exports.toggleBrandStatus = async (req, res) => {
 
         brand.isActive = !brand.isActive;
         await brand.save();
-        res.redirect('/admin/brands');
+        // Redirect back to the same brand detail page
+        res.redirect('/admin/brands/' + req.params.id);
     } catch (error) {
         console.error(error);
         res.status(500).send('Server Error');

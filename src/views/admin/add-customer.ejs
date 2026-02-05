@@ -1,0 +1,99 @@
+<!-- Admin add customer page template -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
+    <title>Admin · Add Customer</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
+            </aside>
+
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 text-sm mb-4">
+                    <a href="/admin/customers" class="text-[#5f8c5f] hover:underline">Customers</a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-[#111811]">Add Customer</span>
+                </div>
+
+                <h1 class="text-[32px] font-bold text-[#121811] mb-6">Add Customer</h1>
+
+                <!-- Message Container -->
+                <% if (typeof message !=='undefined' && message) { %>
+                    <div
+                        class="mb-4 p-3 rounded-xl text-sm font-medium <%= messageType === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' %>">
+                        <%= message %>
+                    </div>
+                    <% } %>
+
+                        <form action="/admin/customers/add" method="POST" class="max-w-md space-y-4"
+                            id="addCustomerForm">
+                            <!-- Name -->
+                            <div>
+                                <label class="block text-sm text-[#628d5e] mb-1">Full Name <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="name" required
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                    placeholder="Enter customer name" />
+                            </div>
+
+                            <!-- Email -->
+                            <div>
+                                <label class="block text-sm text-[#628d5e] mb-1">Email <span
+                                        class="text-red-500">*</span></label>
+                                <input type="email" name="email" required
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                    placeholder="Enter customer email" />
+                            </div>
+
+                            <!-- Phone -->
+                            <div>
+                                <label class="block text-sm text-[#628d5e] mb-1">Phone</label>
+                                <input type="tel" name="phone"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                    placeholder="Enter phone number (optional)" />
+                            </div>
+
+                            <!-- Password -->
+                            <div>
+                                <label class="block text-sm text-[#628d5e] mb-1">Password <span
+                                        class="text-red-500">*</span></label>
+                                <input type="password" name="password" required minlength="8"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                    placeholder="Enter password (min 8 characters)" />
+                                <p class="text-xs text-[#658d5e] mt-1">Minimum 8 characters</p>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="flex gap-3 pt-4">
+                                <button type="submit"
+                                    class="h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                                    Add Customer
+                                </button>
+                                <a href="/admin/customers"
+                                    class="h-10 px-6 rounded-xl bg-[#f0f5f0] font-bold text-[#111810] hover:bg-[#e0e5e0] transition-colors flex items-center">
+                                    Cancel
+                                </a>
+                            </div>
+                        </form>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

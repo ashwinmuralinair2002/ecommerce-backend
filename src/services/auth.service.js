@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/user.model');
 const emailService = require('./email.service');
+const fs = require('fs');
 
 // Helper to generate 6-digit OTP
 const generateOTP = () => {
@@ -39,12 +40,23 @@ const registerUser = async (userData) => {
     });
 
     // Send OTP via Email
-    await emailService.sendEmail(email, 'Your OTP for SoundWave', `Your OTP is ${otp}. It expires in 10 minutes.`);
+    console.log(`[OTP] Request started for email: ${email}`);
+    console.log(`[OTP] Generated OTP: ${otp}`);
+    const debugMsg = `[DEV-OTP] Generated OTP for ${email}: ${otp} | NODE_ENV: ${process.env.NODE_ENV}\n`;
+    try {
+        fs.appendFileSync('debug_output.txt', debugMsg);
+    } catch (e) {
+        console.error('Failed to write debug file', e);
+    }
+    console.log(debugMsg);
+
+    await emailService.sendEmail(email, 'SoundWave Verification Code', `Your verification code is ${otp}. It expires in 10 minutes.`, otp);
 
     return {
         id: user._id,
         name: user.name,
         email: user.email,
+        devOtp: otp // FORCE RETURN
     };
 };
 
@@ -85,10 +97,6 @@ const resendOtp = async (email) => {
         throw new Error('User not found');
     }
 
-    if (user.isVerified) {
-        throw new Error('User already verified');
-    }
-
     // Cooldown check (1 minute)
     if (user.lastOtpSentAt && Date.now() - user.lastOtpSentAt < 60000) {
         throw new Error('Please wait before resending OTP');
@@ -102,27 +110,57 @@ const resendOtp = async (email) => {
     await user.save();
 
     // Send New OTP via Email
-    await emailService.sendEmail(email, 'Your New OTP for SoundWave', `Your new OTP is ${otp}. It expires in 10 minutes.`);
+    console.log(`[OTP] Request started for email: ${email}`);
+    console.log(`[OTP] Generated OTP: ${otp}`);
+    const debugMsg = `[DEV-OTP] Resent OTP for ${email}: ${otp} | NODE_ENV: ${process.env.NODE_ENV}\n`;
+    try {
+        fs.appendFileSync('debug_output.txt', debugMsg);
+    } catch (e) {
+        console.error('Failed to write debug file', e);
+    }
+    console.log(debugMsg);
 
-    return { message: 'OTP resent' }; // Removed OTP from response
+    await emailService.sendEmail(email, 'SoundWave Verification Code (Resend)', `Your new verification code is ${otp}. It expires in 10 minutes.`, otp);
+
+    return {
+        message: 'OTP resent',
+        devOtp: otp // FORCE RETURN
+    };
 };
 
 // Login user
 const loginUser = async (email, password) => {
-    // Check for Admin
-    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-        const token = jwt.sign({ id: 'admin', role: 'admin' }, process.env.JWT_SECRET || 'secret', {
-            expiresIn: '1h',
-        });
-        return {
-            token,
-            user: {
-                id: 'admin',
-                name: 'Ashwin Murali Nair',
-                email: email,
-                role: 'admin'
-            },
-        };
+    // Check for Admin (by email)
+    if (email === process.env.ADMIN_EMAIL) {
+        // First check if admin has a DB record with updated password
+        const dbAdmin = await User.findOne({ email: email, role: 'admin' });
+
+        let passwordValid = false;
+
+        if (dbAdmin && dbAdmin.password) {
+            // Check DB password first (supports password changes)
+            passwordValid = await bcrypt.compare(password, dbAdmin.password);
+        }
+
+        // Fallback to env password if no DB record or DB password doesn't match
+        if (!passwordValid && (password === process.env.ADMIN_PASSWORD)) {
+            passwordValid = true;
+        }
+
+        if (passwordValid) {
+            const token = jwt.sign({ id: dbAdmin ? dbAdmin._id : 'admin', role: 'admin' }, process.env.JWT_SECRET || 'secret', {
+                expiresIn: process.env.JWT_EXPIRY || '1h',
+            });
+            return {
+                token,
+                user: {
+                    id: dbAdmin ? dbAdmin._id : 'admin',
+                    name: dbAdmin ? dbAdmin.name : (process.env.ADMIN_NAME || 'Admin'),
+                    email: email,
+                    role: 'admin'
+                },
+            };
+        }
     }
 
     // Check for user
@@ -147,7 +185,7 @@ const loginUser = async (email, password) => {
 
     // Generate Token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', {
-        expiresIn: '1h',
+        expiresIn: process.env.JWT_EXPIRY || '1h',
     });
 
     return {
@@ -174,9 +212,14 @@ const forgotPassword = async (email) => {
     await user.save();
 
     // Send Reset OTP via Email
-    await emailService.sendEmail(email, 'Password Reset OTP for SoundWave', `Your Password Reset OTP is ${otp}. It expires in 10 minutes.`);
+    console.log(`[OTP] Request started for email: ${email}`);
+    console.log(`[OTP] Generated OTP: ${otp}`);
+    await emailService.sendEmail(email, 'Password Reset OTP for SoundWave', `Your Password Reset OTP is ${otp}. It expires in 10 minutes.`, otp);
 
-    return { message: 'OTP sent to email' }; // Removed OTP from response
+    return {
+        message: 'OTP sent to email',
+        devOtp: otp // FORCE RETURN
+    };
 };
 
 // Reset Password

@@ -2,12 +2,16 @@
 const User = require('../models/user.model');
 const Order = require('../models/order.model');
 const { Parser } = require('json2csv');
+const bcrypt = require('bcryptjs');
 
-// @desc    Get Customers Page
+// @desc    Get Customers Page (with Pagination)
 // @route   GET /admin/customers
 const getCustomersPage = async (req, res) => {
     try {
-        const { search } = req.query;
+        const { search, page = 1 } = req.query;
+        const limit = 5; // 5 customers per page
+        const currentPage = parseInt(page) || 1;
+
         let query = { role: 'user', deleted: false };
 
         if (search) {
@@ -18,7 +22,15 @@ const getCustomersPage = async (req, res) => {
             ];
         }
 
-        const users = await User.find(query).sort({ createdAt: -1 });
+        // Get total count for pagination
+        const totalCustomers = await User.countDocuments(query);
+        const totalPages = Math.ceil(totalCustomers / limit);
+        const skip = (currentPage - 1) * limit;
+
+        const users = await User.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
 
         // Augment users with dummy stats as requested
         const augmentedUsers = users.map(user => ({
@@ -28,7 +40,17 @@ const getCustomersPage = async (req, res) => {
             lastActive: user.updatedAt // Placeholder using updatedAt
         }));
 
-        res.render('admin/customers', { consumers: augmentedUsers, search: search || '' });
+        res.render('admin/customers', {
+            consumers: augmentedUsers,
+            search: search || '',
+            pagination: {
+                currentPage,
+                totalPages,
+                totalCustomers,
+                hasNextPage: currentPage < totalPages,
+                hasPrevPage: currentPage > 1
+            }
+        });
     } catch (error) {
         console.error(error);
         res.status(500).send('Server Error');
@@ -219,14 +241,14 @@ const getCustomerOrders = async (req, res) => {
 
 // @desc    Update Admin Profile
 // @route   POST /admin/profile/update
+// @desc    Update Admin Profile
+// @route   POST /admin/profile/update
 const updateAdminProfile = async (req, res) => {
     try {
         const { name, email, phone } = req.body;
 
         // Basic Validation
         if (!email || !email.includes('@')) {
-            // For form submission, we might want a better error handling strategy (flash), 
-            // but for now redirecting back is consistent with existing error handling flow.
             console.error('Update Failed: Invalid Email');
             if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
                 return res.redirect('back');
@@ -234,18 +256,31 @@ const updateAdminProfile = async (req, res) => {
             return res.status(400).json({ error: 'Invalid email' });
         }
 
+        let updatedUser = {};
+
         // Case 1: DB-Based Admin (Has a valid MongoDB _id)
         if (req.user && req.user._id) {
-            const user = await User.findById(req.user._id);
-            if (!user) {
+            const dbUser = await User.findById(req.user._id);
+            if (!dbUser) {
                 return res.status(404).json({ error: 'User not found in DB' });
             }
 
-            user.name = name || user.name;
-            user.email = email || user.email;
-            user.phone = phone || user.phone;
+            dbUser.name = name || dbUser.name;
+            dbUser.email = email || dbUser.email;
+            dbUser.phone = phone !== undefined ? phone : dbUser.phone;
 
-            await user.save();
+            await dbUser.save();
+            updatedUser = dbUser.toObject();
+
+            console.log('[Admin Profile] DB Admin updated:', { name: dbUser.name, email: dbUser.email, phone: dbUser.phone });
+
+            // Update Session to reflect changes immediately
+            if (req.session) {
+                req.session.adminName = dbUser.name;
+                req.session.adminEmail = dbUser.email;
+                req.session.adminPhone = dbUser.phone;
+                await new Promise((resolve) => req.session.save(resolve));
+            }
         }
         // Case 2: Env-Based Admin (No DB record, just Session/Env identity)
         else {
@@ -253,12 +288,34 @@ const updateAdminProfile = async (req, res) => {
             if (req.session) {
                 req.session.adminName = name || req.user.name;
                 req.session.adminEmail = email || req.user.email;
-                req.session.adminPhone = phone || req.user.phone;
+                req.session.adminPhone = phone !== undefined ? phone : req.user.phone;
 
-                // Force save to ensure persistence before redirect/reload
-                req.session.save(err => {
-                    if (err) console.error('Session Save Error:', err);
+                // Capture updated values for response
+                updatedUser = {
+                    name: req.session.adminName,
+                    email: req.session.adminEmail,
+                    phone: req.session.adminPhone
+                };
+
+                // Await session save to ensure persistence before redirect/response
+                await new Promise((resolve, reject) => {
+                    req.session.save(err => {
+                        if (err) {
+                            console.error('Session Save Error:', err);
+                            reject(err);
+                        } else {
+                            console.log('[Admin Profile] Session saved:', {
+                                adminName: req.session.adminName,
+                                adminEmail: req.session.adminEmail,
+                                adminPhone: req.session.adminPhone
+                            });
+                            resolve();
+                        }
+                    });
                 });
+            } else {
+                // Fallback if session is missing (unlikely in admin route)
+                updatedUser = { name, email, phone };
             }
         }
 
@@ -267,10 +324,205 @@ const updateAdminProfile = async (req, res) => {
             return res.redirect('back');
         }
 
-        res.json({ success: true, user: req.user });
+        // Return updated user data (Safe for both DB and Env admins)
+        res.json({
+            success: true,
+            user: {
+                name: updatedUser.name,
+                email: updatedUser.email,
+                phone: updatedUser.phone
+            }
+        });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        console.error('Admin Profile Update Error:', error);
+        res.status(500).json({ error: 'Failed to update profile' });
+    }
+};
+
+// @desc    Render Change Password Page
+// @route   GET /admin/change-password
+const getChangePasswordPage = (req, res) => {
+    res.render('admin/change-password', { message: null, messageType: null });
+};
+
+// @desc    Handle Admin Password Change
+// @route   POST /admin/change-password
+const changeAdminPassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        // Validate new password length
+        if (!newPassword || newPassword.length < 8) {
+            return res.render('admin/change-password', {
+                message: 'New password must be at least 8 characters',
+                messageType: 'error'
+            });
+        }
+
+        // Validate passwords match
+        if (newPassword !== confirmPassword) {
+            return res.render('admin/change-password', {
+                message: 'Passwords do not match',
+                messageType: 'error'
+            });
+        }
+
+        // Case 1: DB-Based Admin
+        if (req.user && req.user._id) {
+            const user = await User.findById(req.user._id);
+            if (!user) {
+                return res.render('admin/change-password', {
+                    message: 'Admin user not found',
+                    messageType: 'error'
+                });
+            }
+
+            // Verify current password
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.render('admin/change-password', {
+                    message: 'Current password is incorrect',
+                    messageType: 'error'
+                });
+            }
+
+            // Hash and save new password
+            const salt = await bcrypt.genSalt(10);
+            user.password = await bcrypt.hash(newPassword, salt);
+            await user.save();
+
+            console.log('[Admin Password] DB Admin password updated');
+            return res.redirect('/admin/dashboard?passwordChanged=true');
+        }
+        // Case 2: Env-Based Admin - Create/update DB record for password persistence
+        else {
+            const adminEmail = req.session.adminEmail || process.env.ADMIN_EMAIL;
+            const adminName = req.session.adminName || process.env.ADMIN_NAME || 'Admin';
+
+            // Check if DB record exists for this admin email
+            let adminUser = await User.findOne({ email: adminEmail });
+
+            if (adminUser) {
+                // Admin exists in DB - verify current password against DB hash
+                const isMatch = await bcrypt.compare(currentPassword, adminUser.password);
+                if (!isMatch) {
+                    // Also check against env password for backwards compatibility
+                    const envPassword = process.env.ADMIN_PASSWORD;
+                    if (currentPassword !== envPassword) {
+                        return res.render('admin/change-password', {
+                            message: 'Current password is incorrect',
+                            messageType: 'error'
+                        });
+                    }
+                }
+
+                // Update password in DB
+                const salt = await bcrypt.genSalt(10);
+                adminUser.password = await bcrypt.hash(newPassword, salt);
+                await adminUser.save();
+
+                console.log('[Admin Password] Env-based admin password updated in DB');
+            } else {
+                // No DB record - verify against env password
+                const envPassword = process.env.ADMIN_PASSWORD;
+                if (currentPassword !== envPassword) {
+                    return res.render('admin/change-password', {
+                        message: 'Current password is incorrect',
+                        messageType: 'error'
+                    });
+                }
+
+                // Create DB record for admin with new password
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+                adminUser = new User({
+                    name: adminName,
+                    email: adminEmail,
+                    password: hashedPassword,
+                    role: 'admin',
+                    isVerified: true
+                });
+                await adminUser.save();
+
+                console.log('[Admin Password] Created DB record for env-based admin with new password');
+            }
+
+            return res.redirect('/admin/dashboard?passwordChanged=true');
+        }
+    } catch (error) {
+        console.error('Admin Password Change Error:', error);
+        return res.render('admin/change-password', {
+            message: 'An error occurred while changing password',
+            messageType: 'error'
+        });
+    }
+};
+
+// @desc    Render Add Customer Page
+// @route   GET /admin/customers/add
+const renderAddCustomerPage = (req, res) => {
+    res.render('admin/add-customer', { message: null, messageType: null });
+};
+
+// @desc    Add New Customer
+// @route   POST /admin/customers/add
+const addCustomer = async (req, res) => {
+    try {
+        const { name, email, phone, password } = req.body;
+
+        // Validate required fields
+        if (!name || !email || !password) {
+            return res.render('admin/add-customer', {
+                message: 'Name, email, and password are required',
+                messageType: 'error'
+            });
+        }
+
+        // Check if email already exists
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
+            return res.render('admin/add-customer', {
+                message: 'A user with this email already exists',
+                messageType: 'error'
+            });
+        }
+
+        // Validate password length
+        if (password.length < 8) {
+            return res.render('admin/add-customer', {
+                message: 'Password must be at least 8 characters',
+                messageType: 'error'
+            });
+        }
+
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // Create new user
+        const newUser = new User({
+            name,
+            email: email.toLowerCase(),
+            phone: phone || '',
+            password: hashedPassword,
+            role: 'user',
+            isVerified: true, // Admin-created users are pre-verified
+            deleted: false,
+            isBlocked: false
+        });
+
+        await newUser.save();
+        console.log('[Admin] New customer created:', email);
+
+        res.redirect('/admin/customers');
+    } catch (error) {
+        console.error('Add Customer Error:', error);
+        return res.render('admin/add-customer', {
+            message: 'An error occurred while adding customer',
+            messageType: 'error'
+        });
     }
 };
 
@@ -284,5 +536,9 @@ module.exports = {
     updateCustomer,
     updateAdminNotes,
     getCustomerOrders,
-    updateAdminProfile
+    updateAdminProfile,
+    getChangePasswordPage,
+    changeAdminPassword,
+    renderAddCustomerPage,
+    addCustomer
 };

@@ -3,6 +3,7 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
@@ -40,93 +41,180 @@
     </script>
 </head>
 
-<body class="bg-white font-[Inter]">
-    <div class="flex min-h-screen">
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
 
-        <!-- SIDEBAR -->
-        <%- include('../partials/admin/sidebar', { page: 'brands' }) %>
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'brands' }) %>
+            </aside>
 
-            <!-- MAIN CONTENT -->
-            <div class="flex-1 p-6 max-w-[1200px] mx-auto">
-
-                <!-- Navbar Inclusion (To match Admin Home Page Layout Requirement) -->
-                <%- include('../partials/admin/navbar') %>
-
-                    <!-- HEADER -->
-                    <div class="flex justify-between items-center mb-6 pt-6">
-                        <div>
-                            <h1 class="text-3xl font-bold text-[#121810]">Brands</h1>
-                            <p class="text-sm text-[#658d5e]">Manage product brands and their status</p>
-                        </div>
-                        <a href="/admin/brands/add" class="px-4 py-2 rounded-lg bg-[#37ff14] text-[#121810] font-bold">
-                            Add Brand
-                        </a>
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <!-- HEADER -->
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold text-[#121810]">Brands</h1>
+                        <p class="text-sm text-[#658d5e]">Manage product brands and their status</p>
                     </div>
+                    <a href="/admin/brands/add"
+                        class="px-4 py-2 rounded-lg bg-[#37ff14] text-[#121810] font-bold hover:bg-[#2ae60f] transition-colors">
+                        Add Brand
+                    </a>
+                </div>
 
-                    <!-- SEARCH -->
-                    <div class="mb-4">
-                        <input type="text" name="search" placeholder="Search brand name"
-                            class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 focus:outline-none" />
-                    </div>
+                <!-- SEARCH -->
+                <!-- SEARCH -->
+                <div class="mb-4 relative">
+                    <input type="text" name="search" placeholder="Search brand name" value="<%= locals.search || '' %>"
+                        onkeydown="handleSearch(event)"
+                        class="w-full h-12 rounded-xl bg-[#f0f5f0] pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-[#37ff14]" />
 
-                    <!-- TABLE -->
-                    <div class="overflow-hidden rounded-xl border border-[#dce7da]">
-                        <table class="w-full">
-                            <thead class="bg-white border-b">
-                                <tr>
-                                    <th class="p-3 text-left">Brand</th>
-                                    <th class="p-3 text-left">Products</th>
-                                    <th class="p-3 text-left">Status</th>
-                                    <th class="p-3 text-left">Last Updated</th>
-                                    <th class="p-3 text-left">Actions</th>
+                    <% if (locals.search) { %>
+                        <button onclick="clearSearch()"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors"
+                            title="Clear Search">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                viewBox="0 0 256 256">
+                                <path
+                                    d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
+                                </path>
+                            </svg>
+                        </button>
+                        <% } %>
+                </div>
+
+                <script>
+                    function handleSearch(e) {
+                        if (e.key === 'Enter') {
+                            const val = e.target.value.trim();
+                            if (val) {
+                                window.location.href = '?search=' + encodeURIComponent(val);
+                            } else {
+                                window.location.href = window.location.pathname;
+                            }
+                        }
+                    }
+
+                    function clearSearch() {
+                        window.location.href = window.location.pathname;
+                    }
+                </script>
+
+                <!-- TABLE -->
+                <div class="overflow-hidden rounded-xl border border-[#dce7da]">
+                    <table class="w-full">
+                        <thead class="bg-white border-b">
+                            <tr>
+                                <th class="p-3 text-left">Brand</th>
+                                <th class="p-3 text-left">Products</th>
+                                <th class="p-3 text-left">Status</th>
+                                <th class="p-3 text-left">Last Updated</th>
+                                <th class="p-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <% brands.forEach(brand=> { %>
+                                <tr class="border-t border-[#dce7da]">
+                                    <td class="p-3 flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full bg-cover bg-center <%= brand.logoUrl ? '' : 'bg-[#e0e5e0]' %>"
+                                            style="<%= brand.logoUrl ? " background-image:url('" + brand.logoUrl + "')"
+                                            : '' %>"></div>
+                                        <span class="font-medium text-[#121810]">
+                                            <%= brand.name %>
+                                        </span>
+                                    </td>
+
+                                    <td class="p-3 text-[#658d5e]">
+                                        <%= brand.productCount %>
+                                    </td>
+
+                                    <td class="p-3">
+                                        <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
+                                            <button class="px-4 py-1 rounded-lg text-sm font-medium
+                                                <%= brand.isActive ? 'bg-[#f0f5f0]' : 'bg-[#ffecec] text-red-600' %>">
+                                                <%= brand.isActive ? 'Active' : 'Inactive' %>
+                                            </button>
+                                        </form>
+                                    </td>
+
+                                    <td class="p-3 text-[#658d5e]">
+                                        <%= brand.updatedAt.toDateString() %>
+                                    </td>
+
+                                    <td class="p-3 flex gap-3 text-sm font-medium text-[#658d5e]">
+                                        <a href="/admin/brands/<%= brand._id %>">View</a>
+                                        <button type="button" class="text-red-600"
+                                            onclick="confirmBrandDelete('<%= brand._id %>')">Delete</button>
+                                        <form id="delete-form-<%= brand._id %>" method="POST"
+                                            action="/admin/brands/<%= brand._id %>/delete" style="display:none;">
+                                        </form>
+                                    </td>
                                 </tr>
-                            </thead>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
 
-                            <tbody>
-                                <% brands.forEach(brand=> { %>
-                                    <tr class="border-t border-[#dce7da]">
-                                        <td class="p-3 flex items-center gap-3">
-                                            <div class="w-10 h-10 rounded-full bg-cover bg-center"
-                                                style="background-image:url('<%= brand.logoUrl %>')"></div>
-                                            <span class="font-medium text-[#121810]">
-                                                <%= brand.name %>
+                <!-- Pagination UI -->
+                <% if (pagination && pagination.totalPages> 0) { %>
+                    <div class="flex justify-center items-center gap-2 mt-6">
+                        <!-- Previous Button -->
+                        <% if (pagination.hasPrevPage) { %>
+                            <a href="/admin/brands?page=<%= pagination.currentPage - 1 %>"
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                &laquo; Previous
+                            </a>
+                            <% } else { %>
+                                <span
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                    &laquo; Previous
+                                </span>
+                                <% } %>
+
+                                    <!-- Page Numbers -->
+                                    <div class="flex gap-1">
+                                        <% for (let i=1; i <=pagination.totalPages; i++) { %>
+                                            <% if (i===pagination.currentPage) { %>
+                                                <span
+                                                    class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#27ff14] text-[#111810] text-sm font-bold">
+                                                    <%= i %>
+                                                </span>
+                                                <% } else { %>
+                                                    <a href="/admin/brands?page=<%= i %>"
+                                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                        <%= i %>
+                                                    </a>
+                                                    <% } %>
+                                                        <% } %>
+                                    </div>
+
+                                    <!-- Next Button -->
+                                    <% if (pagination.hasNextPage) { %>
+                                        <a href="/admin/brands?page=<%= pagination.currentPage + 1 %>"
+                                            class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                            Next &raquo;
+                                        </a>
+                                        <% } else { %>
+                                            <span
+                                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                                Next &raquo;
                                             </span>
-                                        </td>
-
-                                        <td class="p-3 text-[#658d5e]">
-                                            <%= brand.productCount %>
-                                        </td>
-
-                                        <td class="p-3">
-                                            <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
-                                                <button class="px-4 py-1 rounded-lg text-sm font-medium
-                        <%= brand.isActive ? 'bg-[#f0f5f0]' : 'bg-[#ffecec] text-red-600' %>">
-                                                    <%= brand.isActive ? 'Active' : 'Inactive' %>
-                                                </button>
-                                            </form>
-                                        </td>
-
-                                        <td class="p-3 text-[#658d5e]">
-                                            <%= brand.updatedAt.toDateString() %>
-                                        </td>
-
-                                        <td class="p-3 flex gap-3 text-sm font-medium text-[#658d5e]">
-                                            <!-- View/Edit link placeholder - User asked for GET /admin/brands/:id -->
-                                            <a href="/admin/brands/<%= brand._id %>">View</a>
-
-                                            <button type="button" class="text-red-600"
-                                                onclick="confirmBrandDelete('<%= brand._id %>')">Delete</button>
-                                            <form id="delete-form-<%= brand._id %>" method="POST"
-                                                action="/admin/brands/<%= brand._id %>/delete" style="display:none;">
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    <% }) %>
-                            </tbody>
-                        </table>
+                                            <% } %>
                     </div>
 
-            </div>
+                    <!-- Pagination Info -->
+                    <p class="text-center text-sm text-[#658d5e] mt-2">
+                        Showing page <%= pagination.currentPage %> of <%= pagination.totalPages %> (<%=
+                                    pagination.totalBrands %> brands)
+                    </p>
+                    <% } %>
+            </section>
+        </main>
     </div>
 </body>
 

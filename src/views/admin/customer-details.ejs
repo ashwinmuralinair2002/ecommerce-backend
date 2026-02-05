@@ -3,14 +3,29 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
-    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
-        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
-
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
     <title>SoundWave - <%= customer.name %>
     </title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+        function confirmAction(options, callback) {
+            Swal.fire({
+                title: options.title,
+                text: options.text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: options.confirmButtonColor || '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: options.confirmButtonText
+            }).then((result) => {
+                if (result.isConfirmed) callback();
+            });
+        }
+
         async function toggleBlock(userId, currentStatus) {
             confirmAction({
                 title: currentStatus ? 'Unblock User?' : 'Block User?',
@@ -21,13 +36,13 @@
                 try {
                     const response = await fetch(`/admin/customers/${userId}/toggle-block`, { method: 'POST' });
                     if (response.ok) {
-                        showToast(`User ${currentStatus ? 'unblocked' : 'blocked'} successfully`);
+                        Swal.fire({ icon: 'success', title: 'Success', timer: 1500, showConfirmButton: false });
                         setTimeout(() => window.location.reload(), 1000);
                     } else {
-                        showError('Action Failed', 'Failed to update status');
+                        Swal.fire('Error', 'Failed to update status', 'error');
                     }
                 } catch (e) {
-                    showError('Error', 'An unexpected error occurred');
+                    Swal.fire('Error', 'An unexpected error occurred', 'error');
                 }
             });
         }
@@ -42,13 +57,13 @@
                 try {
                     const response = await fetch(`/admin/customers/${userId}/delete`, { method: 'POST' });
                     if (response.ok) {
-                        showToast('User deleted successfully');
+                        Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1500, showConfirmButton: false });
                         setTimeout(() => window.location.href = '/admin/customers', 1000);
                     } else {
-                        showError('Delete Failed', 'Failed to delete user');
+                        Swal.fire('Error', 'Failed to delete user', 'error');
                     }
                 } catch (e) {
-                    showError('Error', 'An unexpected error occurred');
+                    Swal.fire('Error', 'An unexpected error occurred', 'error');
                 }
             });
         }
@@ -62,30 +77,24 @@
                     body: JSON.stringify({ adminNotes })
                 });
                 if (response.ok) {
-                    showToast('Notes updated successfully');
+                    Swal.fire({ icon: 'success', title: 'Notes saved', timer: 1500, showConfirmButton: false });
                 } else {
-                    showError('Update Failed', 'Failed to update notes');
+                    Swal.fire('Error', 'Failed to save notes', 'error');
                 }
             } catch (e) {
-                showError('Error', 'Error updating notes');
+                Swal.fire('Error', 'Error saving notes', 'error');
             }
         }
 
         function openTab(evt, tabName) {
-            var i, tabcontent, tablinks;
-            tabcontent = document.getElementsByClassName("tabcontent");
-            for (i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].style.display = "none";
-            }
-            tablinks = document.getElementsByClassName("tablinks");
-            for (i = 0; i < tablinks.length; i++) {
-                // Very basic active state toggle logic for this implementation
-                tablinks[i].classList.remove("border-b-[#121810]", "text-[#121810]");
-                tablinks[i].classList.add("border-b-transparent", "text-[#658d5e]");
-            }
-            document.getElementById(tabName).style.display = "block";
-            evt.currentTarget.classList.remove("border-b-transparent", "text-[#658d5e]");
-            evt.currentTarget.classList.add("border-b-[#121810]", "text-[#121810]");
+            document.querySelectorAll('.tabcontent').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tablinks').forEach(el => {
+                el.classList.remove('border-b-[#121810]', 'text-[#121810]');
+                el.classList.add('border-b-transparent', 'text-[#658d5e]');
+            });
+            document.getElementById(tabName).style.display = 'block';
+            evt.currentTarget.classList.remove('border-b-transparent', 'text-[#658d5e]');
+            evt.currentTarget.classList.add('border-b-[#121810]', 'text-[#121810]');
         }
     </script>
     <style>
@@ -96,195 +105,184 @@
 </head>
 
 <body>
-    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
-        <div class="layout-container flex h-full grow flex-col">
-            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
-                <div class="layout-content-container flex flex-col w-80">
-                    <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
-                </div>
-                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
-                    <%- include('../partials/admin/navbar') %>
 
-                        <div class="flex flex-wrap gap-2 p-4">
-                            <a href="/admin/customers" class="text-[#658d5e] text-base font-medium leading-normal"
-                                href="#">Customers</a>
-                            <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
-                            <span class="text-[#121810] text-base font-medium leading-normal">
-                                <%= customer.name %>
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
+            </aside>
+
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 text-sm mb-4">
+                    <a href="/admin/customers" class="text-[#5f8c5f] hover:underline">Customers</a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-[#111811]">
+                        <%= customer.name %>
+                    </span>
+                </div>
+
+                <!-- Header -->
+                <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                    <h1 class="text-[32px] font-bold text-[#121810]">
+                        <%= customer.name %>
+                    </h1>
+                    <a href="/admin/customers/<%= customer._id %>/edit"
+                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e6f4e6] transition-colors">
+                        Edit profile
+                    </a>
+                </div>
+
+                <!-- Status Badge -->
+                <div class="flex gap-3 mb-4">
+                    <span
+                        class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium <%= customer.isBlocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' %>">
+                        <%= customer.isBlocked ? 'Blocked' : 'Active' %>
+                    </span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3 mb-6">
+                    <button onclick="toggleBlock('<%= customer._id %>', <%= customer.isBlocked %>)"
+                        class="flex items-center justify-center rounded-lg h-10 px-4 text-sm font-bold <%= customer.isBlocked ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200' %> transition-colors">
+                        <%= customer.isBlocked ? 'Unban' : 'Ban' %>
+                    </button>
+                    <button onclick="deleteUser('<%= customer._id %>')"
+                        class="flex items-center justify-center rounded-lg h-10 px-4 text-sm font-bold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
+                        Delete customer
+                    </button>
+                </div>
+
+                <!-- Tabs -->
+                <div class="border-b border-[#dce7da] mb-4">
+                    <div class="flex gap-6">
+                        <button onclick="openTab(event, 'Overview')"
+                            class="tablinks pb-3 border-b-[3px] border-b-[#121810] text-[#121810] text-sm font-bold">
+                            Overview
+                        </button>
+                        <button onclick="openTab(event, 'Orders')"
+                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#658d5e] text-sm font-bold">
+                            Orders
+                        </button>
+                        <button onclick="openTab(event, 'Addresses')"
+                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#658d5e] text-sm font-bold">
+                            Addresses
+                        </button>
+                        <button onclick="openTab(event, 'Notes')"
+                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#658d5e] text-sm font-bold">
+                            Notes
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Overview -->
+                <div id="Overview" class="tabcontent" style="display:block;">
+                    <h2 class="text-lg font-bold text-[#121810] mb-4">Contact Information</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                            <p class="text-sm text-[#658d5e] mb-1">Email</p>
+                            <p class="text-sm text-[#121810] bg-gray-100 rounded-lg px-3 py-2">
+                                <%= customer.email %>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-[#658d5e] mb-1">Phone</p>
+                            <p class="text-sm text-[#121810] bg-gray-100 rounded-lg px-3 py-2">
+                                <%= customer.phone || 'N/A' %>
+                            </p>
+                        </div>
+                    </div>
+
+                    <h2 class="text-lg font-bold text-[#121810] mb-4">Account Meta</h2>
+                    <div class="space-y-3">
+                        <div class="flex border-t border-gray-200 py-3">
+                            <span class="w-32 text-sm text-[#658d5e]">Joined</span>
+                            <span class="text-sm text-[#121810]">
+                                <%= new Date(customer.joinedDate).toLocaleDateString() %>
                             </span>
                         </div>
-                        <div class="flex flex-wrap justify-between gap-3 p-4">
-                            <p class="text-[#121810] tracking-light text-[32px] font-bold leading-tight min-w-72">
-                                <%= customer.name %>
-                            </p>
-                            <a href="/admin/customers/<%= customer._id %>/edit"
-                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-8 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-medium leading-normal">
-                                <span class="truncate">Edit profile</span>
-                            </a>
+                        <div class="flex border-t border-gray-200 py-3">
+                            <span class="w-32 text-sm text-[#658d5e]">Last Login</span>
+                            <span class="text-sm text-[#121810]">
+                                <%= customer.lastLogin ? new Date(customer.lastLogin).toLocaleDateString() : 'N/A' %>
+                            </span>
                         </div>
-                        <div class="flex gap-3 p-3 flex-wrap pr-4">
-                            <div
-                                class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl <%= customer.isBlocked ? 'bg-red-100 text-red-800' : 'bg-[#f0f5f0] text-[#121810]' %> pl-4 pr-4">
-                                <p class="text-sm font-medium leading-normal">
-                                    <%= customer.isBlocked ? 'Blocked' : 'Active' %>
-                                </p>
-                            </div>
+                        <div class="flex border-t border-gray-200 py-3">
+                            <span class="w-32 text-sm text-[#658d5e]">Total Orders</span>
+                            <span class="text-sm text-[#121810]">
+                                <%= customer.totalOrders %>
+                            </span>
                         </div>
-                        <div class="flex justify-stretch">
-                            <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
-                                <button onclick="toggleBlock('<%= customer._id %>', <%= customer.isBlocked %>)"
-                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 <%= customer.isBlocked ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %> text-sm font-bold leading-normal tracking-[0.015em]">
-                                    <span class="truncate">
-                                        <%= customer.isBlocked ? 'Unban' : 'Ban' %>
-                                    </span>
-                                </button>
-                                <button onclick="deleteUser('<%= customer._id %>')"
-                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-transparent text-red-600 text-sm font-bold leading-normal tracking-[0.015em] border border-red-200">
-                                    <span class="truncate">Delete customer</span>
-                                </button>
-                            </div>
+                        <div class="flex border-t border-gray-200 py-3">
+                            <span class="w-32 text-sm text-[#658d5e]">Lifetime Value</span>
+                            <span class="text-sm text-[#121810]">$<%= customer.lifetimeValue %></span>
                         </div>
-
-                        <div class="pb-3">
-                            <div class="flex border-b border-[#dce7da] px-4 gap-8">
-                                <button onclick="openTab(event, 'Overview')"
-                                    class="tablinks flex flex-col items-center justify-center border-b-[3px] border-b-[#121810] text-[#121810] pb-[13px] pt-4">
-                                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Overview</p>
-                                </button>
-                                <button onclick="openTab(event, 'Orders')"
-                                    class="tablinks flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#658d5e] pb-[13px] pt-4">
-                                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Orders</p>
-                                </button>
-                                <button onclick="openTab(event, 'Addresses')"
-                                    class="tablinks flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#658d5e] pb-[13px] pt-4">
-                                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Addresses</p>
-                                </button>
-                                <button onclick="openTab(event, 'Notes')"
-                                    class="tablinks flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-[#658d5e] pb-[13px] pt-4">
-                                    <p class="text-sm font-bold leading-normal tracking-[0.015em]">Notes</p>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Tab Content: Overview -->
-                        <div id="Overview" class="tabcontent" style="display:block;">
-                            <h2
-                                class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                                Contact Information</h2>
-                            <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                <label class="flex flex-col min-w-40 flex-1">
-                                    <p class="text-[#121810] text-base font-medium leading-normal pb-2">Email</p>
-                                    <input disabled
-                                        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal disabled:bg-gray-100"
-                                        value="<%= customer.email %>" />
-                                </label>
-                            </div>
-                            <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                <label class="flex flex-col min-w-40 flex-1">
-                                    <p class="text-[#121810] text-base font-medium leading-normal pb-2">Phone</p>
-                                    <input disabled
-                                        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal disabled:bg-gray-100"
-                                        value="<%= customer.phone || 'N/A' %>" />
-                                </label>
-                            </div>
-                            <h2
-                                class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                                Account Meta</h2>
-                            <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                                <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                    <p class="text-[#658d5e] text-sm font-normal leading-normal">Joined</p>
-                                    <p class="text-[#121810] text-sm font-normal leading-normal">
-                                        <%= new Date(customer.joinedDate).toLocaleDateString() %>
-                                    </p>
-                                </div>
-                                <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                    <p class="text-[#658d5e] text-sm font-normal leading-normal">Last Login</p>
-                                    <p class="text-[#121810] text-sm font-normal leading-normal">
-                                        <%= customer.lastLogin ? new Date(customer.lastLogin).toLocaleDateString()
-                                            : 'N/A' %>
-                                    </p>
-                                </div>
-                                <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                    <p class="text-[#658d5e] text-sm font-normal leading-normal">Total Orders</p>
-                                    <p class="text-[#121810] text-sm font-normal leading-normal">
-                                        <%= customer.totalOrders %>
-                                    </p>
-                                </div>
-                                <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                    <p class="text-[#658d5e] text-sm font-normal leading-normal">Lifetime Value</p>
-                                    <p class="text-[#121810] text-sm font-normal leading-normal">$<%=
-                                            customer.lifetimeValue %>
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Tab Content: Orders -->
-                        <div id="Orders" class="tabcontent">
-                            <div class="p-4 text-center text-gray-500">
-                                <p>No orders found (Placeholder: No Order Model)</p>
-                                <a href="/admin/customers/<%= customer._id %>/orders"
-                                    class="text-blue-500 hover:text-blue-700 mt-2 block">View Orders Page (Coming
-                                    Soon)</a>
-                            </div>
-                        </div>
-
-                        <!-- Tab Content: Addresses -->
-                        <div id="Addresses" class="tabcontent">
-                            <div class="p-4">
-                                <% if (customer.addresses && customer.addresses.length> 0) { %>
-                                    <% customer.addresses.forEach(addr=> { %>
-                                        <div class="border border-gray-200 rounded p-4 mb-3">
-                                            <p class="font-bold">
-                                                <%= addr.label || 'Address' %>
-                                                    <% if(addr.isDefault){ %>(Default)<% } %>
-                                            </p>
-                                            <p>
-                                                <%= addr.name %>
-                                            </p>
-                                            <p>
-                                                <%= addr.houseNo %>, <%= addr.street %>
-                                            </p>
-                                            <p>
-                                                <%= addr.city %>, <%= addr.state %>
-                                                        <%= addr.zip %>
-                                            </p>
-                                            <p>
-                                                <%= addr.country %>
-                                            </p>
-                                            <p>Phone: <%= addr.phone %>
-                                            </p>
-                                        </div>
-                                        <% }) %>
-                                            <% } else { %>
-                                                <p class="text-gray-500">No saved addresses.</p>
-                                                <% } %>
-                            </div>
-                        </div>
-
-                        <!-- Tab Content: Notes -->
-                        <div id="Notes" class="tabcontent">
-                            <div class="p-4">
-                                <label class="block mb-2 text-sm font-bold text-gray-700" for="adminNotes">
-                                    Admin Notes (Internal Use Only)
-                                </label>
-                                <textarea
-                                    class="form-textarea mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                    id="adminNotes" rows="5"
-                                    placeholder="Add internal notes about this customer..."><%= customer.adminNotes || '' %></textarea>
-                                <div class="mt-4">
-                                    <button onclick="saveNotes('<%= customer._id %>')"
-                                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                        Save Notes
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
+                    </div>
                 </div>
-            </div>
-        </div>
+
+                <!-- Tab Content: Orders -->
+                <div id="Orders" class="tabcontent">
+                    <div class="text-center py-8 text-gray-500">
+                        <p>No orders found</p>
+                        <a href="/admin/customers/<%= customer._id %>/orders"
+                            class="text-[#27ff14] hover:underline mt-2 inline-block">
+                            View Orders Page
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Addresses -->
+                <div id="Addresses" class="tabcontent">
+                    <% if (customer.addresses && customer.addresses.length> 0) { %>
+                        <div class="space-y-3">
+                            <% customer.addresses.forEach(addr=> { %>
+                                <div class="border border-gray-200 rounded-lg p-4">
+                                    <p class="font-bold text-[#121810] mb-1">
+                                        <%= addr.label || 'Address' %>
+                                            <% if(addr.isDefault){ %><span
+                                                    class="text-xs text-green-600 ml-2">(Default)</span>
+                                                <% } %>
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        <%= addr.name %>
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        <%= addr.houseNo %>, <%= addr.street %>
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        <%= addr.city %>, <%= addr.state %>
+                                                <%= addr.zip %>
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        <%= addr.country %>
+                                    </p>
+                                    <p class="text-sm text-gray-600">Phone: <%= addr.phone %>
+                                    </p>
+                                </div>
+                                <% }) %>
+                        </div>
+                        <% } else { %>
+                            <p class="text-center py-8 text-gray-500">No saved addresses.</p>
+                            <% } %>
+                </div>
+
+                <!-- Tab Content: Notes -->
+                <div id="Notes" class="tabcontent">
+                    <label class="block mb-2 text-sm font-bold text-[#121810]">Admin Notes (Internal Use Only)</label>
+                    <textarea id="adminNotes" rows="5"
+                        class="w-full rounded-lg border border-gray-200 p-3 text-sm focus:ring-2 focus:ring-[#27ff14] focus:border-transparent"
+                        placeholder="Add internal notes about this customer..."><%= customer.adminNotes || '' %></textarea>
+                    <button onclick="saveNotes('<%= customer._id %>')"
+                        class="mt-4 h-10 px-6 rounded-lg bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                        Save Notes
+                    </button>
+                </div>
+            </section>
+        </main>
     </div>
 </body>
 

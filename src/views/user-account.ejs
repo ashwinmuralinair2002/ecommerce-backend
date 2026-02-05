@@ -3,6 +3,7 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
   <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
   <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
     href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
@@ -144,51 +145,153 @@
       saveBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
       try {
-        const response = await fetch('/api/profile', {
+        let emailChanged = false;
+
+        // 1. Check & Request Email Change First
+        if (email !== originalData.email) {
+          const emailRes = await fetch('/api/profile/email/request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newEmail: email })
+          });
+          const emailResult = await emailRes.json();
+
+          if (!emailRes.ok) {
+            throw new Error(emailResult.error || 'Failed to request email change');
+          }
+          emailChanged = true;
+        }
+
+        // 2. Update Basic Profile Info (Name, Phone)
+        // We always run this to ensure name/phone updates are captured even if email also changed.
+        // We pass 'email' as originalData.email so the backend doesn't try to update it immediately, 
+        // OR we rely on the backend to ignore email if we don't send it?
+        // Let's send the *original* email in the body for the profile update part to be safe, 
+        // effectively telling the backend "keep email as is for now".
+        // Or better: Just send name and phone.
+        const profileRes = await fetch('/api/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, phone })
+          body: JSON.stringify({
+            name,
+            phone,
+            // We intentionally do NOT send 'email' here if it changed, 
+            // or we send the OLD email to satisfy any "required" checks without changing it.
+            // Assuming backend uses what's sent. 
+            // If we send new email here, backend might update it directly if not guarded.
+            // Let's rely on the fact we want to update name/phone.
+            // If we omit email, does backend complain? 
+            // checking profile.service.js: it checks `if (data.name) user.name = data.name`. 
+            // It does NOT seem to look for email in `updateProfile`. Good.
+          })
         });
 
-        const data = await response.json();
+        const profileData = await profileRes.json();
 
-        if (response.ok) {
-          showInlineMessage('Profile updated successfully', 'success');
-
-          // Update Original Data
-          originalData.name = data.name;
-          originalData.email = data.email;
-          if (data.phone) originalData.phone = data.phone;
-
-          // Return to Read-only
-          const editBtn = document.getElementById('edit-btn');
-          const actionBtns = document.getElementById('action-btns');
-
-          // Delay slightly to let user see success message before hiding edit controls
-          setTimeout(() => {
-            inputs.forEach(input => {
-              input.readOnly = true;
-              input.classList.add('bg-gray-50');
-              input.classList.remove('bg-white', 'border-green-500');
-            });
-
-            editBtn.classList.remove('hidden');
-            actionBtns.classList.add('hidden');
-          }, 1500);
-
-        } else {
-          showInlineMessage(data.error || 'Failed to update profile', 'error');
+        if (!profileRes.ok) {
+          throw new Error(profileData.error || 'Failed to update profile details');
         }
+
+        // Success!
+
+        // Update local data for Name/Phone
+        originalData.name = profileData.name;
+        if (profileData.phone) originalData.phone = profileData.phone;
+
+        if (emailChanged) {
+          // Redirect to OTP
+          window.location.href = `/verify-otp?mode=email_change`;
+          return;
+        }
+
+        showInlineMessage('Profile updated successfully', 'success');
+
+        // Logic to return to read-only mode
+        // Update Original Data
+        originalData.name = profileData.name;
+        originalData.email = profileData.email; // Should match original if not changed
+        if (profileData.phone) originalData.phone = profileData.phone;
+
+        // Return to Read-only
+        const editBtn = document.getElementById('edit-btn');
+        const actionBtns = document.getElementById('action-btns');
+
+        setTimeout(() => {
+          inputs.forEach(input => {
+            input.readOnly = true;
+            input.classList.add('bg-gray-50');
+            input.classList.remove('bg-white', 'border-green-500');
+          });
+
+          editBtn.classList.remove('hidden');
+          actionBtns.classList.add('hidden');
+        }, 1500);
+
       } catch (error) {
         console.error('Error:', error);
-        showInlineMessage('An unexpected error occurred', 'error');
+        showInlineMessage(error.message || 'An unexpected error occurred', 'error');
       } finally {
-        // Re-enable button
+        // Re-enable button if we didn't redirect
         if (saveBtn) {
           saveBtn.disabled = false;
           saveBtn.textContent = 'Save';
           saveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         }
+      }
+    }
+    async function uploadProfilePhoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      // Validate Type
+      if (!['image/jpeg', 'image/jpg'].includes(file.type)) {
+        showInlineMessage('Only JPG/JPEG images are allowed', 'error');
+        input.value = ''; // Reset
+        return;
+      }
+
+      // Validate Size (2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        showInlineMessage('Image size must be less than 2MB', 'error');
+        input.value = ''; // Reset
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('profileImage', file);
+
+      const statusEl = document.getElementById('upload-status');
+      statusEl.textContent = 'Uploading...';
+      statusEl.classList.remove('hidden', 'text-red-500', 'text-green-600');
+      statusEl.classList.add('text-blue-600');
+
+      try {
+        const response = await fetch('/api/profile/upload-photo', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Update Image Preview
+          document.getElementById('profile-image-preview').src = data.profileImage;
+          statusEl.textContent = 'Photo updated successfully';
+          statusEl.classList.remove('text-blue-600');
+          statusEl.classList.add('text-green-600');
+          setTimeout(() => statusEl.classList.add('hidden'), 3000);
+          showInlineMessage('Profile photo updated', 'success');
+        } else {
+          throw new Error(data.error || 'Upload failed');
+        }
+      } catch (error) {
+        console.error('Upload Error:', error);
+        statusEl.textContent = 'Upload failed';
+        statusEl.classList.remove('text-blue-600');
+        statusEl.classList.add('text-red-500');
+        showInlineMessage(error.message, 'error');
+      } finally {
+        input.value = ''; // Reset for re-selection
       }
     }
   </script>
@@ -198,22 +301,57 @@
   <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
     style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
 
-    <!-- ================= HEADER ================= -->
-    <header class="flex items-center justify-between border-b border-[#e6f4e6] px-10 py-3">
-      <div class="flex items-center gap-4 text-[#0d1c0d]">
-        <div class="size-4">
-          <svg viewBox="0 0 48 48" fill="currentColor">
-            <path
-              d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z" />
-          </svg>
-        </div>
-        <h2 class="text-lg font-bold">SoundWave</h2>
+    <!-- ================= NAVBAR ================= -->
+    <header class="flex items-center justify-between border-b border-[#e7f4e7] px-10 py-3 bg-white">
+      <div class="flex items-center gap-10">
+        <!-- Logo -->
+        <a href="/home" class="flex items-center gap-3 text-[#0d1c0d] hover:opacity-80 transition-opacity">
+          <div class="size-4">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134
+              C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462
+              C2.19985 28.361 1.76794 23.9758 2.60947 19.7452
+              C3.451 15.5145 5.52816 11.6284 8.57829 8.5783
+              C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948
+              C23.9758 1.76795 28.361 2.19986 32.3462 3.85057
+              C36.3314 5.50129 39.7376 8.29668 42.134 11.8833
+              C44.5305 15.4698 45.8096 19.6865 45.8096 24
+              L24 24 L24 45.8096Z" fill="currentColor" />
+            </svg>
+          </div>
+          <span class="font-bold text-lg">SoundWave</span>
+        </a>
+
+        <!-- Menu -->
+        <nav class="flex gap-8 text-sm font-medium text-[#0d1c0d]">
+          <a href="/deals">Today's Deals</a>
+          <a href="/best-sellers">Best Sellers</a>
+          <a href="/new-arrivals">New Arrivals</a>
+          <a href="/brands">Brands</a>
+        </nav>
       </div>
 
+      <!-- Right -->
       <div class="flex items-center gap-4">
-        <input placeholder="Search" class="h-10 w-56 rounded-lg bg-[#e6f4e6] px-4 text-sm focus:outline-none" />
-        <button class="h-10 w-10 rounded-lg bg-[#e6f4e6]">🛒</button>
-        <div class="h-10 w-10 rounded-full bg-[#e6f4e6] flex items-center justify-center">👤</div>
+        <div class="relative">
+          <input type="text" placeholder="Search"
+            class="h-10 w-56 rounded-lg bg-[#e7f4e7] pl-10 pr-4 text-sm placeholder:text-[#499c49] focus:outline-none" />
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-[#499c49]" xmlns="http://www.w3.org/2000/svg"
+            width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
+            <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32Z" />
+          </svg>
+        </div>
+
+        <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">❤️</button>
+        <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">🛒</button>
+        <a href="/account"
+          class="h-10 w-10 rounded-full bg-[#e7f4e7] flex items-center justify-center ring-2 ring-green-500 overflow-hidden">
+          <% if (user && user.profileImage) { %>
+            <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
+            <% } else { %>
+              👤
+              <% } %>
+        </a>
       </div>
     </header>
 
@@ -238,16 +376,39 @@
       <section class="flex-1 bg-white rounded-lg p-6">
         <h1 class="text-2xl font-bold mb-6">Account Details</h1>
 
-        <h3 class="font-bold mb-3">Profile Photo</h3>
-        <div class="border-2 border-dashed rounded-lg p-10 text-center mb-6">
-          <p class="font-medium">Upload Profile Photo</p>
-          <button class="mt-4 px-4 py-2 rounded-lg bg-[#e6f4e6]">Upload</button>
+        <div class="flex items-center gap-6 mb-8">
+          <div class="relative group">
+            <div class="h-24 w-24 rounded-full overflow-hidden border-2 border-green-100 ring-2 ring-green-50">
+              <img id="profile-image-preview"
+                src="<%= user.profileImage || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name) + '&background=random' %>"
+                alt="Profile Photo" class="h-full w-full object-cover" />
+            </div>
+            <label for="profile-upload"
+              class="absolute bottom-0 right-0 h-8 w-8 bg-green-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-700 transition-colors shadow-lg border-2 border-white">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </label>
+            <input type="file" id="profile-upload" accept="image/jpeg, image/jpg" class="hidden"
+              onchange="uploadProfilePhoto(this)" />
+          </div>
+          <div>
+            <h3 class="font-bold text-lg">
+              <%= user.name %>
+            </h3>
+            <p class="text-sm text-gray-500">
+              <%= user.email %>
+            </p>
+            <p id="upload-status" class="text-xs text-green-600 font-medium mt-1 hidden">Uploading...</p>
+          </div>
         </div>
 
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold">Personal Information</h3>
-          <button id="edit-btn" onclick="toggleEdit()" class="text-sm text-green-600 font-bold hover:underline">Edit
-            Profile</button>
           <div id="action-btns" class="hidden flex gap-2">
             <button onclick="saveProfile()" class="text-sm text-green-600 font-bold hover:underline">Save</button>
             <button onclick="cancelEdit()" class="text-sm text-gray-500 font-bold hover:underline">Cancel</button>
@@ -264,6 +425,18 @@
             value="<%= user.email %>" readonly />
           <input name="phone" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50 text-gray-500"
             placeholder="Phone Number" value="<%= user.phone || '' %>" readonly />
+
+          <!-- Action Buttons (Change Password & Edit Profile) -->
+          <div class="pt-4 flex flex-col sm:flex-row gap-3">
+            <a href="/account/change-password"
+              class="flex-1 flex items-center justify-center h-10 rounded-lg bg-green-100 text-green-700 font-bold hover:bg-green-200 transition-colors">
+              Change Password
+            </a>
+            <button id="edit-btn" onclick="toggleEdit()"
+              class="flex-1 h-10 rounded-lg bg-green-100 text-green-700 font-bold hover:bg-green-200 transition-colors">
+              Edit Profile
+            </button>
+          </div>
 
           <!-- Delete Account Button (Repositioned) -->
           <div class="pt-4">

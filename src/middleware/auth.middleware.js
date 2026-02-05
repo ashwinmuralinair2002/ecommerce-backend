@@ -5,50 +5,64 @@ const User = require('../models/user.model');
 const verifyToken = async (req, res, next) => {
     let token;
 
-    if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith('Bearer')
-    ) {
+    // 1. Check Bearer Header
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
             token = req.headers.authorization.split(' ')[1];
-            try {
-                const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-                // Handle Hardcoded Admin
-                if (decoded.role === 'admin' && decoded.id === 'admin') {
-                    req.user = { id: 'admin', role: 'admin', name: 'Ashwin Murali Nair', email: process.env.ADMIN_EMAIL };
-                    return next();
-                }
-
-                // Optional: Fetch user to check isBlocked status dynamically
-                // This makes every request hit DB but improves security for blocking active users
-                const user = await User.findById(decoded.id).select('-password');
-
-                if (!user) {
-                    return res.status(401).json({ error: 'User not found' });
-                }
-
-                if (user.isBlocked) {
-                    return res.status(403).json({ error: 'User account is blocked' });
-                }
-
-                req.user = user; // Attach full user object
-                next();
-            } catch (error) {
-                if (error.name === 'TokenExpiredError') {
-                    return res.status(401).json({ error: 'Token expired' });
-                }
-                return res.status(401).json({ error: 'Not authorized, token failed' });
-            }
         } catch (error) {
-            console.error(error);
-            return res.status(401).json({ error: 'Not authorized, token failed' });
+            // Ignore format errors here, we'll check token validity later
         }
     }
 
-    if (!token) {
-        return res.status(401).json({ error: 'No token provided, authorization denied' });
+    // 2. Check Cookie
+    if (!token && req.cookies && req.cookies.token) {
+        token = req.cookies.token;
     }
+
+    // 3. Verify Token if found
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+
+            // Handle Hardcoded Admin
+            if (decoded.role === 'admin' && decoded.id === 'admin') {
+                req.user = { id: 'admin', role: 'admin', name: 'Ashwin Murali Nair', email: process.env.ADMIN_EMAIL };
+                return next();
+            }
+
+            // Fetch User
+            const user = await User.findById(decoded.id).select('-password');
+            if (user) {
+                if (user.isBlocked) {
+                    return res.status(403).json({ error: 'User account is blocked' });
+                }
+                req.user = user;
+                return next();
+            }
+        } catch (error) {
+            // If token is invalid/expired, we might still fall back to Session (Google Auth) below?
+            // Actually, if a token is PRESENT but invalid, we usually reject.
+            // But if user has an old token cookie AND a valid passport session... 
+            // Better to reject if explicit token fails.
+            if (error.name === 'TokenExpiredError') {
+                // Try to support session fallback if token expired?
+                // No, standard practice: bad token = 401.
+                return res.status(401).json({ error: 'Token expired' });
+            }
+        }
+    }
+
+    // 4. Check Passport Session (Google Auth / Session Auth)
+    if (req.isAuthenticated && req.isAuthenticated()) {
+        if (req.user) {
+            if (req.user.isBlocked) {
+                return res.status(403).json({ error: 'User account is blocked' });
+            }
+            return next();
+        }
+    }
+
+    return res.status(401).json({ error: 'No token provided, authorization denied' });
 };
 
 const isAdmin = async (req, res, next) => {

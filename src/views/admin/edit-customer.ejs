@@ -3,6 +3,7 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Space+Grotesk%3Awght%40400%3B500%3B700" />
@@ -34,28 +35,37 @@
 
                     <form action="/admin/customers/<%= customer._id %>/update" method="POST">
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                            <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Full Name</p>
-                                <input name="name"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
-                                    value="<%= customer.name || '' %>" required />
-                            </label>
+                            <!-- NAME -->
+                            <div class="relative w-full">
+                                <input name="name" id="name" value="<%= customer.name %>" required
+                                    placeholder="Full Name"
+                                    class="peer form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 pt-4 placeholder-transparent px-4 text-base font-normal leading-normal" />
+                                <label for="name"
+                                    class="absolute left-4 top-1 text-xs text-[#658d5e] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#658d5e] pointer-events-none">Full
+                                    Name</label>
+                            </div>
                         </div>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                            <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Email</p>
-                                <input name="email" type="email"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
-                                    value="<%= customer.email || '' %>" required />
-                            </label>
+                            <!-- EMAIL -->
+                            <div class="relative w-full">
+                                <input name="email" id="email" value="<%= customer.email %>" required
+                                    placeholder="Email Address"
+                                    class="peer form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 pt-4 placeholder-transparent px-4 text-base font-normal leading-normal" />
+                                <label for="email"
+                                    class="absolute left-4 top-1 text-xs text-[#658d5e] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#658d5e] pointer-events-none">Email
+                                    Address</label>
+                            </div>
                         </div>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                            <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#111811] text-base font-medium leading-normal pb-2">Phone Number</p>
-                                <input name="phone"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-[#dbe6db] h-14 placeholder:text-[#5f8c5f] p-[15px] text-base font-normal leading-normal"
-                                    value="<%= customer.phone || '' %>" />
-                            </label>
+                            <!-- PHONE -->
+                            <div class="relative w-full">
+                                <input name="phone" id="phone" value="<%= customer.phone || '' %>"
+                                    placeholder="Phone Number"
+                                    class="peer form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 pt-4 placeholder-transparent px-4 text-base font-normal leading-normal" />
+                                <label for="phone"
+                                    class="absolute left-4 top-1 text-xs text-[#658d5e] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#658d5e] pointer-events-none">Phone
+                                    Number</label>
+                            </div>
                         </div>
 
                         <div class="flex justify-center">

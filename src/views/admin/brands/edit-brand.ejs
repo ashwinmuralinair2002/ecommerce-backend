@@ -3,99 +3,122 @@
 <html>
 
 <head>
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
     <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
-    <title>SoundWave - Edit Brand</title>
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
+    <title>Admin · Edit Brand</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
 <body>
-    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
-        <div class="layout-container flex h-full grow flex-col">
-            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
-                <div class="layout-content-container flex flex-col w-80">
-                    <%- include('../../partials/admin/sidebar', { page: 'brands' }) %>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../../partials/admin/sidebar', { page: 'brands' }) %>
+            </aside>
+
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 text-sm mb-4">
+                    <a href="/admin/brands" class="text-[#5f8c5f] hover:underline">Brands</a>
+                    <span class="text-gray-400">/</span>
+                    <a href="/admin/brands/<%= brand._id %>" class="text-[#5f8c5f] hover:underline">
+                        <%= brand.name %>
+                    </a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-[#111811]">Edit</span>
                 </div>
-                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
-                    <%- include('../../partials/admin/navbar') %>
 
-                        <div class="max-w-[512px] p-4">
-                            <h2
-                                class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] pb-3 pt-5">
-                                Edit Brand</h2>
+                <h1 class="text-[32px] font-bold text-[#121811] mb-6">Edit Brand</h1>
 
-                            <form action="/admin/brands/<%= brand._id %>/edit" method="POST"
-                                enctype="multipart/form-data">
-                                <div class="flex flex-col gap-4 py-3">
-                                    <label class="flex flex-col w-full">
-                                        <p class="text-[#121810] text-base font-medium leading-normal pb-2">Brand Name
-                                        </p>
-                                        <input name="name" value="<%= brand.name %>" required
-                                            class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal" />
-                                    </label>
+                <form action="/admin/brands/<%= brand._id %>/edit" method="POST" enctype="multipart/form-data"
+                    class="max-w-lg space-y-5">
 
-                                    <label class="flex flex-col w-full">
-                                        <p class="text-[#121810] text-base font-medium leading-normal pb-2">Description
-                                        </p>
-                                        <textarea name="description"
-                                            class="form-textarea flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-24 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"><%= brand.description || '' %></textarea>
-                                    </label>
+                    <!-- Brand Name -->
+                    <div>
+                        <label class="block text-sm text-[#628d5e] mb-1">Brand Name <span
+                                class="text-red-500">*</span></label>
+                        <input type="text" name="name" required value="<%= brand.name %>"
+                            class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                            placeholder="Enter brand name" />
+                    </div>
 
-                                    <div class="flex flex-col gap-4 border border-[#dce7da] rounded-xl p-4 bg-gray-50">
-                                        <p class="text-[#121810] text-base font-medium leading-normal">Brand Logo</p>
+                    <!-- Description -->
+                    <div>
+                        <label class="block text-sm text-[#628d5e] mb-1">Description</label>
+                        <textarea name="description" rows="3"
+                            class="w-full rounded-xl bg-[#f0f5f0] px-4 py-3 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                            placeholder="Enter brand description"><%= brand.description || '' %></textarea>
+                    </div>
 
-                                        <!-- Current Logo Preview -->
-                                        <% if (brand.logoUrl) { %>
-                                            <div
-                                                class="w-full flex justify-center py-2 bg-white rounded-lg border border-gray-100">
-                                                <img src="<%= brand.logoUrl %>" alt="Current Logo"
-                                                    class="h-16 object-contain">
-                                            </div>
-                                            <% } %>
+                    <!-- Brand Logo Section -->
+                    <div class="bg-[#f8fcf8] rounded-xl p-5 border border-[#dce7da]">
+                        <p class="text-[#121810] font-medium mb-3">Brand Logo</p>
 
-                                                <label class="flex flex-col w-full">
-                                                    <span
-                                                        class="text-xs font-semibold text-[#658d5e] uppercase tracking-wide mb-1">Upload
-                                                        New Logo (File)</span>
-                                                    <input type="file" name="logo" accept="image/*"
-                                                        class="block w-full text-sm text-[#121810] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#121810] hover:file:bg-[#dce7da]" />
-                                                </label>
-
-                                                <div class="relative">
-                                                    <div class="absolute inset-0 flex items-center" aria-hidden="true">
-                                                        <div class="w-full border-t border-gray-300"></div>
-                                                    </div>
-                                                    <div class="relative flex justify-center">
-                                                        <span class="bg-gray-50 px-2 text-sm text-gray-500">OR</span>
-                                                    </div>
-                                                </div>
-
-                                                <label class="flex flex-col w-full">
-                                                    <span
-                                                        class="text-xs font-semibold text-[#658d5e] uppercase tracking-wide mb-1">Update
-                                                        Logo URL</span>
-                                                    <input name="logoUrl" type="url"
-                                                        placeholder="https://example.com/logo.png"
-                                                        value="<%= brand.logoUrl && brand.logoUrl.startsWith('http') ? brand.logoUrl : '' %>"
-                                                        class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-12 px-4 text-base font-normal leading-normal" />
-                                                </label>
-                                    </div>
-
-                                    <div class="flex gap-3 justify-end pt-4">
-                                        <a href="/admin/brands"
-                                            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-5 bg-[#f0f5f0] text-[#121810] text-base font-bold leading-normal tracking-[0.015em]">Cancel</a>
-                                        <button type="submit"
-                                            class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-5 bg-[#37ff14] text-[#121810] text-base font-bold leading-normal tracking-[0.015em]">Update
-                                            Brand</button>
-                                    </div>
+                        <!-- Current Logo Preview -->
+                        <% if (brand.logoUrl) { %>
+                            <div class="mb-4 p-3 bg-white rounded-lg border border-gray-100 flex justify-center">
+                                <img src="<%= brand.logoUrl %>" alt="Current Logo" class="h-20 object-contain">
+                            </div>
+                            <% } else { %>
+                                <div
+                                    class="mb-4 p-3 bg-white rounded-lg border border-dashed border-gray-300 text-center">
+                                    <p class="text-sm text-gray-400">No logo uploaded</p>
                                 </div>
-                            </form>
-                        </div>
-                </div>
-            </div>
-        </div>
+                                <% } %>
+
+                                    <!-- Upload New Logo -->
+                                    <label class="block mb-3">
+                                        <span
+                                            class="text-xs font-semibold text-[#658d5e] uppercase tracking-wide mb-1 block">Upload
+                                            New Logo (JPG, PNG, WEBP - max 2MB)</span>
+                                        <input type="file" name="logo"
+                                            accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                            class="block w-full text-sm text-[#121810] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#121810] hover:file:bg-[#dce7da]" />
+                                    </label>
+
+                                    <!-- Divider -->
+                                    <div class="relative my-3">
+                                        <div class="absolute inset-0 flex items-center">
+                                            <div class="w-full border-t border-gray-200"></div>
+                                        </div>
+                                        <div class="relative flex justify-center">
+                                            <span class="bg-[#f8fcf8] px-2 text-sm text-gray-400">OR</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Logo URL -->
+                                    <div>
+                                        <label
+                                            class="block text-xs font-semibold text-[#658d5e] uppercase tracking-wide mb-1">Logo
+                                            URL</label>
+                                        <input type="url" name="logoUrl"
+                                            value="<%= brand.logoUrl && brand.logoUrl.startsWith('http') ? brand.logoUrl : '' %>"
+                                            class="w-full h-10 rounded-xl bg-white px-4 border border-[#dce7da] text-[#111810] focus:ring-2 focus:ring-[#27ff14] text-sm"
+                                            placeholder="https://example.com/logo.png" />
+                                    </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit"
+                            class="h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                            Update Brand
+                        </button>
+                        <a href="/admin/brands/<%= brand._id %>"
+                            class="h-10 px-6 rounded-xl bg-[#f0f5f0] font-bold text-[#111810] hover:bg-[#e0e5e0] transition-colors flex items-center">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </section>
+        </main>
     </div>
 </body>
 

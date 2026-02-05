@@ -1,0 +1,13 @@
+
+const registerUser = async (userData) => {
+    throw new Error("RADICAL_OVERWRITE_TEST");
+};
+
+module.exports = {
+    registerUser,
+    loginUser: () => { },
+    verifyOtp: () => { },
+    resendOtp: () => { },
+    forgotPassword: () => { },
+    resetPassword: () => { }
+};

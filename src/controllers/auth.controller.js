@@ -1,6 +1,7 @@
 // Authentication controller handling signup, login, and OTP
 const { validationResult } = require('express-validator');
 const authService = require('../services/auth.service');
+console.log('--- AUTH CONTROLLER LOADING: faa11254 ---');
 
 // @desc    Register a new user
 // @route   POST /api/auth/signup
@@ -14,10 +15,15 @@ const signup = async (req, res) => {
     }
 
     try {
+        console.log('[DEBUG] registerUser SOURCE:', authService.registerUser.toString());
         const user = await authService.registerUser(req.body);
-        res.status(201).json({
-            message: 'User registered successfully',
-            user,
+        console.log('[DEBUG] User object from service:', JSON.stringify(user, null, 2));
+        req.session.otpEmail = req.body.email;
+        req.session.save(() => {
+            res.status(201).json({
+                message: 'User registered successfully',
+                user,
+            });
         });
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -74,6 +80,9 @@ const verifyOtp = async (req, res) => {
 
     try {
         const result = await authService.verifyOtp(email, otp);
+        if (req.session.otpEmail) {
+            req.session.otpEmail = null;
+        }
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -93,7 +102,10 @@ const resendOtp = async (req, res) => {
         if (result.error) {
             return res.status(429).json(result); // Handle cooldown specifically if we returned object
         }
-        res.status(200).json(result);
+        req.session.otpEmail = email;
+        req.session.save(() => {
+            res.status(200).json(result);
+        });
     } catch (error) {
         if (error.message.includes('wait')) {
             return res.status(429).json({ error: error.message });
@@ -118,7 +130,10 @@ const forgotPassword = async (req, res) => {
 
     try {
         const result = await authService.forgotPassword(email);
-        res.status(200).json(result);
+        req.session.otpEmail = email;
+        req.session.save(() => {
+            res.status(200).json(result);
+        });
     } catch (error) {
         // In prod, return 200 even if user not found to prevent enumeration
         // But for this specific task requirement "Invalid email", we return specific error or 404

@@ -1,31 +1,72 @@
 // Utility service for sending emails via Nodemailer
 const nodemailer = require('nodemailer');
 
-const sendEmail = async (to, subject, text) => {
+// Diagnostic: Log environment variable status (without revealing secrets)
+const logEnvStatus = () => {
+    console.log('[EMAIL DIAG] Environment Variables:');
+    console.log('  SMTP_HOST:', process.env.SMTP_HOST ? '✓ Set' : '✗ MISSING');
+    console.log('  SMTP_PORT:', process.env.SMTP_PORT ? `✓ Set (${process.env.SMTP_PORT})` : '✗ MISSING');
+    console.log('  SMTP_USER:', process.env.SMTP_USER ? '✓ Set' : '✗ MISSING');
+    console.log('  SMTP_PASS:', process.env.SMTP_PASS ? '✓ Set' : '✗ MISSING');
+    console.log('  EMAIL_FROM:', process.env.EMAIL_FROM ? `✓ Set (${process.env.EMAIL_FROM})` : '✗ MISSING');
+    console.log('  DEV_OTP_CONSOLE:', process.env.DEV_OTP_CONSOLE || 'Not set');
+};
+
+const sendEmail = async (to, subject, text, otp = null) => {
+    console.log(`[OTP] Attempting to send email via transporter`);
+    logEnvStatus();
+
     try {
-        // Create Transporter
-        // Ideally, use environment variables
+        // Create Transporter (Brevo SMTP)
+        console.log('[EMAIL DIAG] Creating Nodemailer transporter...');
         const transporter = nodemailer.createTransport({
-            service: 'gmail', // or use host/port
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT, // 587
+            secure: false, // true for 465, false for other ports
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS.replace(/\s+/g, '') // Remove spaces from App Password
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS
             }
         });
+        console.log('[EMAIL DIAG] Transporter created successfully');
 
         const mailOptions = {
-            from: process.env.EMAIL_USER,
+            from: `"SoundWave" <${process.env.EMAIL_FROM}>`,
             to,
             subject,
             text
         };
 
+        console.log(`[EMAIL DIAG] Sending email to: ${to}`);
+        console.log(`[EMAIL DIAG] Subject: ${subject}`);
+
         const info = await transporter.sendMail(mailOptions);
-        console.log('Email sent: ' + info.response);
+
+        console.log(`[EMAIL SUCCESS] Message ID: ${info.messageId}`);
+        console.log(`[EMAIL SUCCESS] Response: ${info.response}`);
+        console.log(`[EMAIL SUCCESS] Accepted: ${info.accepted}`);
+        console.log(`[EMAIL SUCCESS] Rejected: ${info.rejected}`);
+
+        // DEV_OTP_CONSOLE fallback (print anyway on success if enabled)
+        if (process.env.DEV_OTP_CONSOLE === 'true' && otp) {
+            console.log(`\n[DEV OTP FALLBACK] OTP for ${to} is: ${otp}\n`);
+        }
+
         return info;
     } catch (error) {
-        console.error('Error sending email:', error);
-        throw new Error('Email functionality failed');
+        console.error('[EMAIL ERROR] Full error object:', error);
+        console.error('[EMAIL ERROR] Error name:', error.name);
+        console.error('[EMAIL ERROR] Error message:', error.message);
+        console.error('[EMAIL ERROR] Error code:', error.code);
+        console.error('[EMAIL ERROR] Error response:', error.response);
+        console.error('[EMAIL ERROR] SMTP Response Code:', error.responseCode);
+
+        // DEV_OTP_CONSOLE fallback on error
+        if (otp) {
+            console.log(`\n[DEV OTP FALLBACK] Email failed! OTP for ${to} is: ${otp}\n`);
+        }
+
+        throw new Error(`Email functionality failed: ${error.message}`);
     }
 };
 

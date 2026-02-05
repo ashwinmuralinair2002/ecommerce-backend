@@ -3,6 +3,7 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
@@ -78,10 +79,12 @@
                 }
 
                 // Success
+                if (data.devOtp) {
+                    alert(`[DEV MODE] Your OTP is: ${data.devOtp}`);
+                }
                 showMessage('Account created successfully! Redirecting to OTP...', 'success');
-                const redirectEmail = (data.user && data.user.email) ? data.user.email : email;
                 setTimeout(() => {
-                    window.location.href = `/verify-otp?email=${encodeURIComponent(redirectEmail)}`;
+                    window.location.href = `/verify-otp`;
                 }, 1500);
 
             } catch (error) {
@@ -118,25 +121,87 @@
                     Create Account
                 </h2>
 
-                <input class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
-                    placeholder="First Name" />
+                <div class="relative mb-3">
+                    <input id="firstName"
+                        class="peer form-input w-full h-14 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4 pt-4 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]"
+                        placeholder="First Name" />
+                    <label for="firstName"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
+                        First Name
+                    </label>
+                </div>
 
-                <input class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
-                    placeholder="Last Name" />
+                <div class="relative mb-3">
+                    <input id="lastName"
+                        class="peer form-input w-full h-14 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4 pt-4 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]"
+                        placeholder="Last Name" />
+                    <label for="lastName"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
+                        Last Name
+                    </label>
+                </div>
 
-                <input class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
-                    placeholder="Email / Phone" />
+                <div class="relative mb-3">
+                    <input id="email"
+                        class="peer form-input w-full h-14 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4 pt-4 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]"
+                        placeholder="Email / Phone" />
+                    <label for="email"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
+                        Email / Phone
+                    </label>
+                </div>
 
-                <input type="password"
-                    class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
-                    placeholder="Password" />
+                <div class="relative mb-3">
+                    <input type="password" id="password"
+                        class="peer form-input w-full h-14 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4 pt-4 pr-10 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]"
+                        placeholder="Password" />
+                    <label for="password"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
+                        Password
+                    </label>
+                    <button type="button" onclick="togglePasswordVisibility('password', 'signup-pass-icon')"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-[#658d5e] hover:text-[#499c49] focus:outline-none p-1">
+                        <span id="signup-pass-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
 
-                <input type="password"
-                    class="form-input w-full h-14 mb-3 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
-                    placeholder="Confirm Password" />
+                <div class="relative mb-3">
+                    <input type="password" id="confirmPassword"
+                        class="peer form-input w-full h-14 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4 pt-4 pr-10 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]"
+                        placeholder="Confirm Password" />
+                    <label for="confirmPassword"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
+                        Confirm Password
+                    </label>
+                    <button type="button" onclick="togglePasswordVisibility('confirmPassword', 'signup-confirm-icon')"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-[#658d5e] hover:text-[#499c49] focus:outline-none p-1">
+                        <span id="signup-confirm-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
 
-                <input class="form-input w-full h-14 mb-5 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4"
-                    placeholder="Have a referral code? (optional)" />
+                <div class="relative mb-5">
+                    <input id="referralCode"
+                        class="peer form-input w-full h-14 rounded-lg border border-[#cee8ce] bg-[#f8fcf8] px-4 pt-4 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]"
+                        placeholder="Have a referral code? (optional)" />
+                    <label for="referralCode"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
+                        Have a referral code? (optional)
+                    </label>
+                </div>
 
                 <button id="signup-submit-btn"
                     class="w-full h-10 rounded-lg bg-[#0df20d] text-sm font-bold text-[#0d1c0d] mb-3">

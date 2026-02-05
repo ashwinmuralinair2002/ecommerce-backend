@@ -3,11 +3,13 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
     <title>SoundWave | Login</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="/js/utils.js"></script>
     <script>
         async function handleLogin() {
             // Clear previous messages
@@ -16,9 +18,9 @@
             msgContainer.textContent = '';
             msgContainer.className = 'hidden mt-4 p-3 rounded-lg text-sm font-medium text-center transition-all duration-300';
 
-            const emailInput = document.querySelector('input[type="text"]');
-            const passwordInput = document.querySelector('input[type="password"]');
-            const submitButton = document.querySelector('button.bg-\\[\\#0df20d\\]');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const submitButton = document.getElementById('loginBtn');
 
             const email = emailInput.value.trim();
             const password = passwordInput.value;
@@ -86,7 +88,7 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const submitButton = document.querySelector('button.bg-\\[\\#0df20d\\]');
+            const submitButton = document.getElementById('loginBtn');
             if (submitButton) {
                 submitButton.addEventListener('click', (e) => {
                     e.preventDefault(); // Prevent implicit form submission if any
@@ -178,23 +180,36 @@
                     Log in to SoundWave
                 </h2>
 
-                <div class="mb-4">
-                    <label class="block text-base font-medium text-[#0d1c0d] mb-2">
+                <div class="relative mb-4">
+                    <input type="text" id="email" placeholder="Email / Phone Number"
+                        class="peer form-input w-full rounded-lg border border-[#cee8ce] bg-[#f8fcf8] h-14 px-4 pt-4 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]" />
+                    <label for="email"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
                         Email / Phone Number
                     </label>
-                    <input type="text" placeholder="Enter your email or phone number"
-                        class="form-input w-full rounded-lg border border-[#cee8ce] bg-[#f8fcf8] h-14 px-4 text-base placeholder:text-[#499c49]" />
                 </div>
 
-                <div class="mb-6">
-                    <label class="block text-base font-medium text-[#0d1c0d] mb-2">
+                <div class="relative mb-6">
+                    <input type="password" id="password" placeholder="Password"
+                        class="peer form-input w-full rounded-lg border border-[#cee8ce] bg-[#f8fcf8] h-14 px-4 pt-4 pr-10 text-base placeholder-transparent focus:outline-none focus:border-[#499c49]" />
+                    <label for="password"
+                        class="absolute left-4 top-1 text-xs text-[#499c49] transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-[#499c49] pointer-events-none">
                         Password
                     </label>
-                    <input type="password" placeholder="Enter your password"
-                        class="form-input w-full rounded-lg border border-[#cee8ce] bg-[#f8fcf8] h-14 px-4 text-base placeholder:text-[#499c49]" />
+                    <button type="button" onclick="togglePasswordVisibility('password', 'login-pass-icon')"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 text-[#658d5e] hover:text-[#499c49] focus:outline-none p-1">
+                        <span id="login-pass-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </span>
+                    </button>
                 </div>
 
-                <button class="w-full h-10 rounded-lg bg-[#0df20d] text-sm font-bold text-[#0d1c0d] mb-3">
+                <button id="loginBtn" class="w-full h-10 rounded-lg bg-[#0df20d] text-sm font-bold text-[#0d1c0d] mb-3">
                     Log In
                 </button>
 

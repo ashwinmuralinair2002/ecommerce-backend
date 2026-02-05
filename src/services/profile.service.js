@@ -1,6 +1,7 @@
 // User profile and address management service
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
+const emailService = require('./email.service');
 
 // Get Profile
 const getProfile = async (userId) => {
@@ -20,12 +21,15 @@ const updateProfile = async (userId, data) => {
 
     if (data.name) user.name = data.name;
     if (data.phone) user.phone = data.phone;
+    if (data.profileImage) user.profileImage = data.profileImage;
 
     await user.save();
     return {
         id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
+        profileImage: user.profileImage,
         addresses: user.addresses
     };
 };
@@ -47,7 +51,18 @@ const requestEmailChange = async (userId, newEmail) => {
     user.emailChangeOtpExpires = Date.now() + 10 * 60 * 1000;
 
     await user.save();
-    return { message: 'OTP sent to new email', otp }; // Return OTP for testing
+
+    // Send OTP to NEW email address
+    console.log(`[OTP] Request started for email: ${newEmail}`);
+    console.log(`[OTP] Generated OTP: ${otp}`);
+    await emailService.sendEmail(
+        newEmail,
+        'Email Change Verification Code',
+        `Your email change verification code is ${otp}. It expires in 10 minutes.`,
+        otp
+    );
+
+    return { message: 'OTP sent to new email' };
 };
 
 // Verify Email Change
@@ -153,6 +168,82 @@ const deleteUser = async (userId) => {
     return { message: 'User deleted successfully' };
 };
 
+// Request Password Change
+const requestPasswordChange = async (userId, oldPassword, newPassword) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Verify Old Password
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+        throw new Error('Incorrect current password');
+    }
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 mins
+
+    await user.save();
+
+    console.log(`[OTP] Request started for email: ${user.email}`);
+    console.log(`[OTP] Generated OTP: ${otp}`);
+    await emailService.sendEmail(
+        user.email,
+        'Password Change Verification Code',
+        `Your Password Change OTP is ${otp}. It expires in 10 minutes.`,
+        otp
+    );
+
+    return { message: 'OTP sent to email for password change' };
+};
+
+// Verify Password Change
+const verifyPasswordChange = async (userId, otp, newPasswordHash) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    if (user.otp !== otp || user.otpExpires < Date.now()) {
+        throw new Error('Invalid or expired OTP');
+    }
+
+    // Success - update password
+    user.password = newPasswordHash;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+
+    await user.save();
+    return { message: 'Password updated successfully' };
+};
+
+// Resend Password Change OTP
+const resendPasswordChangeOtp = async (userId) => {
+    const user = await User.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    // Cooldown check (optional but good practice)
+    // We reuse lastOtpSentAt if defined, or just rely on expiry window.
+    // auth.service uses user.lastOtpSentAt. Profile service doesn't seem to track it yet.
+    // For now, simpler implementation:
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otp = otp;
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
+
+    await user.save();
+
+    console.log(`[OTP] Request started for email: ${user.email}`);
+    console.log(`[OTP] Generated OTP: ${otp}`);
+    await emailService.sendEmail(
+        user.email,
+        'Password Change OTP (Resend)',
+        `Your Password Change OTP is ${otp}. It expires in 10 minutes.`,
+        otp
+    );
+    return { message: 'OTP resent' };
+};
+
 module.exports = {
     getProfile,
     updateProfile,
@@ -161,5 +252,8 @@ module.exports = {
     addAddress,
     updateAddress,
     deleteAddress,
-    deleteUser
+    deleteUser,
+    requestPasswordChange,
+    verifyPasswordChange,
+    resendPasswordChangeOtp
 };

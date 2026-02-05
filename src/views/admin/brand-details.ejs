@@ -3,6 +3,7 @@
 <html>
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
@@ -39,198 +40,182 @@
     </script>
 </head>
 
-<body class="bg-[#f8fcf8] font-[Inter]">
-    <div class="flex min-h-screen">
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
 
-        <!-- UNIFORM SIDEBAR -->
-        <%- include('../partials/admin/sidebar', { page: 'brands' }) %>
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'brands' }) %>
+            </aside>
 
-            <!-- MAIN CONTENT -->
-            <div class="flex-1 max-w-[1200px] mx-auto p-6">
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 text-sm mb-4">
+                    <a href="/admin/brands" class="text-[#5f8c5f] hover:underline">Brands</a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-[#111811]">
+                        <%= brand.name %>
+                    </span>
+                </div>
 
-                <!-- Navbar Inclusion (To match Admin Home Page Layout Requirement) -->
-                <%- include('../partials/admin/navbar') %>
-
-                    <!-- HEADER -->
-                    <div class="flex justify-between items-center mb-6 pt-6">
+                <!-- HEADER -->
+                <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+                    <div class="flex items-center gap-4">
+                        <!-- Brand Logo -->
+                        <div class="w-20 h-20 rounded-lg bg-cover bg-center flex-shrink-0 <%= brand.logoUrl ? '' : 'bg-[#e0e5e0]' %>"
+                            style="<%= brand.logoUrl ? " background-image:url('" + brand.logoUrl + "')" : '' %>"></div>
                         <div>
-                            <h1 class="text-3xl font-bold text-[#0f1d0c]">
+                            <h1 class="text-[32px] font-bold text-[#121810]">
                                 <%= brand.name %>
                             </h1>
                             <p class="text-sm <%= brand.isActive ? 'text-[#53a145]' : 'text-red-600' %>">
                                 <%= brand.isActive ? 'Active' : 'Inactive' %>
                             </p>
                         </div>
+                    </div>
 
-                        <div class="flex gap-3">
-                            <a href="/admin/brands/<%= brand._id %>/edit"
-                                class="px-4 py-2 rounded-lg bg-[#e8f4e6] font-medium">
-                                Edit Brand
-                            </a>
+                    <div class="flex gap-3 flex-wrap">
+                        <a href="/admin/brands/<%= brand._id %>/edit"
+                            class="flex items-center h-10 px-4 rounded-lg bg-[#f0f5f0] font-medium text-[#121810] hover:bg-[#e0e5e0] transition-colors">
+                            Edit Brand
+                        </a>
 
-                            <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
-                                <button class="px-4 py-2 rounded-lg font-medium
-              <%= brand.isActive ? 'bg-[#ffecec] text-red-600' : 'bg-[#e8f4e6]' %>">
-                                    <%= brand.isActive ? 'Deactivate' : 'Activate' %>
-                                </button>
-                            </form>
-
-                            <button type="button" onclick="confirmBrandDelete('<%= brand._id %>')"
-                                class="px-4 py-2 rounded-lg bg-[#ffecec] text-red-600 font-medium">
-                                Delete
+                        <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
+                            <button
+                                class="h-10 px-4 rounded-lg font-medium transition-colors
+                                <%= brand.isActive ? 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]' : 'bg-[#e8f4e6] hover:bg-[#d8e4d6]' %>">
+                                <%= brand.isActive ? 'Deactivate' : 'Activate' %>
                             </button>
-                            <!-- Hidden Form -->
-                            <form id="delete-form-<%= brand._id %>" method="POST"
-                                action="/admin/brands/<%= brand._id %>/delete" style="display:none;"></form>
+                        </form>
+
+                        <button type="button" onclick="confirmBrandDelete('<%= brand._id %>')"
+                            class="h-10 px-4 rounded-lg bg-[#ffecec] text-red-600 font-medium hover:bg-[#ffdddd] transition-colors">
+                            Delete
+                        </button>
+                        <!-- Hidden Form -->
+                        <form id="delete-form-<%= brand._id %>" method="POST"
+                            action="/admin/brands/<%= brand._id %>/delete" style="display:none;"></form>
+                    </div>
+                </div>
+
+                <!-- BRAND DETAILS -->
+                <div class="bg-[#f8fcf8] rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-bold text-[#121810] mb-4">Brand Information</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-[#658d5e] mb-1">Website</p>
+                            <p class="text-[#121810]">
+                                <%= brand.website || '-' %>
+                            </p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-[#658d5e] mb-1">Contact Email</p>
+                            <p class="text-[#121810]">
+                                <%= brand.contactEmail || '-' %>
+                            </p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-[#658d5e] mb-1">Description</p>
+                            <p class="text-[#121810]">
+                                <%= brand.description || '-' %>
+                            </p>
                         </div>
                     </div>
+                </div>
 
-                    <!-- BRAND LOGO -->
-                    <div class="mb-6">
-                        <div class="w-48 h-48 rounded-lg bg-cover bg-center"
-                            style="background-image:url('<%= brand.logoUrl %>')"></div>
-                    </div>
-
-                    <!-- BRAND DETAILS -->
-                    <div class="grid grid-cols-[200px_1fr] gap-y-4 border-t pt-6">
-                        <p class="text-[#53a145]">Website</p>
-                        <p>
-                            <%= brand.website || '-' %>
-                        </p>
-
-                        <p class="text-[#53a145]">Contact Email</p>
-                        <p>
-                            <%= brand.contactEmail || '-' %>
-                        </p>
-
-                        <p class="text-[#53a145]">Description</p>
-                        <p>
-                            <%= brand.description || '-' %>
+                <!-- METRICS -->
+                <h2 class="text-lg font-bold text-[#121810] mb-4">Key Metrics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-[#f8fcf8] p-4 rounded-lg">
+                        <p class="text-sm text-[#658d5e] mb-1">Total Products</p>
+                        <p class="text-2xl font-bold text-[#121810]">
+                            <%= (metrics && metrics.totalProducts) || brand.productCount || 0 %>
                         </p>
                     </div>
 
-                    <!-- METRICS -->
-                    <!-- METRICS -->
-                    <h2 class="text-xl font-bold mt-10 mb-4">Key Metrics</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-gray-500 text-sm font-medium">Total Products</h3>
-                                <span class="p-2 bg-blue-50 text-blue-600 rounded-full">
-                                    <i class="ri-shopping-bag-3-line"></i>
-                                </span>
-                            </div>
-                            <div class="flex items-baseline">
-                                <h2 class="text-2xl font-bold text-gray-800">
-                                    <%= (metrics && metrics.totalProducts) || brand.productCount || 0 %>
-                                </h2>
-                            </div>
+                    <% if (locals.metrics && metrics.totalSales) { %>
+                        <div class="bg-[#f8fcf8] p-4 rounded-lg">
+                            <p class="text-sm text-[#658d5e] mb-1">Total Sales</p>
+                            <p class="text-2xl font-bold text-[#121810]">₹<%= metrics.totalSales.toLocaleString() %>
+                            </p>
                         </div>
-
-                        <% if (locals.metrics && metrics.totalSales) { %>
-                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-gray-500 text-sm font-medium">Total Sales</h3>
-                                    <span class="p-2 bg-green-50 text-green-600 rounded-full">
-                                        <i class="ri-money-dollar-circle-line"></i>
-                                    </span>
-                                </div>
-                                <div class="flex items-baseline">
-                                    <h2 class="text-2xl font-bold text-gray-800">₹<%=
-                                            metrics.totalSales.toLocaleString() %>
-                                    </h2>
-                                </div>
+                        <div class="bg-[#f8fcf8] p-4 rounded-lg">
+                            <p class="text-sm text-[#658d5e] mb-1">Avg. Rating</p>
+                            <p class="text-2xl font-bold text-[#121810]">
+                                <%= metrics.avgRating %> <span class="text-sm text-[#658d5e]">/ 5.0</span>
+                            </p>
+                        </div>
+                        <div class="bg-[#f8fcf8] p-4 rounded-lg">
+                            <p class="text-sm text-[#658d5e] mb-1">Active Promos</p>
+                            <p class="text-2xl font-bold text-[#121810]">
+                                <%= metrics.activePromos %>
+                            </p>
+                        </div>
+                        <% } else { %>
+                            <div
+                                class="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 flex items-center justify-center col-span-1 md:col-span-3">
+                                <p class="text-sm text-gray-500">Sales and rating data will appear here once available.
+                                </p>
                             </div>
-                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-gray-500 text-sm font-medium">Avg. Rating</h3>
-                                    <span class="p-2 bg-yellow-50 text-yellow-600 rounded-full">
-                                        <i class="ri-star-line"></i>
-                                    </span>
-                                </div>
-                                <div class="flex items-baseline">
-                                    <h2 class="text-2xl font-bold text-gray-800">
-                                        <%= metrics.avgRating %>
-                                    </h2>
-                                    <span class="ml-2 text-sm text-gray-500">/ 5.0</span>
-                                </div>
-                            </div>
-                            <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-gray-500 text-sm font-medium">Active Promos</h3>
-                                    <span class="p-2 bg-purple-50 text-purple-600 rounded-full">
-                                        <i class="ri-price-tag-3-line"></i>
-                                    </span>
-                                </div>
-                                <div class="flex items-baseline">
-                                    <h2 class="text-2xl font-bold text-gray-800">
-                                        <%= metrics.activePromos %>
-                                    </h2>
-                                </div>
-                            </div>
-                            <% } else { %>
-                                <div
-                                    class="bg-gray-50 p-6 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center text-center col-span-1 md:col-span-3">
-                                    <div class="text-gray-400 mb-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
-                                    </div>
-                                    <p class="text-sm text-gray-500">Sales and rating data will appear here once
-                                        available.</p>
-                                </div>
-                                <% } %>
-                    </div>
+                            <% } %>
+                </div>
 
-                    <!-- PRODUCTS -->
-                    <h2 class="text-xl font-bold mt-12 mb-4">Products</h2>
-
-                    <table class="w-full border rounded-lg overflow-hidden">
+                <!-- PRODUCTS TABLE -->
+                <h2 class="text-lg font-bold text-[#121810] mb-4">Products</h2>
+                <div class="overflow-hidden rounded-lg border border-[#dce7da]">
+                    <table class="w-full">
                         <thead class="bg-[#f8fcf8]">
                             <tr>
-                                <th class="p-3 text-left">Product</th>
-                                <th class="p-3 text-left">SKU</th>
-                                <th class="p-3 text-left">Price</th>
-                                <th class="p-3 text-left">Stock</th>
-                                <th class="p-3 text-left">Status</th>
-                                <th class="p-3 text-left">Actions</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Product</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">SKU</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Price</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Stock</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Status</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <% if (products.length===0) { %>
                                 <tr>
-                                    <td colspan="6" class="text-center py-4 text-gray-500">No products found for this
+                                    <td colspan="6" class="text-center py-8 text-gray-500">No products found for this
                                         brand.</td>
                                 </tr>
                                 <% } else { %>
                                     <% products.forEach(p=> { %>
-                                        <tr class="border-t">
-                                            <td class="p-3">
+                                        <tr class="border-t border-[#dce7da]">
+                                            <td class="p-3 text-[#121810]">
                                                 <%= p.name %>
                                             </td>
-                                            <td class="p-3">
+                                            <td class="p-3 text-[#658d5e]">
                                                 <%= p.sku %>
                                             </td>
-                                            <td class="p-3">₹<%= p.price %>
+                                            <td class="p-3 text-[#121810]">₹<%= p.price %>
                                             </td>
-                                            <td class="p-3">
+                                            <td class="p-3 text-[#658d5e]">
                                                 <%= p.stock %>
                                             </td>
                                             <td class="p-3">
-                                                <%= p.isActive ? 'Active' : 'Inactive' %>
+                                                <span
+                                                    class="px-2 py-1 rounded-lg text-xs font-medium <%= p.isActive ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-gray-100 text-gray-600' %>">
+                                                    <%= p.isActive ? 'Active' : 'Inactive' %>
+                                                </span>
                                             </td>
-                                            <td class="p-3 text-[#53a145]">
-                                                <a href="/admin/products/<%= p._id %>">View</a>
+                                            <td class="p-3">
+                                                <a href="/admin/products/<%= p._id %>"
+                                                    class="text-[#53a145] hover:underline">View</a>
                                             </td>
                                         </tr>
                                         <% }) %>
                                             <% } %>
                         </tbody>
                     </table>
-
-            </div>
+                </div>
+            </section>
+        </main>
     </div>
 </body>
 

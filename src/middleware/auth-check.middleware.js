@@ -47,15 +47,17 @@ const ensureOtpVerified = (req, res, next) => {
         return res.redirect('/login');
     }
 
-    // Check verified status
-    // Note: Google Auth users are auto-verified in passport config
+    // Google OAuth users are auto-verified (have googleId)
+    if (req.user.googleId) {
+        return next();
+    }
+
+    // Check verified status for regular users
     if (req.user.isVerified) {
         return next();
     }
 
-    // If not verified, redirect to OTP or Login
-    // Check if we have an email to send them to OTP page context?
-    // User model usually stores otp flags.
+    // If not verified, redirect to OTP verification
     res.redirect('/verify-otp');
 };
 

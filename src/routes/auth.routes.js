@@ -1,10 +1,13 @@
 // Authentication routes configuration
+console.log('--- AUTH ROUTES LOADING: faa11254 ---');
 const express = require('express');
 const { check } = require('express-validator');
 const { signup, login, verifyOtp, resendOtp, forgotPassword, resetPassword } = require('../controllers/auth.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 
 const router = express.Router();
+
+router.get('/debug-probe', (req, res) => res.json({ msg: 'I AM HERE', env: process.env.NODE_ENV }));
 
 router.post(
     '/signup',
@@ -33,19 +36,24 @@ router.get('/google', passport.authenticate('google', { scope: ['profile', 'emai
 
 router.get(
     '/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login', session: false }),
+    passport.authenticate('google', { failureRedirect: '/login' }), // Removed session: false
     (req, res) => {
         // Generate JWT
         const token = jwt.sign(
             { id: req.user._id, role: req.user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '30d' }
+            { expiresIn: process.env.JWT_EXPIRY || '1h' }
         );
 
-        // Redirect with token
-        // In a clearer implementation, we might send an HTML page that saves token to localstorage
-        // For now, redirect to login with query param, frontend will check it
-        res.redirect(`/login?token=${token}&user=${encodeURIComponent(JSON.stringify(req.user))}`);
+        // Set Cookie (Same as in auth.controller.login)
+        res.cookie('token', token, {
+            httpOnly: true,
+            maxAge: 3600000, // 1 hour (matches default expiry)
+            secure: process.env.NODE_ENV === 'production'
+        });
+
+        // Redirect to home
+        res.redirect('/home');
     }
 );
 

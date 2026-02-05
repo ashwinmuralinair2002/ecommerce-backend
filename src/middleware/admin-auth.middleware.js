@@ -34,6 +34,9 @@ const ensureAdminAuthenticated = async (req, res, next) => {
             };
         }
 
+        // IMPORTANT: Set res.locals.user so views receive the updated admin data
+        res.locals.user = req.user;
+
         return next();
     }
 

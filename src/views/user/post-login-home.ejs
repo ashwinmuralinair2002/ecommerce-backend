@@ -3,6 +3,7 @@
 <html lang="en">
 
 <head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <meta charset="UTF-8" />
     <title>SoundWave | Home</title>
 
@@ -19,7 +20,7 @@
     <header class="flex items-center justify-between border-b border-[#e7f4e7] px-10 py-3 bg-white">
         <div class="flex items-center gap-10">
             <!-- Logo -->
-            <div class="flex items-center gap-3 text-[#0d1c0d]">
+            <a href="/home" class="flex items-center gap-3 text-[#0d1c0d] hover:opacity-80 transition-opacity">
                 <div class="size-4">
                     <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134
@@ -34,7 +35,7 @@
                     </svg>
                 </div>
                 <span class="font-bold text-lg">SoundWave</span>
-            </div>
+            </a>
 
             <!-- Menu -->
             <nav class="flex gap-8 text-sm font-medium text-[#0d1c0d]">
@@ -59,7 +60,14 @@
 
             <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">❤️</button>
             <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">🛒</button>
-            <a href="/account" class="h-10 w-10 rounded-full bg-[#e7f4e7] flex items-center justify-center">👤</a>
+            <a href="/account"
+                class="h-10 w-10 rounded-full bg-[#e7f4e7] flex items-center justify-center overflow-hidden">
+                <% if (user && user.profileImage) { %>
+                    <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
+                    <% } else { %>
+                        👤
+                        <% } %>
+            </a>
         </div>
     </header>
 
