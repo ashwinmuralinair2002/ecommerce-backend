@@ -7,7 +7,7 @@ const configurePassport = require('./config/passport');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const profileRoutes = require('./routes/profile.routes');
-// const adminRoutes = require('./routes/admin.routes');
+const addressRoutes = require('./routes/address.routes');
 
 const { getHomePage, getPostLoginHomePage } = require('./controllers/home.controller');
 const nocache = require('./middleware/nocache.middleware');
@@ -17,7 +17,7 @@ const app = express();
 const cookieParser = require('cookie-parser');
 
 // Connect to Database
-console.log('--- APP IDENTITY VERIFIED: faa11254 ---');
+
 connectDB();
 
 // Middleware
@@ -97,21 +97,12 @@ app.use((req, res, next) => {
     next();
 });
 
-// Admin Dashboard Route Removed (Duplicate/Incorrect) - Handled below using correct middleware
-
-// Protected routes using JWT for API calls
-// const authRoutes = require('./routes/auth.routes'); // Already imported above
-console.log('--- AUTH ROUTES IMPORTED ---', typeof authRoutes);
-if (authRoutes.stack) {
-    authRoutes.stack.forEach(r => {
-        if (r.route && r.route.path) {
-            console.log('ROUTE:', r.route.path);
-        }
-    });
-}
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
-// app.use('/api/admin', adminRoutes);
+
+// View Routes - Address Management
+app.use(addressRoutes);
 
 const { ensureAuthenticated, ensureOtpVerified, ensureGuest } = require('./middleware/auth-check.middleware');
 
@@ -123,96 +114,7 @@ app.get('/account', require('./middleware/auth-check.middleware').ensureAuthenti
     res.render('user-account', { user: req.user || {} });
 });
 
-app.get('/account/addresses', require('./middleware/auth-check.middleware').ensureAuthenticated, (req, res) => {
-    res.render('user-addresses', { user: req.user || {} });
-});
 
-app.get('/account/addresses/new', require('./middleware/auth-check.middleware').ensureAuthenticated, (req, res) => {
-    res.render('add-address', { user: req.user || {} });
-});
-
-app.post('/account/addresses', require('./middleware/auth-check.middleware').ensureAuthenticated, async (req, res) => {
-    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
-
-    // Server-side validation
-    if (!name || !phone || !houseNo || !street || !city || !state || !postalCode || !label) {
-        return res.status(400).send('All fields are required');
-    }
-
-    try {
-        const profileService = require('./services/profile.service');
-        // Map to schema-compatible object + extra fields
-        // Since "NO DB CHANGES YET", we try to respect the prompt's data model in the payload
-        // but map strict schema fields (zip -> postalCode)
-        const addressData = {
-            street: `${houseNo}, ${street}`, // Combining purely to satisfy schema strictness if needed, or just pass 'street'
-            city,
-            state,
-            zip: postalCode,
-            country: 'India', // Default required by schema
-            isDefault: false,
-            // Pass pure fields too if schema allows mixed/flexible or if avoiding accidental data loss
-            name,
-            phone,
-            label,
-            houseNo,
-            originalStreet: street
-        };
-
-        // Note: profileService.addAddress expects { street, city, state, zip }
-        // We are passing extra fields which will be stripped by Mongoose unless schema is changed
-        await profileService.addAddress(req.user.id, addressData);
-
-        res.redirect('/account/addresses');
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error adding address: ' + error.message);
-    }
-});
-
-app.get('/account/addresses/:id/edit', require('./middleware/auth-check.middleware').ensureAuthenticated, (req, res) => {
-    const address = req.user.addresses.id(req.params.id);
-    if (!address) {
-        return res.redirect('/account/addresses');
-    }
-    res.render('edit-address', { user: req.user, address });
-});
-
-app.post('/account/addresses/:id/update', require('./middleware/auth-check.middleware').ensureAuthenticated, async (req, res) => {
-    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
-
-    try {
-        const profileService = require('./services/profile.service');
-        const addressData = {
-            name,
-            phone,
-            houseNo,
-            street,
-            city,
-            state,
-            zip: postalCode,
-            country: 'India',
-            label
-        };
-
-        await profileService.updateAddress(req.user.id, req.params.id, addressData);
-        res.redirect('/account/addresses');
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error updating address: ' + error.message);
-    }
-});
-
-app.post('/account/addresses/:id/delete', require('./middleware/auth-check.middleware').ensureAuthenticated, async (req, res) => {
-    try {
-        const profileService = require('./services/profile.service');
-        await profileService.deleteAddress(req.user.id, req.params.id);
-        res.redirect('/account/addresses');
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error deleting address: ' + error.message);
-    }
-});
 
 const { ensureAdminAuthenticated } = require('./middleware/admin-auth.middleware');
 

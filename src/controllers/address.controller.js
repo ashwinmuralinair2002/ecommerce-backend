@@ -1,0 +1,178 @@
+// Address management controller for user account
+const profileService = require('../services/profile.service');
+
+// @desc    Render Address List Page
+// @route   GET /account/addresses
+const getAddresses = (req, res) => {
+    res.render('user-addresses', { user: req.user || {} });
+};
+
+// @desc    Render Add Address Form
+// @route   GET /account/addresses/new
+const renderAddAddress = (req, res) => {
+    res.render('add-address', { user: req.user || {} });
+};
+
+// @desc    Add New Address
+// @route   POST /account/addresses
+const addAddress = async (req, res) => {
+    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
+    const errors = {};
+
+    if (!name || !/^[A-Za-z ]{3,}$/.test(name.trim())) {
+        errors.name = 'Name must be at least 3 characters and contain only alphabets.';
+    }
+    if (!phone || !/^[0-9]{10}$/.test(phone.trim())) {
+        errors.phone = 'Phone number must be exactly 10 digits.';
+    }
+    if (!postalCode || !/^[0-9]{6}$/.test(postalCode.trim())) {
+        errors.postalCode = 'Postal code must be exactly 6 digits.';
+    }
+    if (!houseNo || houseNo.trim().length < 1) errors.houseNo = 'House No is required.';
+    if (!street || street.trim().length < 2) errors.street = 'Street is required (min 2 chars).';
+    if (!city || city.trim().length < 2) {
+        errors.city = 'City is required (min 2 chars).';
+    } else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(city.trim())) {
+        errors.city = 'City must contain only letters and spaces.';
+    }
+    if (!state || state.trim().length < 2) {
+        errors.state = 'State is required (min 2 chars).';
+    } else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(state.trim())) {
+        errors.state = 'State must contain only letters and spaces.';
+    }
+    if (!label) errors.label = 'Label is required.';
+
+    if (Object.keys(errors).length > 0) {
+        return res.render('add-address', {
+            user: req.user || {},
+            errors,
+            formData: req.body
+        });
+    }
+
+    try {
+        // Title-case helper
+        const toTitleCase = (s) => s.trim().replace(/\s+/g, ' ').replace(/\b[a-z]/g, c => c.toUpperCase());
+
+        const addressData = {
+            street: `${houseNo}, ${street}`,
+            city: toTitleCase(city),
+            state: toTitleCase(state),
+            zip: postalCode,
+            country: 'India',
+            isDefault: false,
+            name,
+            phone,
+            label,
+            houseNo,
+            originalStreet: street
+        };
+
+        await profileService.addAddress(req.user.id, addressData);
+        res.redirect('/account/addresses?success=address_saved');
+    } catch (error) {
+        res.status(500).render('add-address', {
+            user: req.user || {},
+            errors: { general: 'Failed to save address. Please try again.' },
+            formData: req.body
+        });
+    }
+};
+
+// @desc    Render Edit Address Form
+// @route   GET /account/addresses/:id/edit
+const renderEditAddress = (req, res) => {
+    const address = req.user.addresses.id(req.params.id);
+    if (!address) {
+        return res.redirect('/account/addresses');
+    }
+    res.render('edit-address', { user: req.user, address });
+};
+
+// @desc    Update Address
+// @route   POST /account/addresses/:id/update
+const updateAddress = async (req, res) => {
+    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
+    const errors = {};
+
+    if (!name || !/^[A-Za-z ]{3,}$/.test(name.trim())) {
+        errors.name = 'Name must be at least 3 characters and contain only alphabets.';
+    }
+    if (!phone || !/^[0-9]{10}$/.test(phone.trim())) {
+        errors.phone = 'Phone number must be exactly 10 digits.';
+    }
+    if (!postalCode || !/^[0-9]{6}$/.test(postalCode.trim())) {
+        errors.postalCode = 'Postal code must be exactly 6 digits.';
+    }
+    if (!houseNo || houseNo.trim().length < 1) errors.houseNo = 'House No is required.';
+    if (!street || street.trim().length < 2) errors.street = 'Street is required (min 2 chars).';
+    if (!city || city.trim().length < 2) {
+        errors.city = 'City is required (min 2 chars).';
+    } else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(city.trim())) {
+        errors.city = 'City must contain only letters and spaces.';
+    }
+    if (!state || state.trim().length < 2) {
+        errors.state = 'State is required (min 2 chars).';
+    } else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(state.trim())) {
+        errors.state = 'State must contain only letters and spaces.';
+    }
+    if (!label) errors.label = 'Label is required.';
+
+    if (Object.keys(errors).length > 0) {
+        const mockAddress = { _id: req.params.id, ...req.body, zip: postalCode };
+        return res.render('edit-address', {
+            user: req.user || {},
+            address: mockAddress,
+            errors,
+            formData: req.body
+        });
+    }
+
+    try {
+        // Title-case helper
+        const toTitleCase = (s) => s.trim().replace(/\s+/g, ' ').replace(/\b[a-z]/g, c => c.toUpperCase());
+
+        const addressData = {
+            name,
+            phone,
+            houseNo,
+            street,
+            city: toTitleCase(city),
+            state: toTitleCase(state),
+            zip: postalCode,
+            country: 'India',
+            label
+        };
+
+        await profileService.updateAddress(req.user.id, req.params.id, addressData);
+        res.redirect('/account/addresses?success=address_updated');
+    } catch (error) {
+        const mockAddress = { _id: req.params.id, ...req.body, zip: postalCode };
+        res.status(500).render('edit-address', {
+            user: req.user || {},
+            address: mockAddress,
+            errors: { general: 'Failed to update address. Please try again.' },
+            formData: req.body
+        });
+    }
+};
+
+// @desc    Delete Address
+// @route   POST /account/addresses/:id/delete
+const deleteAddress = async (req, res) => {
+    try {
+        await profileService.deleteAddress(req.user.id, req.params.id);
+        res.redirect('/account/addresses');
+    } catch (error) {
+        res.redirect('/account/addresses?error=delete_failed');
+    }
+};
+
+module.exports = {
+    getAddresses,
+    renderAddAddress,
+    addAddress,
+    renderEditAddress,
+    updateAddress,
+    deleteAddress
+};

@@ -20,7 +20,7 @@ const seedOrders = async () => {
         }
 
         // Fetch seeded users to attach orders to
-        const users = await User.find({ role: 'user', deleted: false });
+        const users = await User.find({ role: 'user', isDeleted: { $ne: true } });
 
         if (users.length === 0) {
             console.log('No users found to seed orders for. Run seedUsers.js first.');

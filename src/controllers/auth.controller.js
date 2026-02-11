@@ -1,7 +1,7 @@
 // Authentication controller handling signup, login, and OTP
 const { validationResult } = require('express-validator');
 const authService = require('../services/auth.service');
-console.log('--- AUTH CONTROLLER LOADING: faa11254 ---');
+
 
 // @desc    Register a new user
 // @route   POST /api/auth/signup
@@ -15,9 +15,7 @@ const signup = async (req, res) => {
     }
 
     try {
-        console.log('[DEBUG] registerUser SOURCE:', authService.registerUser.toString());
         const user = await authService.registerUser(req.body);
-        console.log('[DEBUG] User object from service:', JSON.stringify(user, null, 2));
         req.session.otpEmail = req.body.email;
         req.session.save(() => {
             res.status(201).json({
@@ -83,6 +81,19 @@ const verifyOtp = async (req, res) => {
         if (req.session.otpEmail) {
             req.session.otpEmail = null;
         }
+
+        // Auto-Login Logic
+        if (result.token) {
+            res.cookie('token', result.token, {
+                httpOnly: true,
+                maxAge: 3600000, // 1 hour
+                secure: process.env.NODE_ENV === 'production'
+            });
+
+            // Standard user session handling
+            // req.session.userId = result.user.id; // Optional depending on conflicting logic in login
+        }
+
         res.status(200).json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });

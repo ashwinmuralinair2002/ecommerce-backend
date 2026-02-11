@@ -17,34 +17,57 @@ const configurePassport = () => {
             },
             async (accessToken, refreshToken, profile, done) => {
                 try {
-                    // Check if user exists
-                    let user = await User.findOne({ googleId: profile.id });
+                    const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+                    const googlePhoto = profile.photos && profile.photos.length > 0
+                        ? profile.photos[0].value
+                        : null;
+
+                    // Step 1: Find active (non-deleted) user by googleId
+                    let user = await User.findOne({ googleId: profile.id, isDeleted: { $ne: true } });
 
                     if (user) {
                         if (user.isBlocked) return done(new Error('User account is blocked'), null);
+                        // Update profile image if empty or default
+                        if (googlePhoto && !user.profileImage) {
+                            user.profileImage = googlePhoto;
+                            await user.save();
+                        }
                         return done(null, user);
                     }
 
-                    // Check if user exists with same email (link account)
-                    if (profile.emails && profile.emails.length > 0) {
-                        user = await User.findOne({ email: profile.emails[0].value });
+                    // Step 2: Find active (non-deleted) user by email — link Google account
+                    if (email) {
+                        user = await User.findOne({ email: email, isDeleted: { $ne: true } });
 
                         if (user) {
                             if (user.isBlocked) return done(new Error('User account is blocked'), null);
                             user.googleId = profile.id;
+                            // Update profile image if empty or default
+                            if (googlePhoto && !user.profileImage) {
+                                user.profileImage = googlePhoto;
+                            }
                             await user.save();
                             return done(null, user);
                         }
                     }
 
-                    // Create new user
+                    // Step 3: Clear googleId from any deleted users with same googleId
+                    // (so the unique sparse index doesn't conflict)
+                    await User.updateMany(
+                        { googleId: profile.id, isDeleted: true },
+                        { $unset: { googleId: '' } }
+                    );
+
+                    // Step 4: Create a brand new user
                     user = await User.create({
                         googleId: profile.id,
                         name: profile.displayName,
-                        email: profile.emails[0].value,
-                        password: '', // No password for Google users
-                        isVerified: true, // Auto-verify Google users
-                        lastOtpSentAt: Date.now(), // Prevent null errors if used elsewhere
+                        email: email,
+                        profileImage: googlePhoto || null,
+                        isVerified: true,
+                        isDeleted: false,
+                        isBlocked: false,
+                        lastOtpSentAt: Date.now(),
                     });
 
                     return done(null, user);
@@ -62,6 +85,10 @@ const configurePassport = () => {
     passport.deserializeUser(async (id, done) => {
         try {
             const user = await User.findById(id);
+            // Reject deleted or blocked users during deserialization
+            if (!user || user.isDeleted || user.isBlocked) {
+                return done(null, false);
+            }
             done(null, user);
         } catch (err) {
             done(err, null);

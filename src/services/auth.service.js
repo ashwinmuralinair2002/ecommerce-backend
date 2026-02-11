@@ -40,23 +40,24 @@ const registerUser = async (userData) => {
     });
 
     // Send OTP via Email
-    console.log(`[OTP] Request started for email: ${email}`);
-    console.log(`[OTP] Generated OTP: ${otp}`);
-    const debugMsg = `[DEV-OTP] Generated OTP for ${email}: ${otp} | NODE_ENV: ${process.env.NODE_ENV}\n`;
-    try {
-        fs.appendFileSync('debug_output.txt', debugMsg);
-    } catch (e) {
-        console.error('Failed to write debug file', e);
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[OTP] Request started for email: ${email}`);
+        console.log(`[OTP] Generated OTP: ${otp}`);
+        const debugMsg = `[DEV-OTP] Generated OTP for ${email}: ${otp} | NODE_ENV: ${process.env.NODE_ENV}\n`;
+        try {
+            fs.appendFileSync('debug_output.txt', debugMsg);
+        } catch (e) {
+            console.error('Failed to write debug file', e);
+        }
+        console.log(debugMsg);
     }
-    console.log(debugMsg);
 
     await emailService.sendEmail(email, 'SoundWave Verification Code', `Your verification code is ${otp}. It expires in 10 minutes.`, otp);
 
     return {
         id: user._id,
         name: user.name,
-        email: user.email,
-        devOtp: otp // FORCE RETURN
+        email: user.email
     };
 };
 
@@ -72,6 +73,7 @@ const verifyOtp = async (email, otp) => {
         return { message: 'User already verified' };
     }
 
+    // Not Verified, proceed to verify
     if (user.otp !== otp) {
         throw new Error('Invalid OTP');
     }
@@ -86,7 +88,21 @@ const verifyOtp = async (email, otp) => {
     user.otpExpires = undefined;
     await user.save();
 
-    return { message: 'Account verified successfully' };
+    // Generate Token for Auto-Login
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', {
+        expiresIn: process.env.JWT_EXPIRY || '1h',
+    });
+
+    return {
+        message: 'Account verified successfully',
+        token,
+        user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role
+        }
+    };
 };
 
 // Resend OTP
@@ -110,21 +126,22 @@ const resendOtp = async (email) => {
     await user.save();
 
     // Send New OTP via Email
-    console.log(`[OTP] Request started for email: ${email}`);
-    console.log(`[OTP] Generated OTP: ${otp}`);
-    const debugMsg = `[DEV-OTP] Resent OTP for ${email}: ${otp} | NODE_ENV: ${process.env.NODE_ENV}\n`;
-    try {
-        fs.appendFileSync('debug_output.txt', debugMsg);
-    } catch (e) {
-        console.error('Failed to write debug file', e);
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[OTP] Request started for email: ${email}`);
+        console.log(`[OTP] Generated OTP: ${otp}`);
+        const debugMsg = `[DEV-OTP] Resent OTP for ${email}: ${otp} | NODE_ENV: ${process.env.NODE_ENV}\n`;
+        try {
+            fs.appendFileSync('debug_output.txt', debugMsg);
+        } catch (e) {
+            console.error('Failed to write debug file', e);
+        }
+        console.log(debugMsg);
     }
-    console.log(debugMsg);
 
     await emailService.sendEmail(email, 'SoundWave Verification Code (Resend)', `Your new verification code is ${otp}. It expires in 10 minutes.`, otp);
 
     return {
-        message: 'OTP resent',
-        devOtp: otp // FORCE RETURN
+        message: 'OTP resent'
     };
 };
 
@@ -164,7 +181,7 @@ const loginUser = async (email, password) => {
     }
 
     // Check for user
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email, isDeleted: { $ne: true } });
     if (!user) {
         throw new Error('Invalid email or password');
     }
@@ -212,13 +229,14 @@ const forgotPassword = async (email) => {
     await user.save();
 
     // Send Reset OTP via Email
-    console.log(`[OTP] Request started for email: ${email}`);
-    console.log(`[OTP] Generated OTP: ${otp}`);
+    if (process.env.NODE_ENV === 'development') {
+        console.log(`[OTP] Request started for email: ${email}`);
+        console.log(`[OTP] Generated OTP: ${otp}`);
+    }
     await emailService.sendEmail(email, 'Password Reset OTP for SoundWave', `Your Password Reset OTP is ${otp}. It expires in 10 minutes.`, otp);
 
     return {
-        message: 'OTP sent to email',
-        devOtp: otp // FORCE RETURN
+        message: 'OTP sent to email'
     };
 };
 

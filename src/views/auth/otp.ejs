@@ -57,12 +57,12 @@
                 </p>
 
                 <div class="flex justify-center gap-4 mb-6">
-                    <input class="otp-input" type="number" maxlength="1" />
-                    <input class="otp-input" type="number" maxlength="1" />
-                    <input class="otp-input" type="number" maxlength="1" />
-                    <input class="otp-input" type="number" maxlength="1" />
-                    <input class="otp-input" type="number" maxlength="1" />
-                    <input class="otp-input" type="number" maxlength="1" />
+                    <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
+                    <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
+                    <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
+                    <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
+                    <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
+                    <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
                 </div>
 
                 <button class="w-full h-10 rounded-lg bg-[#1ff91f] text-sm font-bold text-[#0d1c0d] mb-4">
@@ -133,9 +133,37 @@
                     const inputs = document.querySelectorAll('.otp-input');
                     inputs.forEach((input, index) => {
                         input.addEventListener('input', (e) => {
+                            // Ensure only numbers
+                            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+
                             if (e.target.value.length === 1) {
                                 if (index < inputs.length - 1) {
                                     inputs[index + 1].focus();
+                                }
+                            }
+                        });
+
+                        input.addEventListener('paste', (e) => {
+                            e.preventDefault();
+                            const clipboardData = e.clipboardData || window.clipboardData;
+                            const pastedData = clipboardData.getData('Text');
+                            // Extract only digits
+                            const digits = pastedData.replace(/\D/g, '').split('');
+
+                            if (digits.length > 0) {
+                                let currentIndex = index;
+                                for (let i = 0; i < digits.length; i++) {
+                                    if (currentIndex < inputs.length) {
+                                        inputs[currentIndex].value = digits[i];
+                                        currentIndex++;
+                                    }
+                                }
+
+                                // Focus the appropriate bit
+                                if (currentIndex < inputs.length) {
+                                    inputs[currentIndex].focus();
+                                } else {
+                                    inputs[inputs.length - 1].focus();
                                 }
                             }
                         });
@@ -210,7 +238,7 @@
                                 if (!response.ok) throw new Error(data.error || 'Verification failed');
 
                                 showMessage('Email updated successfully!', 'success');
-                                setTimeout(() => window.location.href = '/user/account', 1500);
+                                setTimeout(() => window.location.href = '/account', 1500);
                                 return;
                             } catch (error) {
                                 showMessage(error.message, 'error');
@@ -238,7 +266,7 @@
                             }
 
                             showMessage('Email verified successfully!', 'success');
-                            window.location.href = '/home'; // Go to post-login home
+                            window.location.href = '/home?signup=success'; // Go to post-login home
 
                         } catch (error) {
                             showMessage(error.message, 'error');
@@ -301,9 +329,7 @@
                                 throw new Error(data.error || 'Resend failed');
                             }
 
-                            if (data.devOtp) {
-                                alert(`[DEV MODE] Your OTP is: ${data.devOtp}`);
-                            }
+
 
                             showMessage('OTP Resent! Please check your email.', 'success');
                             // Reset Timer (Optional, but good UX)

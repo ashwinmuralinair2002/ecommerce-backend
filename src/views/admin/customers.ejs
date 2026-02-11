@@ -90,22 +90,19 @@
                 try {
                     const response = await fetch(`/admin/customers/${userId}/delete`, { method: 'POST' });
                     if (response.ok) {
-                        // Remove Row
-                        const row = document.getElementById(`row-${userId}`);
-                        if (row) row.remove();
-
-                        Swal.fire({
+                        await Swal.fire({
                             icon: 'success',
                             title: 'Deleted!',
                             text: 'User has been deleted.',
-                            timer: 1500,
+                            timer: 1200,
                             showConfirmButton: false
                         });
+                        // Reload current page to recalculate pagination server-side
+                        window.location.reload();
                     } else {
                         Swal.fire('Error', 'Failed to delete user', 'error');
                     }
                 } catch (e) {
-                    console.error(e);
                     Swal.fire('Error', 'An unexpected error occurred', 'error');
                 }
             });
@@ -231,10 +228,28 @@
                                                 class="border-t border-t-[#dce7da] hover:bg-gray-50 cursor-pointer"
                                                 onclick="window.location.href='/admin/customers/<%= user._id %>'">
                                                 <td class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
-                                                    <div
-                                                        class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 flex items-center justify-center bg-gray-200 text-gray-600 font-bold">
-                                                        <%= user.name.charAt(0).toUpperCase() %>
-                                                    </div>
+                                                    <% const nameParts=user.name.trim().split(/\s+/); const
+                                                        initials=nameParts.length> 1
+                                                        ? (nameParts[0].charAt(0) + nameParts[nameParts.length -
+                                                        1].charAt(0)).toUpperCase()
+                                                        : user.name.substring(0, 2).toUpperCase();
+                                                        const hasImage = user.profileImage && user.profileImage.length >
+                                                        0;
+                                                        %>
+                                                        <% if (hasImage) { %>
+                                                            <img src="<%= user.profileImage %>" alt="<%= initials %>"
+                                                                class="w-10 h-10 rounded-full object-cover"
+                                                                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                                                            <div class="w-10 h-10 rounded-full bg-[#e7f4e7] text-[#2d6a2d] font-bold text-sm items-center justify-center"
+                                                                style="display:none;">
+                                                                <%= initials %>
+                                                            </div>
+                                                            <% } else { %>
+                                                                <div
+                                                                    class="w-10 h-10 rounded-full bg-[#e7f4e7] text-[#2d6a2d] font-bold text-sm flex items-center justify-center">
+                                                                    <%= initials %>
+                                                                </div>
+                                                                <% } %>
                                                 </td>
                                                 <td
                                                     class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">

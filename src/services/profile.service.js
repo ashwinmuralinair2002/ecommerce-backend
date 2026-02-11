@@ -41,7 +41,7 @@ const requestEmailChange = async (userId, newEmail) => {
 
     if (newEmail === user.email) throw new Error('New email cannot be same as current email');
 
-    const emailExists = await User.findOne({ email: newEmail });
+    const emailExists = await User.findOne({ email: newEmail, isDeleted: { $ne: true } });
     if (emailExists) throw new Error('Email already in use');
 
     // Generate OTP
@@ -163,8 +163,9 @@ const deleteUser = async (userId) => {
     const user = await User.findById(userId);
     if (!user) throw new Error('User not found');
 
-    // In a real app we might soft-delete or archive, but for now we hard delete based on request
-    await User.findByIdAndDelete(userId);
+    // Soft delete - mark as deleted, don't remove from database
+    user.isDeleted = true;
+    await user.save();
     return { message: 'User deleted successfully' };
 };
 

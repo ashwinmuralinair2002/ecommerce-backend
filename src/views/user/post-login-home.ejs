@@ -12,6 +12,7 @@
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap" />
 
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-[#f8fcf8]" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
@@ -65,8 +66,13 @@
                 <% if (user && user.profileImage) { %>
                     <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
                     <% } else { %>
-                        👤
-                        <% } %>
+                        <% const _np=(user && user.name) ? user.name.trim().split(/\s+/) : []; const _ini=_np.length> 1
+                            ? (_np[0][0] + _np[_np.length-1][0]).toUpperCase() : (user && user.name ?
+                            user.name.substring(0,2).toUpperCase() : 'U'); %>
+                            <span class="text-xs font-bold text-[#2d6a2d]">
+                                <%= _ini %>
+                            </span>
+                            <% } %>
             </a>
         </div>
     </header>
@@ -177,6 +183,35 @@
             </footer>
         </div>
     </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('signup') === 'success') {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                });
+
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Account created successfully. Welcome to SoundWave!'
+                });
+
+                // Clean URL
+                const url = new URL(window.location);
+                url.searchParams.delete('signup');
+                window.history.replaceState({}, '', url);
+            }
+        });
+    </script>
 </body>
 
 </html>

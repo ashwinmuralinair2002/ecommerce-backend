@@ -5,88 +5,143 @@
 <head>
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
-    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
-        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900&amp;family=Space+Grotesk%3Awght%40400%3B500%3B700" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
     <title>Edit Customer - <%= customer.name %>
     </title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
 <body>
-    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
-        style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
-        <div class="layout-container flex h-full grow flex-col">
-            <!-- Header reused conceptually -->
-            <header
-                class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#f0f5f0] px-10 py-3">
-                <div class="flex items-center gap-4 text-[#111811]">
-                    <h2 class="text-[#111811] text-lg font-bold leading-tight tracking-[-0.015em]">SoundWave Admin</h2>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
+            </aside>
+
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <!-- Breadcrumb -->
+                <div class="flex items-center gap-2 text-sm mb-4">
+                    <a href="/admin/customers" class="text-[#5f8c5f] hover:underline">Customers</a>
+                    <span class="text-gray-400">/</span>
+                    <a href="/admin/customers/<%= customer._id %>" class="text-[#5f8c5f] hover:underline">
+                        <%= customer.name %>
+                    </a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-[#111811]">Edit</span>
                 </div>
-            </header>
-            <div class="px-40 flex flex-1 justify-center py-5">
-                <div class="layout-content-container flex flex-col w-[512px] max-w-[512px] py-5 max-w-[960px] flex-1">
-                    <div class="flex flex-wrap gap-2 p-4">
-                        <a href="/admin/customers/<%= customer._id %>"
-                            class="text-[#5f8c5f] text-base font-medium leading-normal">Back to Details</a>
+
+                <h1 class="text-[32px] font-bold text-[#121811] mb-6">Edit Customer: <%= customer.name %>
+                </h1>
+
+                <!-- General Error -->
+                <% if (locals.error) { %>
+                    <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800">
+                        <%= error %>
                     </div>
-                    <h2 class="text-[#111811] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                        Edit Customer: <%= customer.name %>
-                    </h2>
+                    <% } %>
 
-                    <form action="/admin/customers/<%= customer._id %>/update" method="POST">
-                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                            <!-- NAME -->
-                            <div class="relative w-full">
-                                <input name="name" id="name" value="<%= customer.name %>" required
-                                    placeholder="Full Name"
-                                    class="peer form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 pt-4 placeholder-transparent px-4 text-base font-normal leading-normal" />
-                                <label for="name"
-                                    class="absolute left-4 top-1 text-xs text-[#658d5e] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#658d5e] pointer-events-none">Full
-                                    Name</label>
-                            </div>
-                        </div>
-                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                            <!-- EMAIL -->
-                            <div class="relative w-full">
-                                <input name="email" id="email" value="<%= customer.email %>" required
-                                    placeholder="Email Address"
-                                    class="peer form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 pt-4 placeholder-transparent px-4 text-base font-normal leading-normal" />
-                                <label for="email"
-                                    class="absolute left-4 top-1 text-xs text-[#658d5e] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#658d5e] pointer-events-none">Email
-                                    Address</label>
-                            </div>
-                        </div>
-                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                            <!-- PHONE -->
-                            <div class="relative w-full">
-                                <input name="phone" id="phone" value="<%= customer.phone || '' %>"
-                                    placeholder="Phone Number"
-                                    class="peer form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 pt-4 placeholder-transparent px-4 text-base font-normal leading-normal" />
-                                <label for="phone"
-                                    class="absolute left-4 top-1 text-xs text-[#658d5e] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#658d5e] peer-focus:top-1 peer-focus:text-xs peer-focus:text-[#658d5e] pointer-events-none">Phone
-                                    Number</label>
-                            </div>
-                        </div>
+                        <form action="/admin/customers/<%= customer._id %>/update" method="POST"
+                            class="max-w-md space-y-4" id="editCustomerForm" novalidate>
 
-                        <div class="flex justify-center">
-                            <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 max-w-[480px] justify-center">
-                                <a href="/admin/customers/<%= customer._id %>"
-                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#f0f5f0] text-[#111811] text-base font-bold leading-normal tracking-[0.015em] grow"
-                                    style="text-decoration:none; text-align:center; display:flex;">
-                                    <span class="truncate">Cancel</span>
-                                </a>
+                            <!-- Name -->
+                            <div>
+                                <label class="block text-sm text-[#628d5e] mb-1">Full Name <span
+                                        class="text-red-500">*</span></label>
+                                <input type="text" name="name"
+                                    value="<%= locals.oldInput ? oldInput.name || '' : customer.name %>"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
+                                    placeholder="Full Name" />
+                                <% if (locals.errors && errors.name) { %>
+                                    <p class="text-red-500 text-xs mt-1">
+                                        <%= errors.name %>
+                                    </p>
+                                    <% } %>
+                                        <p class="text-red-500 text-xs mt-1 hidden" id="err-name"></p>
+                            </div>
+
+                            <!-- Email -->
+                            <div>
+                                <label class="block text-sm text-[#628d5e] mb-1">Email Address <span
+                                        class="text-red-500">*</span></label>
+                                <input type="email" name="email"
+                                    value="<%= locals.oldInput ? oldInput.email || '' : customer.email %>"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.email) ? 'ring-2 ring-red-400' : '' %>"
+                                    placeholder="Email Address" />
+                                <% if (locals.errors && errors.email) { %>
+                                    <p class="text-red-500 text-xs mt-1">
+                                        <%= errors.email %>
+                                    </p>
+                                    <% } %>
+                                        <p class="text-red-500 text-xs mt-1 hidden" id="err-email"></p>
+                            </div>
+
+                            <!-- Phone -->
+                            <div>
+                                <label class="block text-sm text-[#628d5e] mb-1">Phone Number</label>
+                                <input type="tel" name="phone"
+                                    value="<%= locals.oldInput ? oldInput.phone || '' : customer.phone || '' %>"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.phone) ? 'ring-2 ring-red-400' : '' %>"
+                                    placeholder="Phone Number" />
+                                <% if (locals.errors && errors.phone) { %>
+                                    <p class="text-red-500 text-xs mt-1">
+                                        <%= errors.phone %>
+                                    </p>
+                                    <% } %>
+                                        <p class="text-red-500 text-xs mt-1 hidden" id="err-phone"></p>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div class="flex gap-3 pt-4">
                                 <button type="submit"
-                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-5 bg-[#1ff91f] text-[#111811] text-base font-bold leading-normal tracking-[0.015em] grow">
-                                    <span class="truncate">Save Changes</span>
+                                    class="h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                                    Save Changes
                                 </button>
+                                <a href="/admin/customers/<%= customer._id %>"
+                                    class="h-10 px-6 rounded-xl bg-[#f0f5f0] font-bold text-[#111810] hover:bg-[#e0e5e0] transition-colors flex items-center">
+                                    Cancel
+                                </a>
                             </div>
-                        </div>
-                    </form>
-
-                </div>
-            </div>
-        </div>
+                        </form>
+            </section>
+        </main>
     </div>
+
+    <script>
+        document.getElementById('editCustomerForm').addEventListener('submit', function (e) {
+            let valid = true;
+            document.querySelectorAll('[id^="err-"]').forEach(el => { el.textContent = ''; el.classList.add('hidden'); });
+
+            const name = this.querySelector('[name="name"]');
+            const email = this.querySelector('[name="email"]');
+            const phone = this.querySelector('[name="phone"]');
+
+            if (!name.value.trim() || name.value.trim().length < 2) {
+                document.getElementById('err-name').textContent = 'Name is required (min 2 characters).';
+                document.getElementById('err-name').classList.remove('hidden');
+                valid = false;
+            }
+
+            if (!email.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+                document.getElementById('err-email').textContent = 'Please enter a valid email address.';
+                document.getElementById('err-email').classList.remove('hidden');
+                valid = false;
+            }
+
+            if (phone.value.trim() && !/^\d{10}$/.test(phone.value.trim())) {
+                document.getElementById('err-phone').textContent = 'Phone must be exactly 10 digits.';
+                document.getElementById('err-phone').classList.remove('hidden');
+                valid = false;
+            }
+
+            if (!valid) e.preventDefault();
+        });
+    </script>
 </body>
 
 </html>

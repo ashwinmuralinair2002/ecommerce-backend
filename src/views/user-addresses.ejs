@@ -82,8 +82,13 @@
                     <% if (user && user.profileImage) { %>
                         <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
                         <% } else { %>
-                            👤
-                            <% } %>
+                            <% const _np=(user && user.name) ? user.name.trim().split(/\s+/) : []; const
+                                _ini=_np.length> 1 ? (_np[0][0] + _np[_np.length-1][0]).toUpperCase() : (user &&
+                                user.name ? user.name.substring(0,2).toUpperCase() : 'U'); %>
+                                <span class="text-xs font-bold text-[#2d6a2d]">
+                                    <%= _ini %>
+                                </span>
+                                <% } %>
                 </a>
             </div>
         </header>
@@ -167,6 +172,23 @@
             </section>
         </main>
     </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const success = urlParams.get('success');
+
+            if (success === 'address_saved') {
+                showToast('Address saved successfully!', 'success');
+                // Clean URL
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            } else if (success === 'address_updated') {
+                showToast('Address updated successfully!', 'success');
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        });
+    </script>
 </body>
 
 </html>

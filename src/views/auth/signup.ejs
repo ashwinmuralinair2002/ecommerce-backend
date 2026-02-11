@@ -79,9 +79,7 @@
                 }
 
                 // Success
-                if (data.devOtp) {
-                    alert(`[DEV MODE] Your OTP is: ${data.devOtp}`);
-                }
+
                 showMessage('Account created successfully! Redirecting to OTP...', 'success');
                 setTimeout(() => {
                     window.location.href = `/verify-otp`;

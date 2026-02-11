@@ -64,7 +64,16 @@
                 <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">🛒</button>
                 <a href="/account"
                     class="h-10 w-10 rounded-full bg-[#e7f4e7] flex items-center justify-center ring-2 ring-green-500 overflow-hidden">
-                    👤
+                    <% if (user && user.profileImage) { %>
+                        <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
+                        <% } else { %>
+                            <% const _np=(user && user.name) ? user.name.trim().split(/\s+/) : []; const
+                                _ini=_np.length> 1 ? (_np[0][0] + _np[_np.length-1][0]).toUpperCase() : (user &&
+                                user.name ? user.name.substring(0,2).toUpperCase() : 'U'); %>
+                                <span class="text-xs font-bold text-[#2d6a2d]">
+                                    <%= _ini %>
+                                </span>
+                                <% } %>
                 </a>
             </div>
         </header>
@@ -103,21 +112,27 @@
                         <!-- Full Name -->
                         <div class="relative">
                             <input name="name" id="name" placeholder="Full Name"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.name || '' %>" required />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.name) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.name) || address.name || '' %>" required />
                             <label for="name"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Full
                                 Name</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.name) || '' %>
+                            </p>
                         </div>
 
                         <!-- Phone Number -->
                         <div class="relative">
                             <input name="phone" id="phone" placeholder="Phone Number"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.phone || '' %>" required />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.phone) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.phone) || address.phone || '' %>" required />
                             <label for="phone"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Phone
                                 Number</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.phone) || '' %>
+                            </p>
                         </div>
                     </div>
 
@@ -125,20 +140,27 @@
                         <!-- House No -->
                         <div class="relative">
                             <input name="houseNo" id="houseNo" placeholder="House No"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.houseNo || '' %>" required />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.houseNo) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.houseNo) || address.houseNo || '' %>"
+                                required />
                             <label for="houseNo"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">House
                                 No</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.houseNo) || '' %>
+                            </p>
                         </div>
 
                         <!-- Street -->
                         <div class="relative">
                             <input name="street" id="street" placeholder="Street"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.street || '' %>" required />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.street) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.street) || address.street || '' %>" required />
                             <label for="street"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Street</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.street) || '' %>
+                            </p>
                         </div>
                     </div>
 
@@ -146,19 +168,25 @@
                         <!-- City -->
                         <div class="relative">
                             <input name="city" id="city" placeholder="City"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.city || '' %>" required />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.city) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.city) || address.city || '' %>" required />
                             <label for="city"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">City</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.city) || '' %>
+                            </p>
                         </div>
 
                         <!-- State -->
                         <div class="relative">
                             <input name="state" id="state" placeholder="State"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.state || '' %>" required />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.state) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.state) || address.state || '' %>" required />
                             <label for="state"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">State</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.state) || '' %>
+                            </p>
                         </div>
                     </div>
 
@@ -166,21 +194,27 @@
                         <!-- Postal Code -->
                         <div class="relative">
                             <input name="postalCode" id="postalCode" placeholder="Postal Code"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.zip || '' %>" required />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.postalCode) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.postalCode) || address.zip || '' %>" required />
                             <label for="postalCode"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Postal
                                 Code</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.postalCode) || '' %>
+                            </p>
                         </div>
 
                         <!-- Address Label -->
                         <div class="relative">
                             <input name="label" id="label" placeholder="Home, Work, Other"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border border-[#dbe6db] bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= address.label || '' %>" />
+                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.label) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
+                                value="<%= (locals.formData && formData.label) || address.label || '' %>" required />
                             <label for="label"
                                 class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Address
                                 Label</label>
+                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                <%= (locals.errors && errors.label) || '' %>
+                            </p>
                         </div>
                     </div>
 
@@ -196,6 +230,84 @@
                         </button>
                     </div>
                 </form>
+
+                <script>
+                    const form = document.querySelector('form');
+                    const inputs = form.querySelectorAll('input, select');
+
+                    const validateField = (input) => {
+                        const name = input.name;
+                        const value = input.value.trim();
+                        let error = '';
+
+                        if (name === 'name') {
+                            if (!value) error = 'Full Name is required';
+                            else if (!/^[A-Za-z ]{3,}$/.test(value)) error = 'Name must be at least 3 chars (letters only)';
+                        } else if (name === 'phone') {
+                            if (!value) error = 'Phone Number is required';
+                            else if (!/^[0-9]{10}$/.test(value)) error = 'Phone must be exactly 10 digits';
+                        } else if (name === 'postalCode') {
+                            if (!value) error = 'Postal Code is required';
+                            else if (!/^[0-9]{6}$/.test(value)) error = 'Postal Code must be exactly 6 digits';
+                        } else if (['houseNo', 'street'].includes(name)) {
+                            if (!value) error = `${input.placeholder} is required`;
+                            else if (value.length < 2) error = 'Must be at least 2 characters';
+                        } else if (name === 'city') {
+                            if (!value) error = 'City is required';
+                            else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(value)) error = 'City must contain only letters and spaces.';
+                        } else if (name === 'state') {
+                            if (!value) error = 'State is required';
+                            else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(value)) error = 'State must contain only letters and spaces.';
+                        } else if (name === 'label') {
+                            if (!value) error = 'Address Label is required';
+                        }
+
+                        // Display Error
+                        const container = input.closest('div');
+                        const errorMsg = container.querySelector('.error-msg') || container.parentElement.querySelector('.error-msg');
+
+                        // Handle select specifically if needed, but structure assumes generic next sibling or standard placement
+                        // Refined selector for select inside div structure
+                        let errorEl = input.parentElement.querySelector('.error-msg');
+                        if (!errorEl) errorEl = input.nextElementSibling?.classList?.contains('error-msg') ? input.nextElementSibling : null;
+
+
+                        if (error) {
+                            input.classList.add('border-red-500');
+                            input.classList.remove('border-[#dbe6db]');
+                            if (errorEl) errorEl.textContent = error;
+                        } else {
+                            input.classList.remove('border-red-500');
+                            input.classList.add('border-[#dbe6db]');
+                            if (errorEl) errorEl.textContent = '';
+                        }
+
+                        return !error;
+                    };
+
+                    inputs.forEach(input => {
+                        input.addEventListener('input', () => validateField(input));
+                        input.addEventListener('blur', () => validateField(input));
+                    });
+
+                    form.addEventListener('submit', (e) => {
+                        let isValid = true;
+                        let firstError = null;
+
+                        inputs.forEach(input => {
+                            if (!validateField(input)) {
+                                isValid = false;
+                                if (!firstError) firstError = input;
+                            }
+                        });
+
+                        if (!isValid) {
+                            e.preventDefault();
+                            firstError.focus();
+                            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    });
+                </script>
 
             </section>
         </main>

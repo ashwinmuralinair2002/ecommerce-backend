@@ -9,10 +9,10 @@ const bcrypt = require('bcryptjs');
 const getCustomersPage = async (req, res) => {
     try {
         const { search, page = 1 } = req.query;
-        const limit = 5; // 5 customers per page
+        const limit = 5;
         const currentPage = parseInt(page) || 1;
 
-        let query = { role: 'user', deleted: false };
+        let query = { role: 'user', isDeleted: { $ne: true } };
 
         if (search) {
             query.$or = [
@@ -22,9 +22,15 @@ const getCustomersPage = async (req, res) => {
             ];
         }
 
-        // Get total count for pagination
         const totalCustomers = await User.countDocuments(query);
         const totalPages = Math.ceil(totalCustomers / limit);
+
+        // If current page exceeds total pages (e.g., last user on page was deleted), redirect to last valid page
+        if (currentPage > totalPages && totalPages > 0) {
+            const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+            return res.redirect(`/admin/customers?page=${totalPages}${searchParam}`);
+        }
+
         const skip = (currentPage - 1) * limit;
 
         const users = await User.find(query)
@@ -32,12 +38,11 @@ const getCustomersPage = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        // Augment users with dummy stats as requested
         const augmentedUsers = users.map(user => ({
             ...user.toObject(),
-            totalOrders: 0, // Placeholder
-            lifetimeValue: 0, // Placeholder
-            lastActive: user.updatedAt // Placeholder using updatedAt
+            totalOrders: 0,
+            lifetimeValue: 0,
+            lastActive: user.updatedAt
         }));
 
         res.render('admin/customers', {
@@ -52,8 +57,12 @@ const getCustomersPage = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.render('admin/customers', {
+            consumers: [],
+            search: '',
+            error: 'Failed to load customers. Please try again.',
+            pagination: { currentPage: 1, totalPages: 0, totalCustomers: 0, hasNextPage: false, hasPrevPage: false }
+        });
     }
 };
 
@@ -63,12 +72,11 @@ const toggleBlockUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        // Prevent blocking admin (though query usually filters them out, safety check)
         if (user.role === 'admin') {
-            return res.status(403).json({ error: 'Cannot block admin' });
+            return res.status(403).json({ success: false, message: 'Cannot block admin' });
         }
 
         user.isBlocked = !user.isBlocked;
@@ -76,8 +84,7 @@ const toggleBlockUser = async (req, res) => {
 
         res.json({ success: true, isBlocked: user.isBlocked });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server Error' });
+        res.status(500).json({ success: false, message: 'Failed to update user status' });
     }
 };
 
@@ -87,16 +94,15 @@ const softDeleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        user.deleted = true;
+        user.isDeleted = true;
         await user.save();
 
         res.json({ success: true });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server Error' });
+        res.status(500).json({ success: false, message: 'Failed to delete user' });
     }
 };
 
@@ -105,23 +111,21 @@ const softDeleteUser = async (req, res) => {
 const getCustomerDetails = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-        if (!user || user.role === 'admin' || user.deleted) {
-            return res.status(404).render('404', { message: 'Customer not found' });
+        if (!user || user.role === 'admin' || user.isDeleted) {
+            return res.redirect('/admin/customers');
         }
 
-        // Augment with stats
         const customer = {
             ...user.toObject(),
-            totalOrders: 0, // Placeholder
-            lifetimeValue: 0, // Placeholder
+            totalOrders: 0,
+            lifetimeValue: 0,
             joinedDate: user.createdAt,
-            lastLogin: user.updatedAt // Placeholder
+            lastLogin: user.updatedAt
         };
 
         res.render('admin/customer-details', { customer });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.redirect('/admin/customers');
     }
 };
 
@@ -130,15 +134,14 @@ const getCustomerDetails = async (req, res) => {
 const renderEditCustomerPage = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-        if (!user || user.role === 'admin' || user.deleted) {
-            return res.status(404).render('404', { message: 'Customer not found' });
+        if (!user || user.role === 'admin' || user.isDeleted) {
+            return res.redirect('/admin/customers');
         }
-        res.render('admin/edit-customer', { customer: user });
+        res.render('admin/edit-customer', { customer: user, error: null, errors: {}, oldInput: null });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.redirect('/admin/customers');
     }
-}
+};
 
 // @desc    Update Customer Profile
 // @route   POST /admin/customers/:id/update
@@ -146,9 +149,43 @@ const updateCustomer = async (req, res) => {
     try {
         const { name, email, phone } = req.body;
         const user = await User.findById(req.params.id);
+        const errors = {};
 
-        if (!user || user.role === 'admin' || user.deleted) {
-            return res.status(404).json({ error: 'Customer not found' });
+        if (!user || user.role === 'admin' || user.isDeleted) {
+            return res.redirect('/admin/customers');
+        }
+
+        // Validation
+        if (!name || name.trim().length < 2) {
+            errors.name = 'Name is required (min 2 characters).';
+        }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.email = 'Please enter a valid email address.';
+        }
+        if (phone && !/^\d{10}$/.test(phone.trim())) {
+            errors.phone = 'Phone must be exactly 10 digits.';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            return res.render('admin/edit-customer', {
+                customer: user,
+                error: null,
+                errors,
+                oldInput: req.body
+            });
+        }
+
+        // Check email uniqueness (if changed)
+        if (email.toLowerCase() !== user.email.toLowerCase()) {
+            const existing = await User.findOne({ email: email.toLowerCase(), _id: { $ne: user._id } });
+            if (existing) {
+                return res.render('admin/edit-customer', {
+                    customer: user,
+                    error: 'A user with this email already exists.',
+                    errors: {},
+                    oldInput: req.body
+                });
+            }
         }
 
         user.name = name || user.name;
@@ -158,8 +195,13 @@ const updateCustomer = async (req, res) => {
         await user.save();
         res.redirect(`/admin/customers/${user._id}`);
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        const user = await User.findById(req.params.id).catch(() => null);
+        res.render('admin/edit-customer', {
+            customer: user || { _id: req.params.id, name: '', email: '', phone: '' },
+            error: 'Failed to update customer. Please try again.',
+            errors: {},
+            oldInput: req.body
+        });
     }
 };
 
@@ -171,7 +213,7 @@ const updateAdminNotes = async (req, res) => {
         const user = await User.findById(req.params.id);
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
 
         user.adminNotes = adminNotes;
@@ -179,8 +221,7 @@ const updateAdminNotes = async (req, res) => {
 
         res.json({ success: true, message: 'Notes updated' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server Error' });
+        res.status(500).json({ success: false, message: 'Failed to update notes' });
     }
 };
 
@@ -189,7 +230,7 @@ const updateAdminNotes = async (req, res) => {
 const exportCustomers = async (req, res) => {
     try {
         const { search } = req.query;
-        let query = { role: 'user', deleted: false };
+        let query = { role: 'user', isDeleted: { $ne: true } };
 
         if (search) {
             query.$or = [
@@ -212,12 +253,10 @@ const exportCustomers = async (req, res) => {
             res.attachment('customers.csv');
             return res.send(csv);
         } catch (err) {
-            console.error(err);
-            return res.status(500).send('Error generating CSV');
+            return res.status(500).json({ success: false, message: 'Failed to generate CSV export' });
         }
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.status(500).json({ success: false, message: 'Failed to export customers' });
     }
 };
 
@@ -226,43 +265,38 @@ const exportCustomers = async (req, res) => {
 const getCustomerOrders = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
-        if (!user || user.role === 'admin' || user.deleted) {
-            return res.status(404).render('404', { message: 'Customer not found' });
+        if (!user || user.role === 'admin' || user.isDeleted) {
+            return res.redirect('/admin/customers');
         }
 
         const orders = await Order.find({ user: user._id, deleted: false }).sort({ createdAt: -1 });
 
         res.render('admin/customer-orders', { customer: user, orders });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.redirect(`/admin/customers/${req.params.id}`);
     }
 };
 
-// @desc    Update Admin Profile
-// @route   POST /admin/profile/update
 // @desc    Update Admin Profile
 // @route   POST /admin/profile/update
 const updateAdminProfile = async (req, res) => {
     try {
         const { name, email, phone } = req.body;
 
-        // Basic Validation
-        if (!email || !email.includes('@')) {
-            console.error('Update Failed: Invalid Email');
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
                 return res.redirect('back');
             }
-            return res.status(400).json({ error: 'Invalid email' });
+            return res.status(400).json({ success: false, message: 'Invalid email address' });
         }
 
         let updatedUser = {};
 
-        // Case 1: DB-Based Admin (Has a valid MongoDB _id)
+        // Case 1: DB-Based Admin
         if (req.user && req.user._id) {
             const dbUser = await User.findById(req.user._id);
             if (!dbUser) {
-                return res.status(404).json({ error: 'User not found in DB' });
+                return res.status(404).json({ success: false, message: 'User not found' });
             }
 
             dbUser.name = name || dbUser.name;
@@ -272,9 +306,6 @@ const updateAdminProfile = async (req, res) => {
             await dbUser.save();
             updatedUser = dbUser.toObject();
 
-            console.log('[Admin Profile] DB Admin updated:', { name: dbUser.name, email: dbUser.email, phone: dbUser.phone });
-
-            // Update Session to reflect changes immediately
             if (req.session) {
                 req.session.adminName = dbUser.name;
                 req.session.adminEmail = dbUser.email;
@@ -282,49 +313,34 @@ const updateAdminProfile = async (req, res) => {
                 await new Promise((resolve) => req.session.save(resolve));
             }
         }
-        // Case 2: Env-Based Admin (No DB record, just Session/Env identity)
+        // Case 2: Env-Based Admin
         else {
-            // Update Session to reflect changes in UI for this session
             if (req.session) {
                 req.session.adminName = name || req.user.name;
                 req.session.adminEmail = email || req.user.email;
                 req.session.adminPhone = phone !== undefined ? phone : req.user.phone;
 
-                // Capture updated values for response
                 updatedUser = {
                     name: req.session.adminName,
                     email: req.session.adminEmail,
                     phone: req.session.adminPhone
                 };
 
-                // Await session save to ensure persistence before redirect/response
                 await new Promise((resolve, reject) => {
                     req.session.save(err => {
-                        if (err) {
-                            console.error('Session Save Error:', err);
-                            reject(err);
-                        } else {
-                            console.log('[Admin Profile] Session saved:', {
-                                adminName: req.session.adminName,
-                                adminEmail: req.session.adminEmail,
-                                adminPhone: req.session.adminPhone
-                            });
-                            resolve();
-                        }
+                        if (err) reject(err);
+                        else resolve();
                     });
                 });
             } else {
-                // Fallback if session is missing (unlikely in admin route)
                 updatedUser = { name, email, phone };
             }
         }
 
-        // If request is from a form submission, redirect back
         if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
             return res.redirect('back');
         }
 
-        // Return updated user data (Safe for both DB and Env admins)
         res.json({
             success: true,
             user: {
@@ -335,8 +351,10 @@ const updateAdminProfile = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Admin Profile Update Error:', error);
-        res.status(500).json({ error: 'Failed to update profile' });
+        if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
+            return res.redirect('back');
+        }
+        res.status(500).json({ success: false, message: 'Failed to update profile' });
     }
 };
 
@@ -352,7 +370,6 @@ const changeAdminPassword = async (req, res) => {
     try {
         const { currentPassword, newPassword, confirmPassword } = req.body;
 
-        // Validate new password length
         if (!newPassword || newPassword.length < 8) {
             return res.render('admin/change-password', {
                 message: 'New password must be at least 8 characters',
@@ -360,7 +377,6 @@ const changeAdminPassword = async (req, res) => {
             });
         }
 
-        // Validate passwords match
         if (newPassword !== confirmPassword) {
             return res.render('admin/change-password', {
                 message: 'Passwords do not match',
@@ -378,7 +394,6 @@ const changeAdminPassword = async (req, res) => {
                 });
             }
 
-            // Verify current password
             const isMatch = await bcrypt.compare(currentPassword, user.password);
             if (!isMatch) {
                 return res.render('admin/change-password', {
@@ -387,27 +402,22 @@ const changeAdminPassword = async (req, res) => {
                 });
             }
 
-            // Hash and save new password
             const salt = await bcrypt.genSalt(10);
             user.password = await bcrypt.hash(newPassword, salt);
             await user.save();
 
-            console.log('[Admin Password] DB Admin password updated');
             return res.redirect('/admin/dashboard?passwordChanged=true');
         }
-        // Case 2: Env-Based Admin - Create/update DB record for password persistence
+        // Case 2: Env-Based Admin
         else {
             const adminEmail = req.session.adminEmail || process.env.ADMIN_EMAIL;
             const adminName = req.session.adminName || process.env.ADMIN_NAME || 'Admin';
 
-            // Check if DB record exists for this admin email
             let adminUser = await User.findOne({ email: adminEmail });
 
             if (adminUser) {
-                // Admin exists in DB - verify current password against DB hash
                 const isMatch = await bcrypt.compare(currentPassword, adminUser.password);
                 if (!isMatch) {
-                    // Also check against env password for backwards compatibility
                     const envPassword = process.env.ADMIN_PASSWORD;
                     if (currentPassword !== envPassword) {
                         return res.render('admin/change-password', {
@@ -417,14 +427,10 @@ const changeAdminPassword = async (req, res) => {
                     }
                 }
 
-                // Update password in DB
                 const salt = await bcrypt.genSalt(10);
                 adminUser.password = await bcrypt.hash(newPassword, salt);
                 await adminUser.save();
-
-                console.log('[Admin Password] Env-based admin password updated in DB');
             } else {
-                // No DB record - verify against env password
                 const envPassword = process.env.ADMIN_PASSWORD;
                 if (currentPassword !== envPassword) {
                     return res.render('admin/change-password', {
@@ -433,7 +439,6 @@ const changeAdminPassword = async (req, res) => {
                     });
                 }
 
-                // Create DB record for admin with new password
                 const salt = await bcrypt.genSalt(10);
                 const hashedPassword = await bcrypt.hash(newPassword, salt);
 
@@ -445,14 +450,11 @@ const changeAdminPassword = async (req, res) => {
                     isVerified: true
                 });
                 await adminUser.save();
-
-                console.log('[Admin Password] Created DB record for env-based admin with new password');
             }
 
             return res.redirect('/admin/dashboard?passwordChanged=true');
         }
     } catch (error) {
-        console.error('Admin Password Change Error:', error);
         return res.render('admin/change-password', {
             message: 'An error occurred while changing password',
             messageType: 'error'
@@ -463,7 +465,7 @@ const changeAdminPassword = async (req, res) => {
 // @desc    Render Add Customer Page
 // @route   GET /admin/customers/add
 const renderAddCustomerPage = (req, res) => {
-    res.render('admin/add-customer', { message: null, messageType: null });
+    res.render('admin/add-customer', { message: null, messageType: null, errors: {}, oldInput: {} });
 };
 
 // @desc    Add New Customer
@@ -471,12 +473,28 @@ const renderAddCustomerPage = (req, res) => {
 const addCustomer = async (req, res) => {
     try {
         const { name, email, phone, password } = req.body;
+        const errors = {};
 
-        // Validate required fields
-        if (!name || !email || !password) {
+        // Validation
+        if (!name || name.trim().length < 2) {
+            errors.name = 'Name is required (min 2 characters).';
+        }
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.email = 'Please enter a valid email address.';
+        }
+        if (!password || password.length < 8) {
+            errors.password = 'Password must be at least 8 characters.';
+        }
+        if (phone && !/^\d{10}$/.test(phone.trim())) {
+            errors.phone = 'Phone must be exactly 10 digits.';
+        }
+
+        if (Object.keys(errors).length > 0) {
             return res.render('admin/add-customer', {
-                message: 'Name, email, and password are required',
-                messageType: 'error'
+                message: null,
+                messageType: null,
+                errors,
+                oldInput: req.body
             });
         }
 
@@ -484,44 +502,36 @@ const addCustomer = async (req, res) => {
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return res.render('admin/add-customer', {
-                message: 'A user with this email already exists',
-                messageType: 'error'
+                message: 'A user with this email already exists.',
+                messageType: 'error',
+                errors: {},
+                oldInput: req.body
             });
         }
 
-        // Validate password length
-        if (password.length < 8) {
-            return res.render('admin/add-customer', {
-                message: 'Password must be at least 8 characters',
-                messageType: 'error'
-            });
-        }
-
-        // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create new user
         const newUser = new User({
             name,
             email: email.toLowerCase(),
             phone: phone || '',
             password: hashedPassword,
             role: 'user',
-            isVerified: true, // Admin-created users are pre-verified
-            deleted: false,
+            isVerified: true,
+            isDeleted: false,
             isBlocked: false
         });
 
         await newUser.save();
-        console.log('[Admin] New customer created:', email);
 
         res.redirect('/admin/customers');
     } catch (error) {
-        console.error('Add Customer Error:', error);
         return res.render('admin/add-customer', {
-            message: 'An error occurred while adding customer',
-            messageType: 'error'
+            message: 'An error occurred while adding customer. Please try again.',
+            messageType: 'error',
+            errors: {},
+            oldInput: req.body
         });
     }
 };

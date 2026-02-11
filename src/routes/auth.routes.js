@@ -1,5 +1,5 @@
 // Authentication routes configuration
-console.log('--- AUTH ROUTES LOADING: faa11254 ---');
+
 const express = require('express');
 const { check } = require('express-validator');
 const { signup, login, verifyOtp, resendOtp, forgotPassword, resetPassword } = require('../controllers/auth.controller');
@@ -7,7 +7,7 @@ const { verifyToken } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
-router.get('/debug-probe', (req, res) => res.json({ msg: 'I AM HERE', env: process.env.NODE_ENV }));
+
 
 router.post(
     '/signup',

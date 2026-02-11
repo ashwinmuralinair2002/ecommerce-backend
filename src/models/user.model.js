@@ -26,13 +26,12 @@ const userSchema = new mongoose.Schema({
         default: '',
     },
     profileImage: {
-        type: String, // Cloudinary URL
+        type: String,
         default: null
     },
     email: {
         type: String,
         required: true,
-        unique: true,
         lowercase: true,
         trim: true,
     },
@@ -86,7 +85,7 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-    deleted: {
+    isDeleted: {
         type: Boolean,
         default: false,
     },

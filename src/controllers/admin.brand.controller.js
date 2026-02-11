@@ -7,17 +7,15 @@ const cloudinary = require('../config/cloudinary');
 exports.getBrands = async (req, res) => {
     try {
         const { page = 1, search = '' } = req.query;
-        const limit = 5; // 5 brands per page
+        const limit = 5;
         const currentPage = parseInt(page) || 1;
 
         const query = { isDeleted: false };
 
-        // Search Logic
         if (search) {
             query.name = { $regex: search, $options: 'i' };
         }
 
-        // Get total count for pagination
         const totalBrands = await Brand.countDocuments(query);
         const totalPages = Math.ceil(totalBrands / limit);
         const skip = (currentPage - 1) * limit;
@@ -27,7 +25,6 @@ exports.getBrands = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        // Ensure logoUrl defaults if missing (for old data)
         brands.forEach(b => {
             if (!b.logoUrl) b.logoUrl = '';
             if (b.productCount === undefined) b.productCount = 0;
@@ -35,7 +32,7 @@ exports.getBrands = async (req, res) => {
 
         res.render('admin/admin-brands', {
             brands,
-            search, // Pass search term to view
+            search,
             pagination: {
                 currentPage,
                 totalPages,
@@ -45,15 +42,19 @@ exports.getBrands = async (req, res) => {
             }
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.render('admin/admin-brands', {
+            brands: [],
+            search: '',
+            error: 'Failed to load brands. Please try again.',
+            pagination: { currentPage: 1, totalPages: 0, totalBrands: 0, hasNextPage: false, hasPrevPage: false }
+        });
     }
 };
 
-// @desc    Render Add Brand Page -- Keeping existing flow
+// @desc    Render Add Brand Page
 // @route   GET /admin/brands/add
 exports.renderAddBrand = (req, res) => {
-    res.render('admin/brands/add-brand');
+    res.render('admin/brands/add-brand', { error: null, errors: {}, oldInput: {} });
 };
 
 // @desc    Add Brand
@@ -61,28 +62,40 @@ exports.renderAddBrand = (req, res) => {
 exports.addBrand = async (req, res) => {
     try {
         const { name, description, website, contactEmail, isActive } = req.body;
+        const errors = {};
 
-        // 1. Validate file upload OR URL
+        // Backend validation
+        if (!name || name.trim().length < 2) {
+            errors.name = 'Brand name is required (min 2 characters).';
+        }
         if (!req.file && !req.body.logoUrl) {
+            errors.logo = 'Please upload a brand logo or provide a URL.';
+        }
+        if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+            errors.contactEmail = 'Please enter a valid email address.';
+        }
+
+        if (Object.keys(errors).length > 0) {
             return res.render('admin/brands/add-brand', {
-                error: 'Please upload a brand logo or provide a URL.',
+                error: null,
+                errors,
                 oldInput: req.body
             });
         }
 
-        // 2. Validate unique name
+        // Check unique name
         const existingBrand = await Brand.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') }, isDeleted: false });
         if (existingBrand) {
             return res.render('admin/brands/add-brand', {
                 error: 'Brand name already exists.',
+                errors: {},
                 oldInput: req.body
             });
         }
 
-        // 3. Create Brand - use Cloudinary URL from req.file.path
         let logoUrl = '';
         if (req.file) {
-            logoUrl = req.file.path; // Cloudinary URL
+            logoUrl = req.file.path;
         } else if (req.body.logoUrl) {
             logoUrl = req.body.logoUrl;
         }
@@ -93,7 +106,7 @@ exports.addBrand = async (req, res) => {
             logoUrl,
             website,
             contactEmail,
-            isActive: isActive === 'on', // Checkbox sends 'on' if checked
+            isActive: isActive === 'on',
             productCount: 0
         });
 
@@ -101,9 +114,9 @@ exports.addBrand = async (req, res) => {
         res.redirect('/admin/brands');
 
     } catch (error) {
-        console.error(error);
         res.render('admin/brands/add-brand', {
-            error: 'Server Error: ' + error.message,
+            error: 'Failed to add brand. Please try again.',
+            errors: {},
             oldInput: req.body
         });
     }
@@ -114,11 +127,12 @@ exports.addBrand = async (req, res) => {
 exports.renderEditBrand = async (req, res) => {
     try {
         const brand = await Brand.findById(req.params.id);
-        if (!brand) return res.status(404).send('Brand not found');
-        res.render('admin/brands/edit-brand', { brand });
+        if (!brand) {
+            return res.redirect('/admin/brands');
+        }
+        res.render('admin/brands/edit-brand', { brand, error: null, errors: {}, oldInput: null });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.redirect('/admin/brands');
     }
 };
 
@@ -127,12 +141,9 @@ exports.renderEditBrand = async (req, res) => {
 exports.getBrandDetails = async (req, res) => {
     try {
         const brand = await Brand.findById(req.params.id);
-        if (!brand) return res.status(404).send('Brand not found');
+        if (!brand) return res.redirect('/admin/brands');
 
-        // Mock data as requested since Product model is not fully wired/populated with brands
         const products = [];
-        // Example mock product if brand.productCount > 0 could be added here if needed, 
-        // but for now empty array is safer than crashing on missing model.
         if (brand.productCount > 0) {
             products.push({
                 _id: 'mock_prod_1',
@@ -148,8 +159,7 @@ exports.getBrandDetails = async (req, res) => {
 
         res.render('admin/brand-details', { brand, products, metrics });
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.redirect('/admin/brands');
     }
 };
 
@@ -158,31 +168,45 @@ exports.getBrandDetails = async (req, res) => {
 exports.editBrand = async (req, res) => {
     try {
         if (!req.body) {
-            throw new Error('req.body is undefined - Body parsing failed');
+            throw new Error('Request body is missing');
         }
 
         const { name, description, logoUrl } = req.body;
         const brand = await Brand.findById(req.params.id);
+        const errors = {};
+
+        if (!brand) {
+            return res.redirect('/admin/brands');
+        }
+
+        if (!name || name.trim().length < 2) {
+            errors.name = 'Brand name is required (min 2 characters).';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            return res.render('admin/brands/edit-brand', {
+                brand,
+                error: null,
+                errors,
+                oldInput: req.body
+            });
+        }
 
         brand.name = name || brand.name;
         brand.description = description || brand.description;
 
-        // Priority: 1. New File Upload (Cloudinary), 2. New URL input, 3. Keep existing
         if (req.file) {
-            // Delete old image from Cloudinary if it exists and is a Cloudinary URL
             if (brand.logoUrl && brand.logoUrl.includes('cloudinary.com')) {
                 try {
-                    // Extract public_id from URL
                     const urlParts = brand.logoUrl.split('/');
                     const filename = urlParts[urlParts.length - 1];
                     const publicId = 'soundwave_brands/' + filename.split('.')[0];
                     await cloudinary.uploader.destroy(publicId);
-                    console.log('[Brand] Old Cloudinary image deleted:', publicId);
                 } catch (deleteErr) {
-                    console.error('[Brand] Failed to delete old Cloudinary image:', deleteErr.message);
+                    // Silently continue — old image deletion is non-critical
                 }
             }
-            brand.logoUrl = req.file.path; // Cloudinary URL
+            brand.logoUrl = req.file.path;
         } else if (logoUrl && logoUrl.trim() !== '') {
             brand.logoUrl = logoUrl;
         }
@@ -190,8 +214,14 @@ exports.editBrand = async (req, res) => {
         await brand.save();
         res.redirect('/admin/brands');
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        // Re-render with error and preserved input
+        const brand = await Brand.findById(req.params.id).catch(() => null);
+        res.render('admin/brands/edit-brand', {
+            brand: brand || { _id: req.params.id, name: '', description: '', logoUrl: '' },
+            error: 'Failed to update brand. Please try again.',
+            errors: {},
+            oldInput: req.body
+        });
     }
 };
 
@@ -200,15 +230,13 @@ exports.editBrand = async (req, res) => {
 exports.toggleBrandStatus = async (req, res) => {
     try {
         const brand = await Brand.findById(req.params.id);
-        if (!brand) return res.status(404).send('Brand not found');
+        if (!brand) return res.redirect('/admin/brands');
 
         brand.isActive = !brand.isActive;
         await brand.save();
-        // Redirect back to the same brand detail page
         res.redirect('/admin/brands/' + req.params.id);
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.redirect('/admin/brands/' + req.params.id);
     }
 };
 
@@ -217,15 +245,12 @@ exports.toggleBrandStatus = async (req, res) => {
 exports.deleteBrand = async (req, res) => {
     try {
         const brand = await Brand.findById(req.params.id);
-        if (!brand) return res.status(404).send('Brand not found');
-
-        // if (brand.productCount > 0) { ... } validation removed to allow force delete
+        if (!brand) return res.redirect('/admin/brands');
 
         brand.isDeleted = true;
         await brand.save();
         res.redirect('/admin/brands');
     } catch (error) {
-        console.error(error);
-        res.status(500).send('Server Error');
+        res.redirect('/admin/brands');
     }
 };

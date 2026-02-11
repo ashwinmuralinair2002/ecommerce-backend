@@ -33,7 +33,7 @@
 
                 <h1 class="text-[32px] font-bold text-[#121811] mb-6">Add Customer</h1>
 
-                <!-- Message Container -->
+                <!-- General Message Container -->
                 <% if (typeof message !=='undefined' && message) { %>
                     <div
                         class="mb-4 p-3 rounded-xl text-sm font-medium <%= messageType === 'error' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' %>">
@@ -42,41 +42,67 @@
                     <% } %>
 
                         <form action="/admin/customers/add" method="POST" class="max-w-md space-y-4"
-                            id="addCustomerForm">
+                            id="addCustomerForm" novalidate>
                             <!-- Name -->
                             <div>
                                 <label class="block text-sm text-[#628d5e] mb-1">Full Name <span
                                         class="text-red-500">*</span></label>
-                                <input type="text" name="name" required
-                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                <input type="text" name="name" value="<%= locals.oldInput ? oldInput.name || '' : '' %>"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
                                     placeholder="Enter customer name" />
+                                <% if (locals.errors && errors.name) { %>
+                                    <p class="text-red-500 text-xs mt-1">
+                                        <%= errors.name %>
+                                    </p>
+                                    <% } %>
+                                        <p class="text-red-500 text-xs mt-1 hidden" id="err-name"></p>
                             </div>
 
                             <!-- Email -->
                             <div>
                                 <label class="block text-sm text-[#628d5e] mb-1">Email <span
                                         class="text-red-500">*</span></label>
-                                <input type="email" name="email" required
-                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                <input type="email" name="email"
+                                    value="<%= locals.oldInput ? oldInput.email || '' : '' %>"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.email) ? 'ring-2 ring-red-400' : '' %>"
                                     placeholder="Enter customer email" />
+                                <% if (locals.errors && errors.email) { %>
+                                    <p class="text-red-500 text-xs mt-1">
+                                        <%= errors.email %>
+                                    </p>
+                                    <% } %>
+                                        <p class="text-red-500 text-xs mt-1 hidden" id="err-email"></p>
                             </div>
 
                             <!-- Phone -->
                             <div>
                                 <label class="block text-sm text-[#628d5e] mb-1">Phone</label>
                                 <input type="tel" name="phone"
-                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                    value="<%= locals.oldInput ? oldInput.phone || '' : '' %>"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.phone) ? 'ring-2 ring-red-400' : '' %>"
                                     placeholder="Enter phone number (optional)" />
+                                <% if (locals.errors && errors.phone) { %>
+                                    <p class="text-red-500 text-xs mt-1">
+                                        <%= errors.phone %>
+                                    </p>
+                                    <% } %>
+                                        <p class="text-red-500 text-xs mt-1 hidden" id="err-phone"></p>
                             </div>
 
                             <!-- Password -->
                             <div>
                                 <label class="block text-sm text-[#628d5e] mb-1">Password <span
                                         class="text-red-500">*</span></label>
-                                <input type="password" name="password" required minlength="8"
-                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14]"
+                                <input type="password" name="password"
+                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.password) ? 'ring-2 ring-red-400' : '' %>"
                                     placeholder="Enter password (min 8 characters)" />
-                                <p class="text-xs text-[#658d5e] mt-1">Minimum 8 characters</p>
+                                <% if (locals.errors && errors.password) { %>
+                                    <p class="text-red-500 text-xs mt-1">
+                                        <%= errors.password %>
+                                    </p>
+                                    <% } %>
+                                        <p class="text-red-500 text-xs mt-1 hidden" id="err-password"></p>
+                                        <p class="text-xs text-[#658d5e] mt-1">Minimum 8 characters</p>
                             </div>
 
                             <!-- Buttons -->
@@ -94,6 +120,44 @@
             </section>
         </main>
     </div>
+
+    <script>
+        document.getElementById('addCustomerForm').addEventListener('submit', function (e) {
+            let valid = true;
+            document.querySelectorAll('[id^="err-"]').forEach(el => { el.textContent = ''; el.classList.add('hidden'); });
+
+            const name = this.querySelector('[name="name"]');
+            const email = this.querySelector('[name="email"]');
+            const phone = this.querySelector('[name="phone"]');
+            const password = this.querySelector('[name="password"]');
+
+            if (!name.value.trim() || name.value.trim().length < 2) {
+                document.getElementById('err-name').textContent = 'Name is required (min 2 characters).';
+                document.getElementById('err-name').classList.remove('hidden');
+                valid = false;
+            }
+
+            if (!email.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+                document.getElementById('err-email').textContent = 'Please enter a valid email address.';
+                document.getElementById('err-email').classList.remove('hidden');
+                valid = false;
+            }
+
+            if (phone.value.trim() && !/^\d{10}$/.test(phone.value.trim())) {
+                document.getElementById('err-phone').textContent = 'Phone must be exactly 10 digits.';
+                document.getElementById('err-phone').classList.remove('hidden');
+                valid = false;
+            }
+
+            if (!password.value || password.value.length < 8) {
+                document.getElementById('err-password').textContent = 'Password must be at least 8 characters.';
+                document.getElementById('err-password').classList.remove('hidden');
+                valid = false;
+            }
+
+            if (!valid) e.preventDefault();
+        });
+    </script>
 </body>
 
 </html>
