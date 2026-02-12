@@ -1,15 +1,43 @@
 // Home page controller for public and authenticated views
+const Product = require('../models/Product');
+
+// Helper: fetch products by badge
+async function getProductsByBadge(badge, limit = 8) {
+    return Product.find({
+        badges: badge,
+        isListed: true
+    })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+}
+
 // Public Landing Page
-exports.getHomePage = (req, res) => {
-    // If user is already logged in and verified, strictly redirect to /home?
-    // Or allow them to see landing page? 
-    // Requirement says: "The root route / MUST ALWAYS render the Landing Page"
-    // So we just render it.
-    res.render('user/home', { user: req.user });
+exports.getHomePage = async (req, res) => {
+    try {
+        const [bestSellers, newArrivals, deals] = await Promise.all([
+            getProductsByBadge('Best seller'),
+            getProductsByBadge('New'),
+            getProductsByBadge('Deal')
+        ]);
+        res.render('user/home', { user: req.user, bestSellers, newArrivals, deals });
+    } catch (error) {
+        console.error('Error loading home page:', error);
+        res.render('user/home', { user: req.user, bestSellers: [], newArrivals: [], deals: [] });
+    }
 };
 
 // Protected Dashboard / Feed
-exports.getPostLoginHomePage = (req, res) => {
-    // User is guaranteed to be authenticated and verified by middleware
-    res.render('user/post-login-home', { user: req.user });
+exports.getPostLoginHomePage = async (req, res) => {
+    try {
+        const [bestSellers, newArrivals, deals] = await Promise.all([
+            getProductsByBadge('Best seller'),
+            getProductsByBadge('New'),
+            getProductsByBadge('Deal')
+        ]);
+        res.render('user/post-login-home', { user: req.user, bestSellers, newArrivals, deals });
+    } catch (error) {
+        console.error('Error loading home page:', error);
+        res.render('user/post-login-home', { user: req.user, bestSellers: [], newArrivals: [], deals: [] });
+    }
 };

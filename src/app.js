@@ -10,6 +10,8 @@ const profileRoutes = require('./routes/profile.routes');
 const addressRoutes = require('./routes/address.routes');
 
 const { getHomePage, getPostLoginHomePage } = require('./controllers/home.controller');
+const productController = require('./controllers/admin.product.controller');
+const productUpload = require('./config/multerUpload');
 const nocache = require('./middleware/nocache.middleware');
 require('dotenv').config();
 
@@ -155,6 +157,16 @@ app.post('/admin/brands/:id/edit', ensureAdminAuthenticated, brandUpload.single(
 app.post('/admin/brands/:id/toggle-status', ensureAdminAuthenticated, brandController.toggleBrandStatus);
 app.post('/admin/brands/:id/delete', ensureAdminAuthenticated, brandController.deleteBrand);
 
+// Admin Product Management
+app.get('/admin/products', ensureAdminAuthenticated, productController.getProductsPage);
+app.get('/admin/products/add', ensureAdminAuthenticated, productController.getAddProductPage);
+app.get('/admin/products/edit/:id', ensureAdminAuthenticated, productController.getEditProductPage);
+app.post('/admin/products', ensureAdminAuthenticated, productUpload.array('productImages', 10), productController.createProduct);
+app.put('/admin/products/:id', ensureAdminAuthenticated, productUpload.array('productImages', 10), productController.updateProduct);
+app.delete('/admin/products/:id/images/:imageId', ensureAdminAuthenticated, productController.deleteProductImage);
+app.post('/admin/products/soft-delete', ensureAdminAuthenticated, productController.softDeleteProducts);
+app.delete('/admin/products/:id', ensureAdminAuthenticated, productController.softDeleteProduct);
+app.get('/admin/products/:id', ensureAdminAuthenticated, productController.getProductDetailPage);
 
 app.get('/login', (req, res) => {
     res.render('login');

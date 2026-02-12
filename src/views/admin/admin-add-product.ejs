@@ -1,0 +1,782 @@
+<!-- Admin Add Product page with dynamic brands, image upload, and form validation -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
+
+    <title>Admin · Add Product</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <style>
+        :root {
+            --checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(18,24,16)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e');
+            --select-button-svg: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724px%27 height=%2724px%27 fill=%27rgb(101,141,94)%27 viewBox=%270 0 256 256%27%3e%3cpath d=%27M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z%27%3e%3c/path%3e%3c/svg%3e');
+        }
+
+        .field-error {
+            color: #dc2626;
+            font-size: 0.75rem;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .field-error.visible {
+            display: block;
+        }
+
+        .input-error {
+            border-color: #dc2626 !important;
+        }
+
+        .hero-badge {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            background: #37ff14;
+            color: #121810;
+            font-size: 0.625rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .image-preview-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            aspect-ratio: 1;
+        }
+
+        .image-preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-remove-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(220, 38, 38, 0.9);
+            color: white;
+            border: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'products' }) %>
+            </aside>
+
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <!-- Breadcrumb -->
+                <div class="flex flex-wrap gap-2 pb-4">
+                    <a class="text-[#658d5e] text-base font-medium leading-normal" href="/admin/products">Products</a>
+                    <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
+                    <span class="text-[#121810] text-base font-medium leading-normal">Add Product</span>
+                </div>
+
+                <!-- Page Title -->
+                <div class="flex flex-wrap justify-between gap-3 pb-4">
+                    <p class="text-[#121810] tracking-light text-[32px] font-bold leading-tight min-w-72">Add Product
+                    </p>
+                </div>
+
+                <!-- Form Content -->
+                <form id="addProductForm" class="max-w-[960px]" enctype="multipart/form-data" novalidate>
+                    <!-- Title -->
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Title <span
+                                    class="text-red-500">*</span></p>
+                            <input id="productTitle" name="title" placeholder="Product Title" required
+                                pattern="^[a-zA-Z0-9 ]+$"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="productTitleError">Only letters, numbers, and spaces allowed</p>
+                        </label>
+                    </div>
+
+                    <!-- SKU -->
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">SKU</p>
+                            <input id="productSku" name="sku" placeholder="SKU (Leave blank to auto-generate)"
+                                pattern="^[a-zA-Z0-9\-]+$"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="productSkuError">Only letters, numbers, and hyphens allowed</p>
+                        </label>
+                    </div>
+
+                    <!-- Brand (Dynamic) -->
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Brand <span
+                                    class="text-red-500">*</span></p>
+                            <select id="brandSelect" name="brand" required
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                <option value="">Select Brand</option>
+                                <% if (brands && brands.length> 0) { %>
+                                    <% brands.forEach(function(brand) { %>
+                                        <option value="<%= brand._id %>">
+                                            <%= brand.name %>
+                                        </option>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <option value="" disabled>No brands available</option>
+                                                <% } %>
+                            </select>
+                            <p class="field-error" id="brandSelectError">Please select a brand</p>
+                        </label>
+                    </div>
+
+                    <!-- Connection Type -->
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Connection Type <span
+                                    class="text-red-500">*</span></p>
+                            <select id="connectionType" name="connectionType" required
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                <option value="">Select Connection Type</option>
+                                <option value="Wired">Wired</option>
+                                <option value="Wireless">Wireless</option>
+                            </select>
+                            <p class="field-error" id="connectionTypeError">Please select a connection type</p>
+                        </label>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Category <span
+                                    class="text-red-500">*</span></p>
+                            <select id="categorySelect" name="category" required
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                <option value="">Select Category</option>
+                                <option value="In-ear">In-ear</option>
+                                <option value="On-ear">On-ear</option>
+                                <option value="Over-ear">Over-ear</option>
+                            </select>
+                            <p class="field-error" id="categorySelectError">Please select a category</p>
+                        </label>
+                    </div>
+
+                    <!-- Short Description -->
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Short Description</p>
+                            <textarea id="shortDescription" name="shortDescription"
+                                placeholder="Brief product description"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] min-h-36 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"></textarea>
+                        </label>
+                    </div>
+
+                    <!-- Pricing -->
+                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                        Pricing</h3>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Price (₹) <span
+                                    class="text-red-500">*</span></p>
+                            <input id="productPrice" name="price" placeholder="e.g., 1299" type="number" step="0.01"
+                                min="0" required
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="productPriceError">Price must be a positive number</p>
+                        </label>
+                    </div>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Original Price (₹)
+                                (Optional)</p>
+                            <input id="originalPrice" name="originalPrice" placeholder="e.g., 1499" type="number"
+                                step="0.01" min="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="originalPriceError">Must be a positive number</p>
+                        </label>
+                    </div>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Discount Percentage (%)
+                            </p>
+                            <input id="discountPercentage" name="discountPercentage" placeholder="e.g., 10"
+                                type="number" step="0.01" min="0" max="100"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="discountPercentageError">Must be between 0 and 100</p>
+                        </label>
+                    </div>
+
+                    <!-- Inventory -->
+                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                        Inventory</h3>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Stock Count <span
+                                    class="text-red-500">*</span></p>
+                            <input id="stockCount" name="stockCount" placeholder="Number of items in stock"
+                                type="number" step="1" min="0" required
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="stockCountError">Must be a whole number (0 or more)</p>
+                        </label>
+                    </div>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Reserved Count (Initial)
+                            </p>
+                            <input id="reservedCount" name="reservedCount" placeholder="0" type="number" step="1"
+                                min="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="reservedCountError">Must be a whole number (0 or more)</p>
+                        </label>
+                    </div>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Reorder Threshold</p>
+                            <input id="reorderThreshold" name="reorderThreshold"
+                                placeholder="Minimum stock before reordering" type="number" step="1" min="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="reorderThresholdError">Must be a whole number (0 or more)</p>
+                        </label>
+                    </div>
+
+                    <!-- Media -->
+                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Media
+                        <span class="text-red-500">*</span></h3>
+                    <p class="text-[#658d5e] text-sm px-4 pb-2">Minimum 3 images required. First image will be the hero
+                        image.</p>
+                    <div class="flex flex-col p-4">
+                        <div id="dropZone"
+                            class="flex flex-col items-center gap-6 rounded-xl border-2 border-dashed border-[#dce7da] px-6 py-14 transition-colors cursor-pointer"
+                            onclick="document.getElementById('imageInput').click()">
+                            <div class="flex max-w-[480px] flex-col items-center gap-2">
+                                <p
+                                    class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] max-w-[480px] text-center">
+                                    Drag &amp; drop images here</p>
+                                <p class="text-[#121810] text-sm font-normal leading-normal max-w-[480px] text-center">
+                                    Or click to upload (JPEG, PNG, WebP)</p>
+                            </div>
+                            <button type="button"
+                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]"
+                                onclick="event.stopPropagation(); document.getElementById('imageInput').click()">
+                                <span class="truncate">Upload Images</span>
+                            </button>
+                        </div>
+                        <input type="file" id="imageInput" name="productImages" accept="image/jpeg,image/png,image/webp"
+                            multiple class="hidden" />
+                        <p class="field-error" id="imageError">Minimum 3 images required</p>
+                    </div>
+                    <!-- Image preview grid -->
+                    <div id="imagePreviewGrid" class="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 px-4">
+                    </div>
+
+                    <!-- Conditional Specs: Wired -->
+                    <div id="wiredSpecs" class="hidden">
+                        <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                            Wired Specs</h3>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Cable Length</p>
+                                <input id="cableLength" name="cableLength" placeholder="e.g., 1.2" type="number"
+                                    step="0.01" min="0"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="cableLengthError">Must be a positive number</p>
+                            </label>
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Connector Type</p>
+                                <input id="connectorType" name="connectorType" placeholder="e.g., 3.5mm Jack"
+                                    pattern="^[a-zA-Z0-9 .]+$"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="connectorTypeError">Only letters, numbers, spaces, and
+                                    periods allowed</p>
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Impedance (Ω)</p>
+                                <input id="impedance" name="impedance" placeholder="e.g., 32" type="number" step="0.1"
+                                    min="0"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="impedanceError">Must be a positive number</p>
+                            </label>
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Driver Size (mm)</p>
+                                <input id="driverSize" name="driverSize" placeholder="e.g., 40" type="number" step="0.1"
+                                    min="0"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="driverSizeError">Must be a positive number</p>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Conditional Specs: Wireless -->
+                    <div id="wirelessSpecs" class="hidden">
+                        <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                            Wireless Specs</h3>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Bluetooth Version
+                                </p>
+                                <input id="bluetoothVersion" name="bluetoothVersion" placeholder="e.g., 5.2"
+                                    type="number" step="0.1" min="0"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="bluetoothVersionError">Must be a positive number</p>
+                            </label>
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Battery Life (hours)
+                                </p>
+                                <input id="batteryLife" name="batteryLife" placeholder="e.g., 30" type="number"
+                                    step="0.1" min="0"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="batteryLifeError">Must be a positive number</p>
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Charging Time
+                                    (hours)</p>
+                                <input id="chargingTime" name="chargingTime" placeholder="e.g., 2" type="number"
+                                    step="0.1" min="0"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="chargingTimeError">Must be a positive number</p>
+                            </label>
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Wireless Range (m)
+                                </p>
+                                <input id="wirelessRange" name="wirelessRange" placeholder="e.g., 10" type="number"
+                                    step="0.1" min="0"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    value="" />
+                                <p class="field-error" id="wirelessRangeError">Must be a positive number</p>
+                            </label>
+                        </div>
+                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                            <label class="flex flex-col min-w-40 flex-1">
+                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Noise Cancellation
+                                </p>
+                                <select id="noiseCancellation" name="noiseCancellation"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                    <option value="">Select</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Passive">Passive</option>
+                                    <option value="None">None</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Badges -->
+                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Badges
+                    </h3>
+                    <div class="px-4">
+                        <label class="flex gap-x-3 py-3 flex-row">
+                            <input type="checkbox" name="badges" value="Best seller"
+                                class="h-5 w-5 rounded border-[#dce7da] border-2 bg-transparent text-[#37ff14] checked:bg-[#37ff14] checked:border-[#37ff14] checked:bg-[image:--checkbox-tick-svg] focus:ring-0 focus:ring-offset-0 focus:border-[#dce7da] focus:outline-none" />
+                            <p class="text-[#121810] text-base font-normal leading-normal">Best seller</p>
+                        </label>
+                        <label class="flex gap-x-3 py-3 flex-row">
+                            <input type="checkbox" name="badges" value="New"
+                                class="h-5 w-5 rounded border-[#dce7da] border-2 bg-transparent text-[#37ff14] checked:bg-[#37ff14] checked:border-[#37ff14] checked:bg-[image:--checkbox-tick-svg] focus:ring-0 focus:ring-offset-0 focus:border-[#dce7da] focus:outline-none" />
+                            <p class="text-[#121810] text-base font-normal leading-normal">New</p>
+                        </label>
+                        <label class="flex gap-x-3 py-3 flex-row">
+                            <input type="checkbox" name="badges" value="Deal"
+                                class="h-5 w-5 rounded border-[#dce7da] border-2 bg-transparent text-[#37ff14] checked:bg-[#37ff14] checked:border-[#37ff14] checked:bg-[image:--checkbox-tick-svg] focus:ring-0 focus:ring-offset-0 focus:border-[#dce7da] focus:outline-none" />
+                            <p class="text-[#121810] text-base font-normal leading-normal">Deal</p>
+                        </label>
+                    </div>
+
+                    <!-- Shipping & Weight -->
+                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                        Shipping &amp; Weight</h3>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Length (cm)</p>
+                            <input id="shippingLength" name="length" placeholder="Length" type="number" step="0.01"
+                                min="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="shippingLengthError">Must be a positive number</p>
+                        </label>
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Width (cm)</p>
+                            <input id="shippingWidth" name="width" placeholder="Width" type="number" step="0.01" min="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="shippingWidthError">Must be a positive number</p>
+                        </label>
+                    </div>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Height (cm)</p>
+                            <input id="shippingHeight" name="height" placeholder="Height" type="number" step="0.01"
+                                min="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="shippingHeightError">Must be a positive number</p>
+                        </label>
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Weight (kg)</p>
+                            <input id="shippingWeight" name="weight" placeholder="Weight" type="number" step="0.01"
+                                min="0"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                            <p class="field-error" id="shippingWeightError">Must be a positive number</p>
+                        </label>
+                    </div>
+
+                    <!-- SEO Meta -->
+                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">SEO
+                        Meta</h3>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Meta Title</p>
+                            <input id="metaTitle" name="metaTitle" placeholder="Meta Title"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                value="" />
+                        </label>
+                    </div>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Meta Description</p>
+                            <textarea id="metaDescription" name="metaDescription" placeholder="Meta Description"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] min-h-36 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"></textarea>
+                        </label>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-stretch">
+                        <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-end">
+                            <button type="button" onclick="window.location.href='/admin/products'"
+                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]">
+                                <span class="truncate">Cancel</span>
+                            </button>
+                            <button type="submit" id="createProductBtn"
+                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#37ff14] text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]">
+                                <span class="truncate">Create Product</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // ========== Image Upload Management ==========
+        let selectedFiles = []; // Array of File objects
+
+        const imageInput = document.getElementById('imageInput');
+        const previewGrid = document.getElementById('imagePreviewGrid');
+        const imageError = document.getElementById('imageError');
+        const dropZone = document.getElementById('dropZone');
+
+        // Drag & Drop
+        dropZone.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            dropZone.classList.add('border-[#37ff14]', 'bg-[#f0fff0]');
+        });
+        dropZone.addEventListener('dragleave', function (e) {
+            e.preventDefault();
+            dropZone.classList.remove('border-[#37ff14]', 'bg-[#f0fff0]');
+        });
+        dropZone.addEventListener('drop', function (e) {
+            e.preventDefault();
+            dropZone.classList.remove('border-[#37ff14]', 'bg-[#f0fff0]');
+            const files = Array.from(e.dataTransfer.files).filter(f =>
+                ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+            );
+            addFiles(files);
+        });
+
+        imageInput.addEventListener('change', function () {
+            const files = Array.from(this.files).filter(f =>
+                ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+            );
+            addFiles(files);
+            this.value = ''; // reset so same file can be re-selected
+        });
+
+        function addFiles(files) {
+            selectedFiles = selectedFiles.concat(files);
+            renderPreviews();
+            validateImages();
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderPreviews();
+            validateImages();
+        }
+
+        function renderPreviews() {
+            previewGrid.innerHTML = '';
+            selectedFiles.forEach(function (file, index) {
+                const div = document.createElement('div');
+                div.className = 'image-preview-item';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = 'Preview ' + (index + 1);
+                div.appendChild(img);
+
+                if (index === 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'hero-badge';
+                    badge.textContent = 'HERO';
+                    div.appendChild(badge);
+                }
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'image-remove-btn';
+                removeBtn.textContent = '×';
+                removeBtn.onclick = function () { removeFile(index); };
+                div.appendChild(removeBtn);
+
+                previewGrid.appendChild(div);
+            });
+        }
+
+        function validateImages() {
+            if (selectedFiles.length < 3) {
+                imageError.classList.add('visible');
+                return false;
+            }
+            imageError.classList.remove('visible');
+            return true;
+        }
+
+        // ========== Connection Type Toggle ==========
+        document.getElementById('connectionType').addEventListener('change', function () {
+            const wiredSpecs = document.getElementById('wiredSpecs');
+            const wirelessSpecs = document.getElementById('wirelessSpecs');
+            wiredSpecs.classList.add('hidden');
+            wirelessSpecs.classList.add('hidden');
+            if (this.value === 'Wired') {
+                wiredSpecs.classList.remove('hidden');
+            } else if (this.value === 'Wireless') {
+                wirelessSpecs.classList.remove('hidden');
+            }
+        });
+
+        // ========== Validation Helpers ==========
+        function showError(inputEl, errorEl) {
+            inputEl.classList.add('input-error');
+            errorEl.classList.add('visible');
+        }
+        function clearError(inputEl, errorEl) {
+            inputEl.classList.remove('input-error');
+            errorEl.classList.remove('visible');
+        }
+
+        function validatePattern(id, errorId) {
+            const input = document.getElementById(id);
+            const error = document.getElementById(errorId);
+            if (!input || !error) return true;
+            if (input.value.trim() === '') {
+                if (input.hasAttribute('required')) {
+                    showError(input, error);
+                    error.textContent = 'This field is required';
+                    return false;
+                }
+                clearError(input, error);
+                return true;
+            }
+            const pattern = input.getAttribute('pattern');
+            if (pattern && !new RegExp(pattern).test(input.value.trim())) {
+                showError(input, error);
+                return false;
+            }
+            clearError(input, error);
+            return true;
+        }
+
+        function validateNumber(id, errorId, isRequired) {
+            const input = document.getElementById(id);
+            const error = document.getElementById(errorId);
+            if (!input || !error) return true;
+            const val = input.value.trim();
+            if (val === '') {
+                if (isRequired) {
+                    showError(input, error);
+                    error.textContent = 'This field is required';
+                    return false;
+                }
+                clearError(input, error);
+                return true;
+            }
+            const num = parseFloat(val);
+            if (isNaN(num) || num < 0) {
+                showError(input, error);
+                return false;
+            }
+            const max = input.getAttribute('max');
+            if (max && num > parseFloat(max)) {
+                showError(input, error);
+                return false;
+            }
+            clearError(input, error);
+            return true;
+        }
+
+        function validateSelect(id, errorId) {
+            const select = document.getElementById(id);
+            const error = document.getElementById(errorId);
+            if (!select || !error) return true;
+            if (!select.value) {
+                showError(select, error);
+                return false;
+            }
+            clearError(select, error);
+            return true;
+        }
+
+        // Real-time validation on blur
+        document.querySelectorAll('#addProductForm input, #addProductForm select').forEach(function (el) {
+            el.addEventListener('blur', function () {
+                const errorEl = document.getElementById(el.id + 'Error');
+                if (!errorEl) return;
+                if (el.type === 'number') {
+                    validateNumber(el.id, el.id + 'Error', el.hasAttribute('required'));
+                } else if (el.tagName === 'SELECT') {
+                    if (el.hasAttribute('required')) validateSelect(el.id, el.id + 'Error');
+                } else {
+                    validatePattern(el.id, el.id + 'Error');
+                }
+            });
+        });
+
+        // ========== Form Submission ==========
+        document.getElementById('addProductForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            let valid = true;
+
+            // Required fields
+            if (!validatePattern('productTitle', 'productTitleError')) valid = false;
+            if (!validatePattern('productSku', 'productSkuError')) valid = false;
+            if (!validateSelect('brandSelect', 'brandSelectError')) valid = false;
+            if (!validateSelect('connectionType', 'connectionTypeError')) valid = false;
+            if (!validateSelect('categorySelect', 'categorySelectError')) valid = false;
+            if (!validateNumber('productPrice', 'productPriceError', true)) valid = false;
+            if (!validateNumber('stockCount', 'stockCountError', true)) valid = false;
+
+            // Optional numeric fields
+            if (!validateNumber('originalPrice', 'originalPriceError', false)) valid = false;
+            if (!validateNumber('discountPercentage', 'discountPercentageError', false)) valid = false;
+            if (!validateNumber('reservedCount', 'reservedCountError', false)) valid = false;
+            if (!validateNumber('reorderThreshold', 'reorderThresholdError', false)) valid = false;
+            if (!validateNumber('shippingLength', 'shippingLengthError', false)) valid = false;
+            if (!validateNumber('shippingWidth', 'shippingWidthError', false)) valid = false;
+            if (!validateNumber('shippingHeight', 'shippingHeightError', false)) valid = false;
+            if (!validateNumber('shippingWeight', 'shippingWeightError', false)) valid = false;
+
+            // Conditional specs
+            const connType = document.getElementById('connectionType').value;
+            if (connType === 'Wired') {
+                if (!validateNumber('cableLength', 'cableLengthError', false)) valid = false;
+                if (!validatePattern('connectorType', 'connectorTypeError')) valid = false;
+                if (!validateNumber('impedance', 'impedanceError', false)) valid = false;
+                if (!validateNumber('driverSize', 'driverSizeError', false)) valid = false;
+            } else if (connType === 'Wireless') {
+                if (!validateNumber('bluetoothVersion', 'bluetoothVersionError', false)) valid = false;
+                if (!validateNumber('batteryLife', 'batteryLifeError', false)) valid = false;
+                if (!validateNumber('chargingTime', 'chargingTimeError', false)) valid = false;
+                if (!validateNumber('wirelessRange', 'wirelessRangeError', false)) valid = false;
+            }
+
+            // Image validation
+            if (!validateImages()) valid = false;
+
+            if (!valid) {
+                const firstError = document.querySelector('.field-error.visible');
+                if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
+            // Build FormData
+            const formData = new FormData();
+            const form = this;
+
+            // Text/select fields
+            const fieldNames = ['title', 'sku', 'brand', 'connectionType', 'category', 'shortDescription',
+                'price', 'originalPrice', 'discountPercentage', 'stockCount', 'reservedCount', 'reorderThreshold',
+                'cableLength', 'connectorType', 'impedance', 'driverSize',
+                'bluetoothVersion', 'batteryLife', 'chargingTime', 'wirelessRange', 'noiseCancellation',
+                'length', 'width', 'height', 'weight', 'metaTitle', 'metaDescription'];
+
+            fieldNames.forEach(function (name) {
+                const el = form.querySelector('[name="' + name + '"]');
+                if (el) formData.append(name, el.value);
+            });
+
+            // Badges (multiple checkboxes)
+            document.querySelectorAll('[name="badges"]:checked').forEach(function (cb) {
+                formData.append('badges', cb.value);
+            });
+
+            // Images
+            selectedFiles.forEach(function (file) {
+                formData.append('productImages', file);
+            });
+
+            // Submit
+            const submitBtn = document.getElementById('createProductBtn');
+            submitBtn.disabled = true;
+            submitBtn.querySelector('span').textContent = 'Creating...';
+
+            try {
+                const res = await fetch('/admin/products', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = '/admin/products/' + data.productId;
+                } else {
+                    alert(data.message || 'Failed to create product');
+                    submitBtn.disabled = false;
+                    submitBtn.querySelector('span').textContent = 'Create Product';
+                }
+            } catch (err) {
+                alert('Error creating product. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.querySelector('span').textContent = 'Create Product';
+            }
+        });
+    </script>
+</body>
+
+</html>

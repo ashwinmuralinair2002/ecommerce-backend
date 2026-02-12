@@ -99,41 +99,103 @@
         <!-- Best Sellers -->
         <section>
             <h2 class="text-xl font-bold mb-4">Best Sellers</h2>
-            <div class="grid grid-cols-4 gap-6">
-                <% const cats=["wired","wireless","in-ear","on-ear"]; %>
-                    <% for(let i=0;i<4;i++){ %>
-                        <div class="border rounded-lg p-4 bg-white">
-                            <p class="font-medium">Product Name</p>
-                            <p class="text-[#499c49]">₹ Price</p>
-                        </div>
-                        <% } %>
-            </div>
+            <% if (bestSellers && bestSellers.length> 0) { %>
+                <div class="grid grid-cols-4 gap-6">
+                    <% bestSellers.forEach(function(product) { %>
+                        <% var heroImg=product.images.find(function(i) { return i.isHero; }) || product.images[0]; %>
+                            <a href="/product/<%= product._id %>"
+                                class="group bg-white rounded-xl overflow-hidden border border-[#e7f4e7] hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                                <div class="aspect-square overflow-hidden bg-[#f0f5f0]">
+                                    <img src="<%= heroImg ? heroImg.url : '' %>" alt="<%= product.title %>"
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                </div>
+                                <div class="p-4 space-y-1">
+                                    <p class="font-medium text-[#0d1c0d] text-sm leading-tight truncate">
+                                        <%= product.title %>
+                                    </p>
+                                    <p class="text-[#15803d] font-bold text-base">₹ <%=
+                                            product.price.toLocaleString('en-IN') %>
+                                    </p>
+                                    <% if (product.originalPrice && product.originalPrice> product.price) { %>
+                                        <p class="text-xs text-gray-400 line-through">₹ <%=
+                                                product.originalPrice.toLocaleString('en-IN') %>
+                                        </p>
+                                        <% } %>
+                                </div>
+                            </a>
+                            <% }) %>
+                </div>
+                <% } else { %>
+                    <p class="text-[#658d5e] text-sm py-6 text-center">No products available</p>
+                    <% } %>
         </section>
 
         <!-- New Arrivals -->
         <section>
             <h2 class="text-xl font-bold mb-4">New Arrivals</h2>
-            <div class="grid grid-cols-4 gap-6">
-                <% for(let i=0;i<4;i++){ %>
-                    <div class="border rounded-lg p-4 bg-white">
-                        <p class="font-medium">Product Name</p>
-                        <p class="text-[#499c49]">₹ Price</p>
-                    </div>
+            <% if (newArrivals && newArrivals.length> 0) { %>
+                <div class="grid grid-cols-4 gap-6">
+                    <% newArrivals.forEach(function(product) { %>
+                        <% var heroImg=product.images.find(function(i) { return i.isHero; }) || product.images[0]; %>
+                            <a href="/product/<%= product._id %>"
+                                class="group bg-white rounded-xl overflow-hidden border border-[#e7f4e7] hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                                <div class="aspect-square overflow-hidden bg-[#f0f5f0]">
+                                    <img src="<%= heroImg ? heroImg.url : '' %>" alt="<%= product.title %>"
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                </div>
+                                <div class="p-4 space-y-1">
+                                    <p class="font-medium text-[#0d1c0d] text-sm leading-tight truncate">
+                                        <%= product.title %>
+                                    </p>
+                                    <p class="text-[#15803d] font-bold text-base">₹ <%=
+                                            product.price.toLocaleString('en-IN') %>
+                                    </p>
+                                    <% if (product.originalPrice && product.originalPrice> product.price) { %>
+                                        <p class="text-xs text-gray-400 line-through">₹ <%=
+                                                product.originalPrice.toLocaleString('en-IN') %>
+                                        </p>
+                                        <% } %>
+                                </div>
+                            </a>
+                            <% }) %>
+                </div>
+                <% } else { %>
+                    <p class="text-[#658d5e] text-sm py-6 text-center">No products available</p>
                     <% } %>
-            </div>
         </section>
 
-        <!-- Deals -->
+        <!-- Today's Deals -->
         <section>
-            <h2 class="text-xl font-bold mb-4">Today’s Deals</h2>
-            <div class="grid grid-cols-4 gap-6">
-                <% for(let i=0;i<4;i++){ %>
-                    <div class="border rounded-lg p-4 bg-white">
-                        <p class="font-medium">Product Name</p>
-                        <p class="text-[#499c49]">Offer Price</p>
-                    </div>
+            <h2 class="text-xl font-bold mb-4">Today's Deals</h2>
+            <% if (deals && deals.length> 0) { %>
+                <div class="grid grid-cols-4 gap-6">
+                    <% deals.forEach(function(product) { %>
+                        <% var heroImg=product.images.find(function(i) { return i.isHero; }) || product.images[0]; %>
+                            <a href="/product/<%= product._id %>"
+                                class="group bg-white rounded-xl overflow-hidden border border-[#e7f4e7] hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                                <div class="aspect-square overflow-hidden bg-[#f0f5f0]">
+                                    <img src="<%= heroImg ? heroImg.url : '' %>" alt="<%= product.title %>"
+                                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                </div>
+                                <div class="p-4 space-y-1">
+                                    <p class="font-medium text-[#0d1c0d] text-sm leading-tight truncate">
+                                        <%= product.title %>
+                                    </p>
+                                    <p class="text-[#15803d] font-bold text-base">₹ <%=
+                                            product.price.toLocaleString('en-IN') %>
+                                    </p>
+                                    <% if (product.originalPrice && product.originalPrice> product.price) { %>
+                                        <p class="text-xs text-gray-400 line-through">₹ <%=
+                                                product.originalPrice.toLocaleString('en-IN') %>
+                                        </p>
+                                        <% } %>
+                                </div>
+                            </a>
+                            <% }) %>
+                </div>
+                <% } else { %>
+                    <p class="text-[#658d5e] text-sm py-6 text-center">No products available</p>
                     <% } %>
-            </div>
         </section>
 
     </main>
