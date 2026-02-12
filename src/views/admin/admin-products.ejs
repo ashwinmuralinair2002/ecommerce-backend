@@ -1,0 +1,424 @@
+<!-- Admin product listing page with dynamic data, search, filters, sort, pagination, and select mode -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
+
+    <title>Admin · Products</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // ──── Search ────
+        function handleSearch(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        }
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            applyFilters();
+        }
+
+        // ──── Filters / Sort ────
+        function applyFilters() {
+            const params = new URLSearchParams();
+            const search = document.getElementById('searchInput').value.trim();
+            const category = document.getElementById('filterCategory').value;
+            const brand = document.getElementById('filterBrand').value;
+            const connectionType = document.getElementById('filterConnection').value;
+            const sort = document.getElementById('sortSelect').value;
+
+            if (search) params.set('search', search);
+            if (category) params.set('category', category);
+            if (brand) params.set('brand', brand);
+            if (connectionType) params.set('connectionType', connectionType);
+            if (sort) params.set('sort', sort);
+
+            window.location.href = '/admin/products?' + params.toString();
+        }
+
+        // ──── Select Mode ────
+        let selectMode = false;
+
+        function toggleSelectMode() {
+            selectMode = !selectMode;
+            const checkboxCells = document.querySelectorAll('.checkbox-cell');
+            const selectBtn = document.getElementById('selectBtn');
+
+            checkboxCells.forEach(cell => {
+                cell.classList.toggle('hidden', !selectMode);
+            });
+
+            selectBtn.textContent = selectMode ? 'Cancel' : 'Select';
+
+            if (!selectMode) {
+                // Uncheck all
+                document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = false);
+            }
+        }
+
+        function getSelectedIds() {
+            const checked = document.querySelectorAll('.product-checkbox:checked');
+            return Array.from(checked).map(cb => cb.dataset.id);
+        }
+
+        // ──── Delete ────
+        function deleteSelected() {
+            const ids = getSelectedIds();
+            if (ids.length === 0) {
+                Swal.fire('No Selection', 'Please select at least one product to delete.', 'info');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Delete Products?',
+                text: `Are you sure you want to delete ${ids.length} product(s)? They will be unlisted.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#aaa',
+                confirmButtonText: 'Yes, Delete'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch('/admin/products/soft-delete', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ids })
+                        });
+                        const data = await response.json();
+                        if (response.ok && data.success) {
+                            await Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted!',
+                                text: data.message,
+                                timer: 1200,
+                                showConfirmButton: false
+                            });
+                            window.location.reload();
+                        } else {
+                            Swal.fire('Error', data.message || 'Failed to delete products', 'error');
+                        }
+                    } catch (err) {
+                        Swal.fire('Error', 'An unexpected error occurred', 'error');
+                    }
+                }
+            });
+        }
+
+        // ──── Build pagination query string (preserves search + filters + sort) ────
+        function paginationQuery(pageNum) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('page', pageNum);
+            return '/admin/products?' + params.toString();
+        }
+    </script>
+</head>
+
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'products' }) %>
+            </aside>
+
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+
+                <!-- Header: Title + Add Product -->
+                <div class="flex flex-wrap justify-between gap-3 mb-6">
+                    <div class="flex min-w-72 flex-col gap-1">
+                        <h1 class="text-[32px] font-bold text-[#121810]">Products</h1>
+                        <p class="text-[#658d5e] text-sm">Manage your product catalog</p>
+                    </div>
+                    <a href="/admin/products/add"
+                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#27ff14] text-[#111810] text-sm font-bold hover:bg-[#20e010] transition-colors">
+                        <span>Add Product</span>
+                    </a>
+                </div>
+
+                <!-- Action Buttons: Select + Delete -->
+                <div class="flex justify-between gap-2 px-4 py-3">
+                    <button id="selectBtn" onclick="toggleSelectMode()"
+                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-bold hover:bg-[#e0e5e0] transition-colors">
+                        Select
+                    </button>
+                    <button onclick="deleteSelected()"
+                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#f0f5f0] text-red-600 text-sm font-bold hover:bg-red-50 transition-colors">
+                        Delete
+                    </button>
+                </div>
+
+                <!-- Search Bar (same style as Customers) -->
+                <div class="px-4 py-3">
+                    <label class="flex flex-col min-w-40 h-12 w-full">
+                        <div class="flex w-full flex-1 items-stretch rounded-lg h-full relative">
+                            <div
+                                class="text-[#658d5e] flex border-none bg-[#f0f5f0] items-center justify-center pl-4 rounded-l-lg border-r-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
+                                    viewBox="0 0 256 256">
+                                    <path
+                                        d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <input id="searchInput" placeholder="Search by product title or SKU"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#121810] focus:outline-0 focus:ring-0 border-none bg-[#f0f5f0] focus:border-none h-full placeholder:text-[#658d5e] pl-2 pr-10 rounded-l-none border-l-0 text-base font-normal leading-normal"
+                                value="<%= search %>" onkeydown="handleSearch(event)" />
+
+                            <% if (search) { %>
+                                <button onclick="clearSearch()"
+                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors z-10"
+                                    title="Clear Search">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        viewBox="0 0 256 256">
+                                        <path
+                                            d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
+                                        </path>
+                                    </svg>
+                                </button>
+                                <% } %>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Filter & Sort Row -->
+                <div class="flex flex-wrap gap-3 px-4 py-3">
+                    <select id="filterCategory" onchange="applyFilters()"
+                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da]">
+                        <option value="">All Categories</option>
+                        <option value="In-ear" <%=filters.category==='In-ear' ? 'selected' : '' %>>In-ear</option>
+                        <option value="On-ear" <%=filters.category==='On-ear' ? 'selected' : '' %>>On-ear</option>
+                        <option value="Over-ear" <%=filters.category==='Over-ear' ? 'selected' : '' %>>Over-ear</option>
+                    </select>
+
+                    <select id="filterBrand" onchange="applyFilters()"
+                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da]">
+                        <option value="">All Brands</option>
+                        <% brands.forEach(b=> { %>
+                            <option value="<%= b._id %>" <%=filters.brand===b._id.toString() ? 'selected' : '' %>><%=
+                                    b.name %>
+                            </option>
+                            <% }) %>
+                    </select>
+
+                    <select id="filterConnection" onchange="applyFilters()"
+                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da]">
+                        <option value="">All Connection Types</option>
+                        <option value="Wired" <%=filters.connectionType==='Wired' ? 'selected' : '' %>>Wired</option>
+                        <option value="Wireless" <%=filters.connectionType==='Wireless' ? 'selected' : '' %>>Wireless
+                        </option>
+                    </select>
+
+                    <select id="sortSelect" onchange="applyFilters()"
+                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da] ml-auto">
+                        <option value="newest" <%=currentSort==='newest' ? 'selected' : '' %>>Newest First</option>
+                        <option value="az" <%=currentSort==='az' ? 'selected' : '' %>>A–Z</option>
+                        <option value="za" <%=currentSort==='za' ? 'selected' : '' %>>Z–A</option>
+                        <option value="price_asc" <%=currentSort==='price_asc' ? 'selected' : '' %>>Price: Low to High
+                        </option>
+                        <option value="price_desc" <%=currentSort==='price_desc' ? 'selected' : '' %>>Price: High to Low
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Divider -->
+                <div class="border-b border-[#dce7da] mx-4 mb-3"></div>
+
+                <!-- Product Table -->
+                <div class="px-4 py-3 @container">
+                    <div class="flex overflow-hidden rounded-lg border border-[#dce7da] bg-white">
+                        <table class="flex-1">
+                            <thead>
+                                <tr class="bg-white">
+                                    <th
+                                        class="checkbox-cell hidden px-4 py-3 w-10 text-sm font-medium text-[#121810] leading-normal">
+                                        <input type="checkbox" id="selectAll"
+                                            onchange="document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = this.checked)"
+                                            class="h-4 w-4 rounded border-[#dce7da] text-[#37ff14] focus:ring-0" />
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-left text-[#121810] w-14 text-sm font-medium leading-normal">
+                                        Image</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        Title</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        SKU</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        Brand</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        Category</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        Price</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        Stock</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-[#121810] w-28 text-sm font-medium leading-normal">
+                                        Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (products.length===0) { %>
+                                    <tr>
+                                        <td colspan="9" class="text-center py-8 text-[#658d5e]">No products found</td>
+                                    </tr>
+                                    <% } else { %>
+                                        <% products.forEach(product=> { %>
+                                            <tr class="border-t border-t-[#dce7da] hover:bg-gray-50 cursor-pointer"
+                                                onclick="window.location.href='/admin/products/<%= product._id %>'">
+
+                                                <!-- Checkbox (hidden by default) -->
+                                                <td class="checkbox-cell hidden h-[72px] px-4 py-2 w-10"
+                                                    onclick="event.stopPropagation()">
+                                                    <input type="checkbox"
+                                                        class="product-checkbox h-4 w-4 rounded border-[#dce7da] text-[#37ff14] focus:ring-0"
+                                                        data-id="<%= product._id %>" />
+                                                </td>
+
+                                                <!-- Thumbnail -->
+                                                <td class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
+                                                    <% if (product.images && product.images.length> 0) { %>
+                                                        <% const heroImg=product.images.find(i=> i.isHero) ||
+                                                            product.images[0]; %>
+                                                            <div class="w-10 h-10 rounded bg-center bg-cover bg-no-repeat"
+                                                                style="background-image: url('<%= heroImg.url %>');">
+                                                            </div>
+                                                            <% } else { %>
+                                                                <div
+                                                                    class="w-10 h-10 rounded bg-[#f0f5f0] flex items-center justify-center text-[#658d5e] text-xs font-bold">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20"
+                                                                        height="20" fill="currentColor"
+                                                                        viewBox="0 0 256 256">
+                                                                        <path
+                                                                            d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40ZM160,96a32,32,0,1,1-32-32A32,32,0,0,1,160,96Zm-72,64,27.52-27.52a8,8,0,0,1,11.31,0L144,149.66l27.52-27.52a8,8,0,0,1,11.31,0L200,139.31V200H56V176Z" />
+                                                                    </svg>
+                                                                </div>
+                                                                <% } %>
+                                                </td>
+
+                                                <!-- Title -->
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">
+                                                    <%= product.title %>
+                                                </td>
+
+                                                <!-- SKU -->
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    <%= product.sku %>
+                                                </td>
+
+                                                <!-- Brand -->
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    <%= product.brand ? product.brand.name : 'N/A' %>
+                                                </td>
+
+                                                <!-- Category -->
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    <%= product.category %>
+                                                </td>
+
+                                                <!-- Price -->
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">
+                                                    ₹<%= product.price.toLocaleString('en-IN') %>
+                                                </td>
+
+                                                <!-- Stock -->
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    <%= product.stockCount %>
+                                                </td>
+
+                                                <!-- Status -->
+                                                <td class="h-[72px] px-4 py-2 w-28 text-sm font-normal leading-normal">
+                                                    <span
+                                                        class="inline-flex items-center justify-center rounded-lg h-8 px-4 text-sm font-medium w-full user-select-none
+                                                    <%= product.status === 'Active' ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-[#f3f4f6] text-[#6b7280]' %>">
+                                                        <%= product.status %>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <% }) %>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <% if (pagination && pagination.totalPages> 0) { %>
+                        <% var qp=[]; if (search) qp.push('search=' + encodeURIComponent(search));
+                            if (filters.category) qp.push(' category=' + encodeURIComponent(filters.category));
+                            if (filters.brand) qp.push(' brand=' + encodeURIComponent(filters.brand));
+                            if (filters.connectionType) qp.push(' connectionType=' + encodeURIComponent(filters.connectionType));
+                            if (currentSort && currentSort !== ' newest') qp.push('sort=' + encodeURIComponent(currentSort));
+                            var baseQs = qp.length > 0 ? ' &' + qp.join('&') : '' ; %>
+                            <div class="flex justify-center items-center gap-2 mt-6">
+                                <!-- Previous -->
+                                <% if (pagination.hasPrevPage) { %>
+                                    <a href="/admin/products?page=<%= pagination.currentPage - 1 %><%= baseQs %>"
+                                        class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                        &laquo; Previous
+                                    </a>
+                                    <% } else { %>
+                                        <span
+                                            class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                            &laquo; Previous
+                                        </span>
+                                        <% } %>
+
+                                            <!-- Page Numbers -->
+                                            <div class="flex gap-1">
+                                                <% for (let i=1; i <=pagination.totalPages; i++) { %>
+                                                    <% if (i===pagination.currentPage) { %>
+                                                        <span
+                                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#27ff14] text-[#111810] text-sm font-bold">
+                                                            <%= i %>
+                                                        </span>
+                                                        <% } else { %>
+                                                            <a href="/admin/products?page=<%= i %><%= baseQs %>"
+                                                                class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                                <%= i %>
+                                                            </a>
+                                                            <% } %>
+                                                                <% } %>
+                                            </div>
+
+                                            <!-- Next -->
+                                            <% if (pagination.hasNextPage) { %>
+                                                <a href="/admin/products?page=<%= pagination.currentPage + 1 %><%= baseQs %>"
+                                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                    Next &raquo;
+                                                </a>
+                                                <% } else { %>
+                                                    <span
+                                                        class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                                        Next &raquo;
+                                                    </span>
+                                                    <% } %>
+                            </div>
+
+                            <!-- Pagination Info -->
+                            <p class="text-center text-sm text-[#658d5e] mt-2">
+                                Showing page <%= pagination.currentPage %> of <%= pagination.totalPages %> (<%=
+                                            pagination.totalProducts %> products)
+                            </p>
+                            <% } %>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>
