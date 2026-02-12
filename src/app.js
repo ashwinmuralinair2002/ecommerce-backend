@@ -155,6 +155,10 @@ app.post('/admin/brands/:id/edit', ensureAdminAuthenticated, brandUpload.single(
 app.post('/admin/brands/:id/toggle-status', ensureAdminAuthenticated, brandController.toggleBrandStatus);
 app.post('/admin/brands/:id/delete', ensureAdminAuthenticated, brandController.deleteBrand);
 
+const categoryController = require('./controllers/admin.category.controller');
+app.get('/admin/categories', ensureAdminAuthenticated, categoryController.getCategoriesPage);
+app.post('/admin/categories/:id/toggle-listing', ensureAdminAuthenticated, categoryController.toggleCategoryListing);
+
 
 app.get('/login', (req, res) => {
     res.render('login');

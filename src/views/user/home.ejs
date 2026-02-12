@@ -72,17 +72,21 @@
         <!-- Categories -->
         <section>
             <h2 class="text-xl font-bold text-[#0d1c0d] mb-6">Product Categories</h2>
-            <div class="grid grid-cols-5 gap-6">
-                <% ["Wired","Wireless","In-Ear","On-Ear","Over-Ear"].forEach(cat=> { %>
-                    <div class="text-center space-y-3">
-                        <div class="aspect-square bg-cover bg-center rounded-lg"
-                            style="background-image:url('/images/categories/<%= cat.toLowerCase() %>.jpg')"></div>
-                        <p class="font-medium">
-                            <%= cat %>
-                        </p>
-                    </div>
-                    <% }) %>
-            </div>
+            <% if (categories && categories.length> 0) { %>
+                <div class="grid grid-cols-<%= Math.min(categories.length, 5) %> gap-6">
+                    <% categories.forEach(cat=> { %>
+                        <div class="text-center space-y-3">
+                            <div class="aspect-square bg-cover bg-center rounded-lg"
+                                style="background-image:url('<%= cat.imageUrl %>')"></div>
+                            <p class="font-medium">
+                                <%= cat.name %>
+                            </p>
+                        </div>
+                        <% }) %>
+                </div>
+                <% } else { %>
+                    <p class="text-[#658d5e] text-sm">No categories available at the moment.</p>
+                    <% } %>
         </section>
 
         <!-- Best Sellers -->

@@ -1,0 +1,223 @@
+<!-- Admin category management page template -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
+
+    <title>Admin · Categories</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block !important;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            opacity: 0 !important;
+            width: 0 !important;
+            height: 0 !important;
+            position: absolute !important;
+            pointer-events: none;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            width: 44px;
+            height: 24px;
+            background-color: #d1d5db;
+            transition: background-color 0.3s ease;
+            border-radius: 24px;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: transform 0.3s ease;
+            border-radius: 50%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: #1e7e34;
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        .toggle-switch:hover .toggle-slider {
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 2px rgba(30, 126, 52, 0.12);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+        <!-- Main Layout: Sidebar + Content -->
+        <main class="flex flex-1 gap-6 px-6 py-5">
+            <!-- Sidebar -->
+            <aside class="w-80">
+                <%- include('../partials/admin/sidebar', { page: 'categories' }) %>
+            </aside>
+
+            <!-- Main Content Panel -->
+            <section class="flex-1 bg-white rounded-lg p-6">
+                <div class="flex flex-wrap justify-between gap-3 mb-6">
+                    <div class="flex min-w-72 flex-col gap-1">
+                        <h1 class="text-[32px] font-bold text-[#121810]">Category Management</h1>
+                        <p class="text-[#658d5e] text-sm">Manage product category visibility</p>
+                    </div>
+                </div>
+
+                <!-- Divider line -->
+                <div class="border-b border-[#dce7da] mx-4 mb-3"></div>
+
+                <div class="px-4 py-3 @container">
+                    <div class="flex overflow-hidden rounded-lg border border-[#dce7da] bg-white">
+                        <table class="flex-1">
+                            <thead>
+                                <tr class="bg-white">
+                                    <th
+                                        class="px-4 py-3 text-left text-[#121810] w-14 text-sm font-medium leading-normal">
+                                        Image</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        Category Name</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-[#121810] w-60 text-sm font-medium leading-normal">
+                                        Status</th>
+                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                        Toggle</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (categories.length===0) { %>
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4">No categories found</td>
+                                    </tr>
+                                    <% } else { %>
+                                        <% categories.forEach(category=> { %>
+                                            <tr id="category-row-<%= category._id %>"
+                                                class="border-t border-t-[#dce7da] hover:bg-gray-50">
+                                                <td class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
+                                                    <div class="w-10 h-10 rounded-lg bg-cover bg-center <%= category.imageUrl ? '' : 'bg-[#e0e5e0]' %>"
+                                                        style="<%= category.imageUrl ? " background-image:url('" +
+                                                        category.imageUrl + "')" : '' %>"></div>
+                                                </td>
+
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">
+                                                    <%= category.name %>
+                                                </td>
+
+                                                <td class="h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
+                                                    <button id="badge-<%= category._id %>"
+                                                        class="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none <%= category.isListed ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-[#f3f4f6] text-[#6b7280]' %>"
+                                                        style="pointer-events: none;">
+                                                        <span class="truncate">
+                                                            <%= category.isListed ? 'Listed' : 'Unlisted' %>
+                                                        </span>
+                                                    </button>
+                                                </td>
+
+                                                <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
+                                                    <div class="flex items-center h-full">
+                                                        <label class="toggle-switch">
+                                                            <input type="checkbox" id="toggle-<%= category._id %>"
+                                                                <%=category.isListed ? 'checked' : '' %>
+                                                            onchange="confirmToggle('<%= category._id %>', '<%=
+                                                                    category.name %>', this)" />
+                                                                    <span class="toggle-slider"></span>
+                                                        </label>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <% }) %>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function confirmToggle(categoryId, categoryName, checkbox) {
+            const newState = checkbox.checked;
+            const actionText = newState ? 'list' : 'unlist';
+
+            Swal.fire({
+                title: `${newState ? 'List' : 'Unlist'} Category?`,
+                text: `Are you sure you want to ${actionText} "${categoryName}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: newState ? '#1e7e34' : '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: newState ? 'Yes, List it' : 'Yes, Unlist it',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/admin/categories/${categoryId}/toggle-listing`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Update badge — same structure as customers page
+                                const badge = document.getElementById('badge-' + categoryId);
+                                if (data.isListed) {
+                                    badge.className = 'flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none bg-[#e6f4ea] text-[#1e7e34]';
+                                    badge.querySelector('span').textContent = 'Listed';
+                                } else {
+                                    badge.className = 'flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none bg-[#f3f4f6] text-[#6b7280]';
+                                    badge.querySelector('span').textContent = 'Unlisted';
+                                }
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                            } else {
+                                checkbox.checked = !newState;
+                                Swal.fire('Error', data.message || 'Failed to update', 'error');
+                            }
+                        })
+                        .catch(() => {
+                            checkbox.checked = !newState;
+                            Swal.fire('Error', 'Network error. Please try again.', 'error');
+                        });
+                } else {
+                    checkbox.checked = !newState;
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
