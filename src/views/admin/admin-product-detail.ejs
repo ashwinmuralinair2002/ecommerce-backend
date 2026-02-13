@@ -25,18 +25,15 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
-        style='font-family: Inter, "Noto Sans", sans-serif;'>
+    <div class="flex min-h-screen bg-[#f8fcf8]" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <!-- Sidebar -->
+        <aside class="w-64 flex-shrink-0">
+            <%- include('../partials/admin/sidebar', { page: 'products' }) %>
+        </aside>
 
-        <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
-            <!-- Sidebar -->
-            <aside class="w-80">
-                <%- include('../partials/admin/sidebar', { page: 'products' }) %>
-            </aside>
-
-            <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+        <!-- Main Content Panel -->
+        <main class="flex-1 px-8 py-6">
+            <section class="bg-white rounded-lg p-6 shadow-sm">
                 <!-- Breadcrumb -->
                 <div class="flex flex-wrap gap-2 pb-4">
                     <a class="text-[#658d5e] text-base font-medium leading-normal" href="/admin/products">Products</a>
@@ -84,70 +81,76 @@
                     <div class="flex flex-col items-stretch justify-start rounded-xl @xl:flex-row @xl:items-start">
                         <!-- Image Gallery -->
                         <div class="w-full @xl:w-1/2">
-                            <% if (product.images && product.images.length> 0) { %>
-                                <% // Sort images: hero first, then rest in original order var
-                                    sortedImages=product.images.slice().sort(function(a, b) { return (b.isHero ? 1 : 0)
-                                    - (a.isHero ? 1 : 0); }); %>
-                                    <!-- Main Image Container -->
-                                    <div class="relative rounded-xl overflow-hidden" style="aspect-ratio: 16/9;">
-                                        <img id="galleryMainImg" src="<%= sortedImages[0].url %>"
-                                            alt="<%= product.title %>"
-                                            class="w-full h-full object-cover transition-opacity duration-300" />
+                            <div class="max-w-xl mx-auto">
+                                <% if (product.images && product.images.length> 0) { %>
+                                    <% // Sort images: hero first, then rest in original order var
+                                        sortedImages=product.images.slice().sort(function(a, b) { return (b.isHero ? 1 :
+                                        0) - (a.isHero ? 1 : 0); }); %>
+                                        <div class="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
+                                            <% const mainImage=sortedImages[0]; %>
+                                                <img id="galleryMainImg"
+                                                    src="<%= mainImage && mainImage.url ? mainImage.url : '/images/placeholder.png' %>"
+                                                    alt="<%= product.title %>"
+                                                    class="w-full h-full object-contain transition-opacity duration-300"
+                                                    onerror="this.src='/images/placeholder.png'">
 
-                                        <% if (sortedImages.length> 1) { %>
-                                            <!-- Left Arrow -->
-                                            <button type="button" id="galleryPrev"
-                                                class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                    fill="currentColor" viewBox="0 0 256 256">
-                                                    <path
-                                                        d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z" />
-                                                </svg>
-                                            </button>
-                                            <!-- Right Arrow -->
-                                            <button type="button" id="galleryNext"
-                                                class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                    fill="currentColor" viewBox="0 0 256 256">
-                                                    <path
-                                                        d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z" />
-                                                </svg>
-                                            </button>
-                                            <% } %>
-                                    </div>
-
-                                    <!-- Thumbnail Strip -->
-                                    <% if (sortedImages.length> 1) { %>
-                                        <div class="flex gap-2 mt-3 overflow-x-auto pb-1" id="galleryThumbs"
-                                            style="scrollbar-width: thin; scrollbar-color: #dce7da transparent;">
-                                            <% sortedImages.forEach(function(img, idx) { %>
-                                                <button type="button"
-                                                    class="gallery-thumb relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer <%= idx === 0 ? 'border-[#37ff14] opacity-100' : 'border-transparent opacity-60 hover:opacity-90' %>"
-                                                    data-index="<%= idx %>" data-url="<%= img.url %>">
-                                                    <img src="<%= img.url %>" alt="Thumbnail <%= idx + 1 %>"
-                                                        class="w-full h-full object-cover" />
-                                                    <% if (img.isHero) { %>
-                                                        <span
-                                                            class="absolute bottom-0 left-0 right-0 bg-[#37ff14] text-[#121810] text-center text-[0.5rem] font-bold leading-tight py-0.5">HERO</span>
-                                                        <% } %>
-                                                </button>
-                                                <% }) %>
-                                        </div>
-                                        <% } %>
-                                            <% } else { %>
-                                                <div class="flex items-center justify-center bg-[#f0f5f0] rounded-xl"
-                                                    style="aspect-ratio: 16/9;">
-                                                    <div class="text-center text-[#658d5e]">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"
-                                                            fill="currentColor" viewBox="0 0 256 256"
-                                                            class="mx-auto mb-2">
+                                                <% if (sortedImages.length> 1) { %>
+                                                    <!-- Left Arrow -->
+                                                    <button type="button" id="galleryPrev"
+                                                        class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm z-10">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                                            fill="currentColor" viewBox="0 0 256 256">
                                                             <path
-                                                                d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40ZM160,96a32,32,0,1,1-32-32A32,32,0,0,1,160,96Zm-72,64,27.52-27.52a8,8,0,0,1,11.31,0L144,149.66l27.52-27.52a8,8,0,0,1,11.31,0L200,139.31V200H56V176Z" />
+                                                                d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z" />
                                                         </svg>
-                                                        <p class="text-sm">No images uploaded</p>
+                                                    </button>
+                                                    <!-- Right Arrow -->
+                                                    <button type="button" id="galleryNext"
+                                                        class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm z-10">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                                            fill="currentColor" viewBox="0 0 256 256">
+                                                            <path
+                                                                d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z" />
+                                                        </svg>
+                                                    </button>
+                                                    <% } %>
+                                        </div>
+
+                                        <!-- Thumbnail Strip -->
+                                        <% if (sortedImages.length> 1) { %>
+                                            <div class="flex gap-2 mt-3 overflow-x-auto pb-1" id="galleryThumbs"
+                                                style="scrollbar-width: thin; scrollbar-color: #dce7da transparent;">
+                                                <% sortedImages.forEach(function(img, idx) { %>
+                                                    <button type="button"
+                                                        class="gallery-thumb relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer <%= idx === 0 ? 'border-[#37ff14] opacity-100' : 'border-transparent opacity-60 hover:opacity-90' %>"
+                                                        data-index="<%= idx %>" data-url="<%= img.url %>">
+                                                        <img src="<%= img.url || '/images/placeholder.png' %>"
+                                                            alt="Thumbnail <%= idx + 1 %>"
+                                                            class="w-full h-full object-cover"
+                                                            onerror="this.src='/images/placeholder.png'" />
+                                                        <% if (img.isHero) { %>
+                                                            <span
+                                                                class="absolute bottom-0 left-0 right-0 bg-[#37ff14] text-[#121810] text-center text-[0.5rem] font-bold leading-tight py-0.5">HERO</span>
+                                                            <% } %>
+                                                    </button>
+                                                    <% }) %>
+                                            </div>
+                                            <% } %>
+                                                <% } else { %>
+                                                    <div
+                                                        class="aspect-square rounded-xl bg-gray-100 flex items-center justify-center w-full">
+                                                        <div class="text-center text-gray-400">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="48"
+                                                                height="48" fill="currentColor" viewBox="0 0 256 256"
+                                                                class="mx-auto mb-2">
+                                                                <path
+                                                                    d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40ZM160,96a32,32,0,1,1-32-32A32,32,0,0,1,160,96Zm-72,64,27.52-27.52a8,8,0,0,1,11.31,0L144,149.66l27.52-27.52a8,8,0,0,1,11.31,0L200,139.31V200H56V176Z" />
+                                                            </svg>
+                                                            <p class="text-sm">No Image Available</p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <% } %>
+                                                    <% } %>
+                            </div>
                         </div>
                         <div
                             class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1 py-4 @xl:px-4">
