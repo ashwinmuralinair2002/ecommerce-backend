@@ -35,7 +35,7 @@
                 title: currentStatus ? 'Unblock User?' : 'Block User?',
                 text: `Are you sure you want to ${currentStatus ? 'unblock' : 'block'} this user?`,
                 confirmButtonText: currentStatus ? 'Yes, Unblock' : 'Yes, Block',
-                confirmButtonColor: currentStatus ? '#1ff91f' : '#d33'
+                confirmButtonColor: currentStatus ? '#685BCB' : '#d33'
             }, async () => {
                 try {
                     const response = await fetch(`/admin/customers/${userId}/toggle-block`, { method: 'POST' });
@@ -126,93 +126,81 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+            <section class="flex-1 p-6 md:p-8">
+                <div class="admin-page-container max-w-[1400px] mx-auto">
                 <div class="flex flex-wrap justify-between gap-3 mb-6">
                     <div class="flex min-w-72 flex-col gap-1">
-                        <h1 class="text-[32px] font-bold text-[#121810]">Customers</h1>
-                        <p class="text-[#658d5e] text-sm">Manage user accounts, orders, and activity</p>
+                        <h1 class="text-[32px] font-bold text-[#1F1F1F]">Customers</h1>
+                        <p class="text-[#685BCB] text-sm">Manage user accounts, orders, and activity</p>
                     </div>
                     <a href="/admin/customers/add"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#27ff14] text-[#111810] text-sm font-bold hover:bg-[#20e010] transition-colors">
+                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#685BCB] text-white text-sm font-bold hover:bg-[#5a4dc0] transition-colors">
                         <span>Add customer</span>
                     </a>
                 </div>
-                <div class="flex justify-between gap-2 px-4 py-3">
-                    <!-- Export buttons removed -->
-                </div>
-                <div class="px-4 py-3">
-                    <label class="flex flex-col min-w-40 h-12 w-full">
-                        <div class="flex w-full flex-1 items-stretch rounded-lg h-full relative">
-                            <div class="text-[#658d5e] flex border-none bg-[#f0f5f0] items-center justify-center pl-4 rounded-l-lg border-r-0"
-                                data-icon="MagnifyingGlass" data-size="24px" data-weight="regular">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
+                <div class="px-4 pt-1 pb-4">
+                    <div class="relative">
+                        <input type="text" placeholder="Search by name / email / phone" value="<%= search %>"
+                            onkeydown="handleSearch(event)"
+                            class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
+                        <% if (search) { %>
+                            <button onclick="clearSearch()"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors"
+                                title="Clear Search">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                     viewBox="0 0 256 256">
                                     <path
-                                        d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z">
+                                        d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
                                     </path>
                                 </svg>
-                            </div>
-                            <input placeholder="Search by name / email / phone"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#121810] focus:outline-0 focus:ring-0 border-none bg-[#f0f5f0] focus:border-none h-full placeholder:text-[#658d5e] pl-2 pr-10 rounded-l-none border-l-0 text-base font-normal leading-normal"
-                                value="<%= search %>" onkeydown="handleSearch(event)" />
-
-                            <% if (search) { %>
-                                <button onclick="clearSearch()"
-                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors z-10"
-                                    title="Clear Search">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                        viewBox="0 0 256 256">
-                                        <path
-                                            d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
-                                        </path>
-                                    </svg>
-                                </button>
-                                <% } %>
-                        </div>
-                    </label>
+                            </button>
+                            <% } %>
+                    </div>
                 </div>
                 <!-- Divider line -->
-                <div class="border-b border-[#dce7da] mx-4 mb-3"></div>
-                <div class="px-4 py-3 @container">
-                    <div class="flex overflow-hidden rounded-lg border border-[#dce7da] bg-white">
+                <div class="border-b border-[#BCA6DB] mx-4 mb-4"></div>
+                <div class="px-4 py-2 @container">
+                    <div class="flex overflow-hidden rounded-lg border border-[#BCA6DB] bg-white">
                         <table class="flex-1">
                             <thead>
                                 <tr class="bg-white">
                                     <!-- Removed empty column -->
                                     <th
-                                        class="px-4 py-3 text-left text-[#121810] w-14 text-sm font-medium leading-normal">
+                                        class="px-4 py-3 text-left text-[#1F1F1F] w-14 text-sm font-medium leading-normal">
                                         Avatar</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Name</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Email</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Phone</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Total orders
                                     </th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Lifetime value
                                     </th>
                                     <th
-                                        class="px-4 py-3 text-left text-[#121810] w-60 text-sm font-medium leading-normal">
+                                        class="px-4 py-3 text-left text-[#1F1F1F] w-60 text-sm font-medium leading-normal">
                                         Status</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Last active
                                     </th>
                                     <th
-                                        class="px-4 py-3 text-left text-[#121810] w-60 text-[#658d5e] text-sm font-medium leading-normal">
+                                        class="px-4 py-3 text-left text-[#1F1F1F] w-60 text-[#685BCB] text-sm font-medium leading-normal">
                                         Actions
                                     </th>
                                 </tr>
@@ -225,7 +213,7 @@
                                     <% } else { %>
                                         <% consumers.forEach((user)=> { %>
                                             <tr id="row-<%= user._id %>"
-                                                class="border-t border-t-[#dce7da] hover:bg-gray-50 cursor-pointer"
+                                                class="border-t border-t-[#BCA6DB] hover:bg-gray-50 cursor-pointer"
                                                 onclick="window.location.href='/admin/customers/<%= user._id %>'">
                                                 <td class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
                                                     <% const nameParts=user.name.trim().split(/\s+/); const
@@ -240,35 +228,35 @@
                                                             <img src="<%= user.profileImage %>" alt="<%= initials %>"
                                                                 class="w-10 h-10 rounded-full object-cover"
                                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                                                            <div class="w-10 h-10 rounded-full bg-[#e7f4e7] text-[#2d6a2d] font-bold text-sm items-center justify-center"
+                                                            <div class="w-10 h-10 rounded-full bg-[#BCA6DB] text-[#2d6a2d] font-bold text-sm items-center justify-center"
                                                                 style="display:none;">
                                                                 <%= initials %>
                                                             </div>
                                                             <% } else { %>
                                                                 <div
-                                                                    class="w-10 h-10 rounded-full bg-[#e7f4e7] text-[#2d6a2d] font-bold text-sm flex items-center justify-center">
+                                                                    class="w-10 h-10 rounded-full bg-[#BCA6DB] text-[#2d6a2d] font-bold text-sm flex items-center justify-center">
                                                                     <%= initials %>
                                                                 </div>
                                                                 <% } %>
                                                 </td>
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">
                                                     <%= user.name %>
                                                 </td>
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= user.email %>
                                                 </td>
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= user.phone || 'N/A' %>
                                                 </td>
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= user.totalOrders %>
                                                 </td>
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     $<%= user.lifetimeValue %>
                                                 </td>
                                                 <td class="h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
@@ -281,15 +269,15 @@
                                                     </button>
                                                 </td>
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= user.lastActive ? new Date(user.lastActive).toLocaleString()
                                                         : 'N/A' %>
                                                 </td>
-                                                <td class="h-[72px] px-4 py-2 w-48 text-[#658d5e] text-sm font-bold leading-normal tracking-[0.015em] flex gap-3 items-center"
+                                                <td class="h-[72px] px-4 py-2 w-48 text-[#685BCB] text-sm font-bold leading-normal tracking-[0.015em] flex gap-3 items-center"
                                                     onclick="event.stopPropagation()">
                                                     <button id="btn-action-<%= user._id %>"
                                                         onclick="toggleBlock('<%= user._id %>', <%= user.isBlocked %>, this)"
-                                                        class="hover:text-[#121810]">
+                                                        class="hover:text-[#1F1F1F]">
                                                         <%= user.isBlocked ? 'Unban' : 'Ban' %>
                                                     </button>
                                                     <button onclick="deleteUser('<%= user._id %>')"
@@ -308,7 +296,7 @@
                             <!-- Previous Button -->
                             <% if (pagination.hasPrevPage) { %>
                                 <a href="/admin/customers?page=<%= pagination.currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
-                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                     &laquo; Previous
                                 </a>
                                 <% } else { %>
@@ -323,12 +311,12 @@
                                             <% for (let i=1; i <=pagination.totalPages; i++) { %>
                                                 <% if (i===pagination.currentPage) { %>
                                                     <span
-                                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#27ff14] text-[#111810] text-sm font-bold">
+                                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold">
                                                         <%= i %>
                                                     </span>
                                                     <% } else { %>
                                                         <a href="/admin/customers?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
-                                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                             <%= i %>
                                                         </a>
                                                         <% } %>
@@ -338,7 +326,7 @@
                                         <!-- Next Button -->
                                         <% if (pagination.hasNextPage) { %>
                                             <a href="/admin/customers?page=<%= pagination.currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
-                                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                 Next &raquo;
                                             </a>
                                             <% } else { %>
@@ -350,11 +338,12 @@
                         </div>
 
                         <!-- Pagination Info -->
-                        <p class="text-center text-sm text-[#658d5e] mt-2">
+                        <p class="text-center text-sm text-[#685BCB] mt-2">
                             Showing page <%= pagination.currentPage %> of <%= pagination.totalPages %> (<%=
                                         pagination.totalCustomers %> customers)
                         </p>
                         <% } %>
+                </div>
                 </div>
             </section>
         </main>

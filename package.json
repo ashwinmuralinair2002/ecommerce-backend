@@ -20,7 +20,8 @@
   },
   "homepage": "https://github.com/ashwinmuralinair2002/ecommerce-backend#readme",
   "dependencies": {
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
+    "axios-cookiejar-support": "^6.0.5",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",
     "cookie-parser": "^1.4.7",
@@ -36,7 +37,8 @@
     "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^7.0.12",
     "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0"
+    "passport-google-oauth20": "^2.0.0",
+    "tough-cookie": "^6.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

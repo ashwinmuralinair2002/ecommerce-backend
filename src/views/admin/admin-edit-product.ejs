@@ -35,8 +35,8 @@
             position: absolute;
             top: 4px;
             left: 4px;
-            background: #37ff14;
-            color: #121810;
+            background: #685BCB;
+            color: #1F1F1F;
             font-size: 0.625rem;
             font-weight: 700;
             padding: 2px 6px;
@@ -65,7 +65,7 @@
 
         .hero-set-btn:hover {
             background: rgba(55, 255, 20, 0.8);
-            color: #121810;
+            color: #1F1F1F;
         }
 
         .image-preview-item {
@@ -102,33 +102,35 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'products' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+            <section class="flex-1 p-6 md:p-8">
                 <!-- Breadcrumb -->
                 <div class="flex flex-wrap gap-2 pb-4">
-                    <a class="text-[#658d5e] text-base font-medium leading-normal" href="/admin/products">Products</a>
-                    <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
-                    <a class="text-[#658d5e] text-base font-medium leading-normal"
+                    <a class="text-[#685BCB] text-base font-medium leading-normal" href="/admin/products">Products</a>
+                    <span class="text-[#685BCB] text-base font-medium leading-normal">/</span>
+                    <a class="text-[#685BCB] text-base font-medium leading-normal"
                         href="/admin/products/<%= product._id %>">
                         <%= product.title %>
                     </a>
-                    <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
-                    <span class="text-[#121810] text-base font-medium leading-normal">Edit</span>
+                    <span class="text-[#685BCB] text-base font-medium leading-normal">/</span>
+                    <span class="text-[#1F1F1F] text-base font-medium leading-normal">Edit</span>
                 </div>
 
                 <!-- Page Title -->
                 <div class="flex flex-wrap justify-between gap-3 pb-4">
-                    <p class="text-[#121810] tracking-light text-[32px] font-bold leading-tight min-w-72">Edit Product
+                    <p class="text-[#1F1F1F] tracking-light text-[32px] font-bold leading-tight min-w-72">Edit Product
                     </p>
                 </div>
 
@@ -137,11 +139,11 @@
                     <!-- Title -->
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Title <span
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Title <span
                                     class="text-red-500">*</span></p>
                             <input id="productTitle" name="title" placeholder="Product Title" required
                                 pattern="^[a-zA-Z0-9 ]+$"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.title %>" />
                             <p class="field-error" id="productTitleError">Only letters, numbers, and spaces allowed</p>
                         </label>
@@ -150,9 +152,9 @@
                     <!-- SKU -->
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">SKU</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">SKU</p>
                             <input id="productSku" name="sku" placeholder="SKU" pattern="^[a-zA-Z0-9\-]+$"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.sku %>" />
                             <p class="field-error" id="productSkuError">Only letters, numbers, and hyphens allowed</p>
                         </label>
@@ -161,10 +163,10 @@
                     <!-- Brand (Dynamic, pre-selected) -->
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Brand <span
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Brand <span
                                     class="text-red-500">*</span></p>
                             <select id="brandSelect" name="brand" required
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
                                 <option value="">Select Brand</option>
                                 <% if (brands && brands.length> 0) { %>
                                     <% brands.forEach(function(brand) { %>
@@ -183,10 +185,10 @@
                     <!-- Connection Type (pre-selected) -->
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Connection Type <span
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Connection Type <span
                                     class="text-red-500">*</span></p>
                             <select id="connectionType" name="connectionType" required
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
                                 <option value="">Select Connection Type</option>
                                 <option value="Wired" <%=product.connectionType==='Wired' ? 'selected' : '' %>>Wired
                                 </option>
@@ -199,18 +201,20 @@
 
                     <!-- Category (pre-selected) -->
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <% const categoryRaw = (product && product.category && (product.category.name || product.category)) || ''; %>
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Category <span
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Category <span
                                     class="text-red-500">*</span></p>
                             <select id="categorySelect" name="category" required
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
                                 <option value="">Select Category</option>
-                                <option value="In-ear" <%=product.category==='In-ear' ? 'selected' : '' %>>In-ear
-                                </option>
-                                <option value="On-ear" <%=product.category==='On-ear' ? 'selected' : '' %>>On-ear
-                                </option>
-                                <option value="Over-ear" <%=product.category==='Over-ear' ? 'selected' : '' %>>Over-ear
-                                </option>
+                                <% if (categories && categories.length > 0) { %>
+                                    <% categories.forEach(function(category) { %>
+                                        <option value="<%= category.name %>" <%= String(categoryRaw).toLowerCase() === String(category.name).toLowerCase() ? 'selected' : '' %>>
+                                            <%= category.name %>
+                                        </option>
+                                    <% }) %>
+                                <% } %>
                             </select>
                             <p class="field-error" id="categorySelectError">Please select a category</p>
                         </label>
@@ -219,135 +223,123 @@
                     <!-- Short Description -->
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Short Description</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Short Description</p>
                             <textarea id="shortDescription" name="shortDescription"
                                 placeholder="Brief product description"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] min-h-36 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"><%= product.shortDescription || '' %></textarea>
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] min-h-36 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"><%= product.shortDescription || '' %></textarea>
                         </label>
                     </div>
 
                     <!-- Pricing -->
-                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
                         Pricing</h3>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Price (₹) <span
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Price (₹) <span
                                     class="text-red-500">*</span></p>
                             <input id="productPrice" name="price" placeholder="e.g., 1299" type="number" step="0.01"
                                 min="0" required
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.price %>" />
                             <p class="field-error" id="productPriceError">Price must be a positive number</p>
                         </label>
                     </div>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Original Price (₹)
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Original Price (₹)
                                 (Optional)</p>
                             <input id="originalPrice" name="originalPrice" placeholder="e.g., 1499" type="number"
                                 step="0.01" min="0"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.originalPrice != null ? product.originalPrice : '' %>" />
                             <p class="field-error" id="originalPriceError">Must be a positive number</p>
                         </label>
                     </div>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Discount Percentage (%)
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Discount Percentage (%)
                             </p>
                             <input id="discountPercentage" name="discountPercentage" placeholder="e.g., 10"
                                 type="number" step="0.01" min="0" max="100"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.discountPercentage || '' %>" />
                             <p class="field-error" id="discountPercentageError">Must be between 0 and 100</p>
                         </label>
                     </div>
 
                     <!-- Inventory -->
-                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
                         Inventory</h3>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Stock Count <span
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Stock Count <span
                                     class="text-red-500">*</span></p>
                             <input id="stockCount" name="stockCount" placeholder="Number of items in stock"
                                 type="number" step="1" min="0" required
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.stockCount %>" />
                             <p class="field-error" id="stockCountError">Must be a whole number (0 or more)</p>
                         </label>
                     </div>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Reserved Count (Initial)
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Reserved Count (Initial)
                             </p>
                             <input id="reservedCount" name="reservedCount" placeholder="0" type="number" step="1"
                                 min="0"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.reservedCount %>" />
                             <p class="field-error" id="reservedCountError">Must be a whole number (0 or more)</p>
                         </label>
                     </div>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Reorder Threshold</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Reorder Threshold</p>
                             <input id="reorderThreshold" name="reorderThreshold"
                                 placeholder="Minimum stock before reordering" type="number" step="1" min="0"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.reorderThreshold %>" />
                             <p class="field-error" id="reorderThresholdError">Must be a whole number (0 or more)</p>
                         </label>
                     </div>
 
-                    <!-- Media -->
-                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Media
-                        <span class="text-red-500">*</span>
-                    </h3>
-                    <p class="text-[#658d5e] text-sm px-4 pb-2">Minimum 3 images required. First image is the hero
-                        image.</p>
-                    <div class="flex flex-col p-4">
-                        <div id="dropZone"
-                            class="flex flex-col items-center gap-6 rounded-xl border-2 border-dashed border-[#dce7da] px-6 py-14 transition-colors cursor-pointer"
-                            onclick="document.getElementById('imageInput').click()">
-                            <div class="flex max-w-[480px] flex-col items-center gap-2">
-                                <p
-                                    class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] max-w-[480px] text-center">
-                                    Drag &amp; drop images here</p>
-                                <p class="text-[#121810] text-sm font-normal leading-normal max-w-[480px] text-center">
-                                    Or click to upload more images (JPEG, PNG, WebP)</p>
-                            </div>
-                            <button type="button"
-                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]"
-                                onclick="event.stopPropagation(); document.getElementById('imageInput').click()">
-                                <span class="truncate">Upload Images</span>
-                            </button>
-                        </div>
-                        <input type="file" id="imageInput" name="productImages" accept="image/jpeg,image/png,image/webp"
-                            multiple class="hidden" />
-                        <p class="field-error" id="imageError">Minimum 3 images required</p>
+                    <!-- Variants -->
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Variants</h3>
+                    <div class="px-4 py-2">
+                        <label class="flex items-center gap-2 text-sm text-[#1F1F1F] font-medium">
+                            <input type="checkbox" id="hasVariantsToggle"
+                                class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]">
+                            Other colours available
+                        </label>
                     </div>
-                    <!-- Image preview grid -->
-                    <div id="imagePreviewGrid" class="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 px-4">
+                    <div id="variantBuilder" class="hidden px-4 space-y-3">
+                        <p class="text-[#685BCB] text-sm">Each variant must include 3 to 10 images.</p>
+                        <div id="variantList" class="space-y-3"></div>
+                        <button type="button" id="addVariantBtn"
+                            class="h-10 px-4 rounded-xl bg-[#FFFFFF] text-[#1F1F1F] font-bold border border-[#BCA6DB] hover:bg-[#D3CEEA] transition-colors">
+                            + Add Colour Variant
+                        </button>
+                        <p class="field-error" id="variantError">Please fix variant details before submitting.</p>
                     </div>
 
                     <!-- Conditional Specs: Wired -->
                     <div id="wiredSpecs" class="<%= product.connectionType === 'Wired' ? '' : 'hidden' %>">
-                        <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                        <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
                             Wired Specs</h3>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Cable Length</p>
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Cable Length</p>
                                 <input id="cableLength" name="cableLength" placeholder="e.g., 1.2" type="number"
                                     step="0.01" min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.cableLength || '' %>" />
                                 <p class="field-error" id="cableLengthError">Must be a positive number</p>
                             </label>
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Connector Type</p>
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Connector Type</p>
                                 <input id="connectorType" name="connectorType" placeholder="e.g., 3.5mm Jack"
                                     pattern="^[a-zA-Z0-9 .]+$"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.connectorType || '' %>" />
                                 <p class="field-error" id="connectorTypeError">Only letters, numbers, spaces, and
                                     periods allowed</p>
@@ -355,18 +347,18 @@
                         </div>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Impedance (Ω)</p>
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Impedance (Ω)</p>
                                 <input id="impedance" name="impedance" placeholder="e.g., 32" type="number" step="0.1"
                                     min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.impedance || '' %>" />
                                 <p class="field-error" id="impedanceError">Must be a positive number</p>
                             </label>
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Driver Size (mm)</p>
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Driver Size (mm)</p>
                                 <input id="driverSize" name="driverSize" placeholder="e.g., 40" type="number" step="0.1"
                                     min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.driverSize || '' %>" />
                                 <p class="field-error" id="driverSizeError">Must be a positive number</p>
                             </label>
@@ -375,54 +367,54 @@
 
                     <!-- Conditional Specs: Wireless -->
                     <div id="wirelessSpecs" class="<%= product.connectionType === 'Wireless' ? '' : 'hidden' %>">
-                        <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                        <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
                             Wireless Specs</h3>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Bluetooth Version
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Bluetooth Version
                                 </p>
                                 <input id="bluetoothVersion" name="bluetoothVersion" placeholder="e.g., 5.2"
                                     type="number" step="0.1" min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.bluetoothVersion || '' %>" />
                                 <p class="field-error" id="bluetoothVersionError">Must be a positive number</p>
                             </label>
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Battery Life (hours)
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Battery Life (hours)
                                 </p>
                                 <input id="batteryLife" name="batteryLife" placeholder="e.g., 30" type="number"
                                     step="0.1" min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.batteryLife || '' %>" />
                                 <p class="field-error" id="batteryLifeError">Must be a positive number</p>
                             </label>
                         </div>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Charging Time
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Charging Time
                                     (hours)</p>
                                 <input id="chargingTime" name="chargingTime" placeholder="e.g., 2" type="number"
                                     step="0.1" min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.chargingTime || '' %>" />
                                 <p class="field-error" id="chargingTimeError">Must be a positive number</p>
                             </label>
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Wireless Range (m)
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Wireless Range (m)
                                 </p>
                                 <input id="wirelessRange" name="wirelessRange" placeholder="e.g., 10" type="number"
                                     step="0.1" min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                     value="<%= product.wirelessRange || '' %>" />
                                 <p class="field-error" id="wirelessRangeError">Must be a positive number</p>
                             </label>
                         </div>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                             <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#121810] text-base font-medium leading-normal pb-2">Noise Cancellation
+                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Noise Cancellation
                                 </p>
                                 <select id="noiseCancellation" name="noiseCancellation"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 bg-[image:--select-button-svg] placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal">
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
                                     <option value="">Select</option>
                                     <option value="Active" <%=product.noiseCancellation==='Active' ? 'selected' : '' %>
                                         >Active</option>
@@ -435,91 +427,246 @@
                         </div>
                     </div>
 
+                    <!-- Warranty -->
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                        Warranty</h3>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Warranty Duration</p>
+                            <select id="warrantyDuration" name="warrantyDuration"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
+                                <option value="No Warranty" <%= product.warranty && product.warranty.duration === 'No Warranty' ? 'selected' : '' %>>No Warranty</option>
+                                <option value="6 Months" <%= product.warranty && product.warranty.duration === '6 Months' ? 'selected' : '' %>>6 Months</option>
+                                <option value="1 Year" <%= product.warranty && product.warranty.duration === '1 Year' ? 'selected' : '' %>>1 Year</option>
+                                <option value="2 Years" <%= product.warranty && product.warranty.duration === '2 Years' ? 'selected' : '' %>>2 Years</option>
+                                <option value="3 Years" <%= product.warranty && product.warranty.duration === '3 Years' ? 'selected' : '' %>>3 Years</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                        <label class="flex flex-col min-w-40 flex-1">
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Warranty Provider</p>
+                            <select id="warrantyProvider" name="warrantyProvider"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
+                                <option value="Brand" <%= !product.warranty || product.warranty.provider === 'Brand' ? 'selected' : '' %>>Brand</option>
+                                <option value="SoundWave" <%= product.warranty && product.warranty.provider === 'SoundWave' ? 'selected' : '' %>>SoundWave</option>
+                            </select>
+                        </label>
+                    </div>
+
+                    <details open class="mx-4 mt-4 rounded-xl border border-[#BCA6DB] bg-white p-4">
+                        <summary class="cursor-pointer text-[#1F1F1F] font-bold">3. Audio Specs</summary>
+                        <div class="mt-4 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label class="flex flex-col">
+                                    <span class="text-sm text-[#685BCB] mb-1">Form Factor</span>
+                                    <select name="formFactor" class="rounded-xl border border-[#BCA6DB] h-11 px-3">
+                                        <option value="">Select</option>
+                                        <option value="In-Ear" <%= product.formFactor === 'In-Ear' ? 'selected' : '' %>>In-Ear</option>
+                                        <option value="On-Ear" <%= product.formFactor === 'On-Ear' ? 'selected' : '' %>>On-Ear</option>
+                                        <option value="Over-Ear" <%= product.formFactor === 'Over-Ear' ? 'selected' : '' %>>Over-Ear</option>
+                                    </select>
+                                </label>
+                                <label class="flex flex-col">
+                                    <span class="text-sm text-[#685BCB] mb-1">Earpiece Shape</span>
+                                    <select name="earpieceShape" class="rounded-xl border border-[#BCA6DB] h-11 px-3">
+                                        <option value="">Select</option>
+                                        <option value="Round" <%= product.earpieceShape === 'Round' ? 'selected' : '' %>>Round</option>
+                                        <option value="Oval" <%= product.earpieceShape === 'Oval' ? 'selected' : '' %>>Oval</option>
+                                        <option value="Ergonomic" <%= product.earpieceShape === 'Ergonomic' ? 'selected' : '' %>>Ergonomic</option>
+                                    </select>
+                                </label>
+                                <label class="flex flex-col">
+                                    <span class="text-sm text-[#685BCB] mb-1">Impedance Range</span>
+                                    <select name="impedanceRange" class="rounded-xl border border-[#BCA6DB] h-11 px-3">
+                                        <option value="">Select</option>
+                                        <option value="Up to 32 Ohm" <%= product.impedanceRange === 'Up to 32 Ohm' ? 'selected' : '' %>>Up to 32 Ohm</option>
+                                        <option value="33-80 Ohm" <%= product.impedanceRange === '33-80 Ohm' ? 'selected' : '' %>>33-80 Ohm</option>
+                                        <option value="81-250 Ohm" <%= product.impedanceRange === '81-250 Ohm' ? 'selected' : '' %>>81-250 Ohm</option>
+                                        <option value="250+ Ohm" <%= product.impedanceRange === '250+ Ohm' ? 'selected' : '' %>>250+ Ohm</option>
+                                    </select>
+                                </label>
+                                <label class="flex flex-col">
+                                    <span class="text-sm text-[#685BCB] mb-1">Sensitivity Range</span>
+                                    <select name="sensitivityRange" class="rounded-xl border border-[#BCA6DB] h-11 px-3">
+                                        <option value="">Select</option>
+                                        <option value="Up to 95 dB" <%= product.sensitivityRange === 'Up to 95 dB' ? 'selected' : '' %>>Up to 95 dB</option>
+                                        <option value="96-105 dB" <%= product.sensitivityRange === '96-105 dB' ? 'selected' : '' %>>96-105 dB</option>
+                                        <option value="106-115 dB" <%= product.sensitivityRange === '106-115 dB' ? 'selected' : '' %>>106-115 dB</option>
+                                        <option value="115+ dB" <%= product.sensitivityRange === '115+ dB' ? 'selected' : '' %>>115+ dB</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label class="flex flex-col">
+                                    <span class="text-sm text-[#685BCB] mb-1">Has Microphone</span>
+                                    <select name="hasMicrophone" class="rounded-xl border border-[#BCA6DB] h-11 px-3">
+                                        <option value="false" <%= product.hasMicrophone ? '' : 'selected' %>>No</option>
+                                        <option value="true" <%= product.hasMicrophone ? 'selected' : '' %>>Yes</option>
+                                    </select>
+                                </label>
+                                <label class="flex flex-col">
+                                    <span class="text-sm text-[#685BCB] mb-1">Battery Charging Time</span>
+                                    <input type="number" step="0.1" min="0" name="batteryChargingTime"
+                                        class="rounded-xl border border-[#BCA6DB] h-11 px-3" placeholder="hours"
+                                        value="<%= product.batteryChargingTime != null ? product.batteryChargingTime : '' %>" />
+                                </label>
+                            </div>
+                            <div class="space-y-2">
+                                <p class="text-sm font-semibold text-[#1F1F1F]">Noise Control Types</p>
+                                <div class="flex flex-wrap gap-4">
+                                    <label><input type="checkbox" name="noiseControlTypes" value="Active Noise Cancellation" <%= product.noiseControlTypes && product.noiseControlTypes.includes('Active Noise Cancellation') ? 'checked' : '' %>> Active Noise Cancellation</label>
+                                    <label><input type="checkbox" name="noiseControlTypes" value="Passive Noise Isolation" <%= product.noiseControlTypes && product.noiseControlTypes.includes('Passive Noise Isolation') ? 'checked' : '' %>> Passive Noise Isolation</label>
+                                    <label><input type="checkbox" name="noiseControlTypes" value="None" <%= product.noiseControlTypes && product.noiseControlTypes.includes('None') ? 'checked' : '' %>> None</label>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <p class="text-sm font-semibold text-[#1F1F1F]">Audio Driver Types</p>
+                                <div class="flex flex-wrap gap-4">
+                                    <label><input type="checkbox" name="audioDriverTypes" value="Dynamic" <%= product.audioDriverTypes && product.audioDriverTypes.includes('Dynamic') ? 'checked' : '' %>> Dynamic</label>
+                                    <label><input type="checkbox" name="audioDriverTypes" value="Planar Magnetic" <%= product.audioDriverTypes && product.audioDriverTypes.includes('Planar Magnetic') ? 'checked' : '' %>> Planar Magnetic</label>
+                                    <label><input type="checkbox" name="audioDriverTypes" value="Balanced Armature" <%= product.audioDriverTypes && product.audioDriverTypes.includes('Balanced Armature') ? 'checked' : '' %>> Balanced Armature</label>
+                                    <label><input type="checkbox" name="audioDriverTypes" value="Hybrid" <%= product.audioDriverTypes && product.audioDriverTypes.includes('Hybrid') ? 'checked' : '' %>> Hybrid</label>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="mx-4 mt-4 rounded-xl border border-[#BCA6DB] bg-white p-4">
+                        <summary class="cursor-pointer text-[#1F1F1F] font-bold">4. Build & Materials</summary>
+                        <div class="mt-4 flex flex-wrap gap-4">
+                            <% ['Plastic','Aluminium','Steel','Leather','Fabric','Silicone'].forEach(function(item){ %>
+                                <label><input type="checkbox" name="materials" value="<%= item %>" <%= product.materials && product.materials.includes(item) ? 'checked' : '' %>> <%= item %></label>
+                            <% }) %>
+                        </div>
+                    </details>
+
+                    <details class="mx-4 mt-4 rounded-xl border border-[#BCA6DB] bg-white p-4">
+                        <summary class="cursor-pointer text-[#1F1F1F] font-bold">5. Smart Features</summary>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex flex-wrap gap-4">
+                                <% ['Touch','Button','Voice','App'].forEach(function(item){ %>
+                                    <label><input type="checkbox" name="controlMethods" value="<%= item %>" <%= product.controlMethods && product.controlMethods.includes(item) ? 'checked' : '' %>> <%= item %></label>
+                                <% }) %>
+                            </div>
+                            <div class="flex flex-wrap gap-4">
+                                <% ['Voice Assistant','Multipoint','Companion App','Adaptive Audio'].forEach(function(item){ %>
+                                    <label><input type="checkbox" name="smartFeatures" value="<%= item %>" <%= product.smartFeatures && product.smartFeatures.includes(item) ? 'checked' : '' %>> <%= item %></label>
+                                <% }) %>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="mx-4 mt-4 rounded-xl border border-[#BCA6DB] bg-white p-4">
+                        <summary class="cursor-pointer text-[#1F1F1F] font-bold">6. Compatibility</summary>
+                        <div class="mt-4 space-y-3">
+                            <div class="flex flex-wrap gap-4">
+                                <% ['Android','iOS','Windows','Mac','PlayStation','Xbox'].forEach(function(item){ %>
+                                    <label><input type="checkbox" name="compatibleDevices" value="<%= item %>" <%= product.compatibleDevices && product.compatibleDevices.includes(item) ? 'checked' : '' %>> <%= item %></label>
+                                <% }) %>
+                            </div>
+                            <div class="flex flex-wrap gap-4">
+                                <% ['Detachable Cable','Braided Cable','Tangle Free','Inline Remote'].forEach(function(item){ %>
+                                    <label><input type="checkbox" name="cableFeatures" value="<%= item %>" <%= product.cableFeatures && product.cableFeatures.includes(item) ? 'checked' : '' %>> <%= item %></label>
+                                <% }) %>
+                            </div>
+                        </div>
+                    </details>
+
+                    <details class="mx-4 mt-4 rounded-xl border border-[#BCA6DB] bg-white p-4">
+                        <summary class="cursor-pointer text-[#1F1F1F] font-bold">7. Package Contents</summary>
+                        <div class="mt-4 flex flex-wrap gap-4">
+                            <% ['Carrying Case','Charging Cable','Audio Cable','Ear Tips','User Manual'].forEach(function(item){ %>
+                                <label><input type="checkbox" name="includedComponents" value="<%= item %>" <%= product.includedComponents && product.includedComponents.includes(item) ? 'checked' : '' %>> <%= item %></label>
+                            <% }) %>
+                        </div>
+                    </details>
+
                     <!-- Badges (pre-checked) -->
-                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Badges
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Badges
                     </h3>
                     <div class="px-4">
                         <label class="flex gap-x-3 py-3 flex-row">
                             <input type="checkbox" name="badges" value="Best seller" <%=product.badges &&
                                 product.badges.includes('Best seller') ? 'checked' : '' %>
-                            class="h-5 w-5 rounded border-[#dce7da] border-2 bg-transparent text-[#37ff14]
-                            checked:bg-[#37ff14] checked:border-[#37ff14] checked:bg-[image:--checkbox-tick-svg]
-                            focus:ring-0 focus:ring-offset-0 focus:border-[#dce7da] focus:outline-none" />
-                            <p class="text-[#121810] text-base font-normal leading-normal">Best seller</p>
+                            class="h-5 w-5 rounded border-[#BCA6DB] border-2 bg-transparent text-[#685BCB]
+                            checked:bg-[#685BCB] checked:border-[#685BCB] checked:bg-[image:--checkbox-tick-svg]
+                            focus:ring-0 focus:ring-offset-0 focus:border-[#BCA6DB] focus:outline-none" />
+                            <p class="text-[#1F1F1F] text-base font-normal leading-normal">Best seller</p>
                         </label>
                         <label class="flex gap-x-3 py-3 flex-row">
                             <input type="checkbox" name="badges" value="New" <%=product.badges &&
                                 product.badges.includes('New') ? 'checked' : '' %>
-                            class="h-5 w-5 rounded border-[#dce7da] border-2 bg-transparent text-[#37ff14]
-                            checked:bg-[#37ff14] checked:border-[#37ff14] checked:bg-[image:--checkbox-tick-svg]
-                            focus:ring-0 focus:ring-offset-0 focus:border-[#dce7da] focus:outline-none" />
-                            <p class="text-[#121810] text-base font-normal leading-normal">New</p>
+                            class="h-5 w-5 rounded border-[#BCA6DB] border-2 bg-transparent text-[#685BCB]
+                            checked:bg-[#685BCB] checked:border-[#685BCB] checked:bg-[image:--checkbox-tick-svg]
+                            focus:ring-0 focus:ring-offset-0 focus:border-[#BCA6DB] focus:outline-none" />
+                            <p class="text-[#1F1F1F] text-base font-normal leading-normal">New</p>
                         </label>
                         <label class="flex gap-x-3 py-3 flex-row">
                             <input type="checkbox" name="badges" value="Deal" <%=product.badges &&
                                 product.badges.includes('Deal') ? 'checked' : '' %>
-                            class="h-5 w-5 rounded border-[#dce7da] border-2 bg-transparent text-[#37ff14]
-                            checked:bg-[#37ff14] checked:border-[#37ff14] checked:bg-[image:--checkbox-tick-svg]
-                            focus:ring-0 focus:ring-offset-0 focus:border-[#dce7da] focus:outline-none" />
-                            <p class="text-[#121810] text-base font-normal leading-normal">Deal</p>
+                            class="h-5 w-5 rounded border-[#BCA6DB] border-2 bg-transparent text-[#685BCB]
+                            checked:bg-[#685BCB] checked:border-[#685BCB] checked:bg-[image:--checkbox-tick-svg]
+                            focus:ring-0 focus:ring-offset-0 focus:border-[#BCA6DB] focus:outline-none" />
+                            <p class="text-[#1F1F1F] text-base font-normal leading-normal">Deal</p>
                         </label>
                     </div>
 
                     <!-- Shipping & Weight -->
-                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
                         Shipping &amp; Weight</h3>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Length (cm)</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Length (cm)</p>
                             <input id="shippingLength" name="length" placeholder="Length" type="number" step="0.01"
                                 min="0"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.length != null ? product.length : '' %>" />
                             <p class="field-error" id="shippingLengthError">Must be a positive number</p>
                         </label>
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Width (cm)</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Width (cm)</p>
                             <input id="shippingWidth" name="width" placeholder="Width" type="number" step="0.01" min="0"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.width != null ? product.width : '' %>" />
                             <p class="field-error" id="shippingWidthError">Must be a positive number</p>
                         </label>
                     </div>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Height (cm)</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Height (cm)</p>
                             <input id="shippingHeight" name="height" placeholder="Height" type="number" step="0.01"
                                 min="0"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.height != null ? product.height : '' %>" />
                             <p class="field-error" id="shippingHeightError">Must be a positive number</p>
                         </label>
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Weight (kg)</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Weight (kg)</p>
                             <input id="shippingWeight" name="weight" placeholder="Weight" type="number" step="0.01"
                                 min="0"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.weight != null ? product.weight : '' %>" />
                             <p class="field-error" id="shippingWeightError">Must be a positive number</p>
                         </label>
                     </div>
 
                     <!-- SEO Meta -->
-                    <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">SEO
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">SEO
                         Meta</h3>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Meta Title</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Meta Title</p>
                             <input id="metaTitle" name="metaTitle" placeholder="Meta Title"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] h-14 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="<%= product.metaTitle || '' %>" />
                         </label>
                     </div>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
-                            <p class="text-[#121810] text-base font-medium leading-normal pb-2">Meta Description</p>
+                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Meta Description</p>
                             <textarea id="metaDescription" name="metaDescription" placeholder="Meta Description"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#121810] focus:outline-0 focus:ring-0 border border-[#dce7da] bg-white focus:border-[#dce7da] min-h-36 placeholder:text-[#658d5e] p-[15px] text-base font-normal leading-normal"><%= product.metaDescription || '' %></textarea>
+                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] min-h-36 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"><%= product.metaDescription || '' %></textarea>
                         </label>
                     </div>
 
@@ -527,11 +674,11 @@
                     <div class="flex justify-stretch">
                         <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-end">
                             <button type="button" onclick="window.location.href='/admin/products/<%= product._id %>'"
-                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]">
+                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#FFFFFF] text-[#1F1F1F] text-sm font-bold leading-normal tracking-[0.015em]">
                                 <span class="truncate">Cancel</span>
                             </button>
                             <button type="submit" id="updateProductBtn"
-                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#37ff14] text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]">
+                                class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#685BCB] text-white text-sm font-bold leading-normal tracking-[0.015em]">
                                 <span class="truncate">Update Product</span>
                             </button>
                         </div>
@@ -545,192 +692,174 @@
     <script>
         const PRODUCT_ID = '<%= product._id %>';
 
-        // ========== Image Management ==========
-        // Existing images from DB (each has _id, url, public_id, isHero)
-        let existingImages = <%- JSON.stringify(product.images || []) %>;
-        let newFiles = []; // Array of File objects (new uploads)
+        // ========== Variant Management ==========
+        const hasVariantsToggle = document.getElementById('hasVariantsToggle');
+        const variantBuilder = document.getElementById('variantBuilder');
+        const variantList = document.getElementById('variantList');
+        const variantError = document.getElementById('variantError');
+        const addVariantBtn = document.getElementById('addVariantBtn');
+        let variants = <%- JSON.stringify(product.variants || []) %>.map((variant) => ({
+            colorInput: variant.colorName || variant.colorCode || '',
+            colorName: variant.colorName || '',
+            colorCode: variant.colorCode || '',
+            existingImages: Array.isArray(variant.images) ? variant.images.map((img) => ({
+                url: img.url,
+                public_id: img.public_id
+            })) : [],
+            files: []
+        }));
 
-        const imageInput = document.getElementById('imageInput');
-        const previewGrid = document.getElementById('imagePreviewGrid');
-        const imageError = document.getElementById('imageError');
-        const dropZone = document.getElementById('dropZone');
-
-        // Drag & Drop
-        dropZone.addEventListener('dragover', function (e) {
-            e.preventDefault();
-            dropZone.classList.add('border-[#37ff14]', 'bg-[#f0fff0]');
-        });
-        dropZone.addEventListener('dragleave', function (e) {
-            e.preventDefault();
-            dropZone.classList.remove('border-[#37ff14]', 'bg-[#f0fff0]');
-        });
-        dropZone.addEventListener('drop', function (e) {
-            e.preventDefault();
-            dropZone.classList.remove('border-[#37ff14]', 'bg-[#f0fff0]');
-            const files = Array.from(e.dataTransfer.files).filter(f =>
-                ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
-            );
-            newFiles = newFiles.concat(files);
-            renderPreviews();
-            validateImages();
-        });
-
-        imageInput.addEventListener('change', function () {
-            const files = Array.from(this.files).filter(f =>
-                ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
-            );
-            newFiles = newFiles.concat(files);
-            renderPreviews();
-            validateImages();
-            this.value = '';
-        });
-
-        function setHeroImage(index) {
-            existingImages.forEach((img, i) => { img.isHero = (i === index); });
-            // Clear hero from new files
-            newFiles._heroIndex = -1;
-            renderPreviews();
-        }
-
-        function setHeroNewFile(index) {
-            existingImages.forEach(img => { img.isHero = false; });
-            newFiles._heroIndex = index;
-            renderPreviews();
-        }
-
-        // Initialize hero tracking for new files
-        newFiles._heroIndex = -1;
-
-        function removeExistingImage(index) {
-            const wasHero = existingImages[index].isHero;
-            existingImages.splice(index, 1);
-            // If hero was removed, auto-assign first remaining
-            if (wasHero) {
-                if (existingImages.length > 0) {
-                    existingImages[0].isHero = true;
-                } else if (newFiles.length > 0) {
-                    newFiles._heroIndex = 0;
-                }
+        function normalizeHex(value) {
+            const raw = String(value || '').trim();
+            if (/^#?[0-9a-fA-F]{6}$/.test(raw)) {
+                return raw.startsWith('#') ? raw.toUpperCase() : `#${raw.toUpperCase()}`;
             }
-            renderPreviews();
-            validateImages();
+            return '';
         }
 
-        function removeNewFile(index) {
-            const wasHero = (newFiles._heroIndex === index);
-            newFiles.splice(index, 1);
-            // Adjust hero index
-            if (wasHero) {
-                newFiles._heroIndex = -1;
-                if (existingImages.length > 0) {
-                    existingImages[0].isHero = true;
-                } else if (newFiles.length > 0) {
-                    newFiles._heroIndex = 0;
-                }
-            } else if (newFiles._heroIndex > index) {
-                newFiles._heroIndex--;
-            }
-            renderPreviews();
-            validateImages();
+        function rgbToHex(rgb) {
+            const match = String(rgb).match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+            if (!match) return '';
+            const parts = match.slice(1, 4).map((n) => Number(n).toString(16).padStart(2, '0').toUpperCase());
+            return `#${parts.join('')}`;
         }
 
-        function renderPreviews() {
-            previewGrid.innerHTML = '';
-            // Determine if any image is hero
-            const anyExistingHero = existingImages.some(img => img.isHero);
-            const anyNewHero = newFiles._heroIndex >= 0;
-            const noHero = !anyExistingHero && !anyNewHero;
+        function colorNameToHex(name) {
+            const probe = document.createElement('span');
+            probe.style.color = '';
+            probe.style.color = String(name || '').trim();
+            if (!probe.style.color) return '';
+            document.body.appendChild(probe);
+            const computed = getComputedStyle(probe).color;
+            document.body.removeChild(probe);
+            return rgbToHex(computed);
+        }
 
-            // Auto-set first image as hero if none selected
-            if (noHero && (existingImages.length + newFiles.length) > 0) {
-                if (existingImages.length > 0) {
-                    existingImages[0].isHero = true;
-                } else {
-                    newFiles._heroIndex = 0;
-                }
-            }
+        function resolveColor(input) {
+            const hex = normalizeHex(input);
+            if (hex) return { colorCode: hex, colorName: '' };
+            const fromName = colorNameToHex(input);
+            if (fromName) return { colorCode: fromName, colorName: String(input).trim() };
+            return null;
+        }
 
-            // Existing images
-            existingImages.forEach(function (img, index) {
-                const div = document.createElement('div');
-                div.className = 'image-preview-item';
-                div.style.position = 'relative';
-                const imgEl = document.createElement('img');
-                imgEl.src = img.url;
-                imgEl.alt = 'Product image ' + (index + 1);
-                div.appendChild(imgEl);
+        function addVariant() {
+            variants.push({ colorInput: '', colorName: '', colorCode: '', existingImages: [], files: [] });
+            renderVariants();
+        }
 
-                if (img.isHero) {
-                    const badge = document.createElement('span');
-                    badge.className = 'hero-badge';
-                    badge.textContent = 'HERO';
-                    div.appendChild(badge);
-                } else {
-                    const heroBtn = document.createElement('button');
-                    heroBtn.type = 'button';
-                    heroBtn.className = 'hero-set-btn';
-                    heroBtn.textContent = '★ Set Hero';
-                    heroBtn.onclick = function () { setHeroImage(index); };
-                    div.appendChild(heroBtn);
-                }
+        function removeVariant(index) {
+            variants.splice(index, 1);
+            renderVariants();
+        }
 
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'image-remove-btn';
-                removeBtn.textContent = '×';
-                removeBtn.onclick = function () { removeExistingImage(index); };
-                div.appendChild(removeBtn);
+        function removeExistingVariantImage(variantIndex, imageIndex) {
+            variants[variantIndex].existingImages.splice(imageIndex, 1);
+            renderVariants();
+        }
 
-                previewGrid.appendChild(div);
+        function renderVariants() {
+            variantList.innerHTML = '';
+            variants.forEach((variant, index) => {
+                const existingCount = variant.existingImages.length;
+                const newCount = variant.files.length;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'border border-[#BCA6DB] rounded-xl p-4 bg-white';
+                wrapper.innerHTML = `
+                    <div class="flex flex-wrap items-center gap-3">
+                        <input type="text" data-role="color-input" data-index="${index}" value="${variant.colorInput || ''}"
+                            placeholder="HEX or colour name (e.g., #000000 / royalblue)"
+                            class="h-11 flex-1 min-w-[240px] rounded-xl border border-[#BCA6DB] px-3 text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]">
+                        <span class="inline-block w-8 h-8 rounded-full border border-[#BCA6DB]" style="background:${variant.colorCode || '#FFFFFF'}"></span>
+                        <button type="button" data-role="remove-variant" data-index="${index}"
+                            class="h-10 px-3 rounded-lg bg-[#ffecec] text-red-600 text-sm font-bold hover:bg-[#ffdddd]">Remove</button>
+                    </div>
+                    <p class="text-xs text-[#685BCB] mt-2">${variant.colorCode ? `Normalized: ${variant.colorCode}` : ''}</p>
+                    <div class="mt-3">
+                        <input type="file" data-role="variant-files" data-index="${index}" multiple accept="image/jpeg,image/png,image/webp"
+                            class="block w-full text-sm text-[#1F1F1F]">
+                        <p class="text-xs text-[#685BCB] mt-1">Existing: ${existingCount}, New: ${newCount}</p>
+                    </div>
+                    <div data-role="variant-existing-list" data-index="${index}" class="mt-2 flex flex-wrap gap-2"></div>
+                `;
+                variantList.appendChild(wrapper);
+
+                const existingList = wrapper.querySelector('[data-role="variant-existing-list"]');
+                variant.existingImages.forEach((img, imageIndex) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'relative w-16 h-16 rounded-lg overflow-hidden border border-[#BCA6DB]';
+                    chip.innerHTML = `<img src="${img.url}" class="w-full h-full object-cover"><button type="button" data-role="remove-existing-variant-image" data-variant-index="${index}" data-image-index="${imageIndex}" class="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-1">x</button>`;
+                    existingList.appendChild(chip);
+                });
             });
 
-            // New file uploads
-            newFiles.forEach(function (file, index) {
-                const div = document.createElement('div');
-                div.className = 'image-preview-item';
-                div.style.position = 'relative';
-                const imgEl = document.createElement('img');
-                imgEl.src = URL.createObjectURL(file);
-                imgEl.alt = 'New image ' + (index + 1);
-                div.appendChild(imgEl);
+            variantList.querySelectorAll('[data-role="color-input"]').forEach((input) => {
+                input.addEventListener('input', function () {
+                    const idx = Number(this.dataset.index);
+                    variants[idx].colorInput = this.value;
+                    const resolved = resolveColor(this.value);
+                    variants[idx].colorCode = resolved ? resolved.colorCode : '';
+                    variants[idx].colorName = resolved ? resolved.colorName : '';
+                    renderVariants();
+                });
+            });
 
-                if (newFiles._heroIndex === index) {
-                    const badge = document.createElement('span');
-                    badge.className = 'hero-badge';
-                    badge.textContent = 'HERO';
-                    div.appendChild(badge);
-                } else {
-                    const heroBtn = document.createElement('button');
-                    heroBtn.type = 'button';
-                    heroBtn.className = 'hero-set-btn';
-                    heroBtn.textContent = '★ Set Hero';
-                    heroBtn.onclick = function () { setHeroNewFile(index); };
-                    div.appendChild(heroBtn);
-                }
+            variantList.querySelectorAll('[data-role="variant-files"]').forEach((input) => {
+                input.addEventListener('change', function () {
+                    const idx = Number(this.dataset.index);
+                    variants[idx].files = Array.from(this.files || []).filter((f) =>
+                        ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
+                    );
+                    renderVariants();
+                });
+            });
 
-                const removeBtn = document.createElement('button');
-                removeBtn.type = 'button';
-                removeBtn.className = 'image-remove-btn';
-                removeBtn.textContent = '×';
-                removeBtn.onclick = function () { removeNewFile(index); };
-                div.appendChild(removeBtn);
+            variantList.querySelectorAll('[data-role="remove-variant"]').forEach((btn) => {
+                btn.addEventListener('click', () => removeVariant(Number(btn.dataset.index)));
+            });
 
-                previewGrid.appendChild(div);
+            variantList.querySelectorAll('[data-role="remove-existing-variant-image"]').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    removeExistingVariantImage(Number(btn.dataset.variantIndex), Number(btn.dataset.imageIndex));
+                });
             });
         }
 
-        function validateImages() {
-            const total = existingImages.length + newFiles.length;
-            if (total < 3) {
-                imageError.classList.add('visible');
+        function validateVariants() {
+            if (!variants.length) {
+                variantError.textContent = 'Add at least one colour variant.';
+                variantError.classList.add('visible');
                 return false;
             }
-            imageError.classList.remove('visible');
+
+            for (const variant of variants) {
+                if (!variant.colorCode) {
+                    variantError.textContent = 'Each variant needs a valid HEX or CSS colour name.';
+                    variantError.classList.add('visible');
+                    return false;
+                }
+                const total = variant.existingImages.length + variant.files.length;
+                if (total < 3 || total > 10) {
+                    variantError.textContent = 'Each variant must contain 3 to 10 images.';
+                    variantError.classList.add('visible');
+                    return false;
+                }
+            }
+
+            variantError.classList.remove('visible');
             return true;
         }
 
-        // Render existing images on page load
-        renderPreviews();
+        hasVariantsToggle.checked = true;
+        hasVariantsToggle.disabled = true;
+        variantBuilder.classList.remove('hidden');
+        if (variants.length === 0) {
+            addVariant();
+        } else {
+            renderVariants();
+        }
+        addVariantBtn.addEventListener('click', addVariant);
 
         // ========== Connection Type Toggle ==========
         document.getElementById('connectionType').addEventListener('change', function () {
@@ -870,8 +999,7 @@
                 if (!validateNumber('wirelessRange', 'wirelessRangeError', false)) valid = false;
             }
 
-            // Image validation
-            if (!validateImages()) valid = false;
+            if (!validateVariants()) valid = false;
 
             if (!valid) {
                 const firstError = document.querySelector('.field-error.visible');
@@ -888,7 +1016,9 @@
                 'price', 'originalPrice', 'discountPercentage', 'stockCount', 'reservedCount', 'reorderThreshold',
                 'cableLength', 'connectorType', 'impedance', 'driverSize',
                 'bluetoothVersion', 'batteryLife', 'chargingTime', 'wirelessRange', 'noiseCancellation',
-                'length', 'width', 'height', 'weight', 'metaTitle', 'metaDescription'];
+                'warrantyDuration', 'warrantyProvider',
+                'length', 'width', 'height', 'weight', 'metaTitle', 'metaDescription',
+                'formFactor', 'earpieceShape', 'impedanceRange', 'sensitivityRange', 'hasMicrophone', 'batteryChargingTime'];
 
             fieldNames.forEach(function (name) {
                 const el = form.querySelector('[name="' + name + '"]');
@@ -899,17 +1029,25 @@
             document.querySelectorAll('[name="badges"]:checked').forEach(function (cb) {
                 formData.append('badges', cb.value);
             });
+            ['noiseControlTypes', 'controlMethods', 'cableFeatures', 'smartFeatures', 'compatibleDevices', 'materials', 'includedComponents', 'audioDriverTypes']
+                .forEach((name) => {
+                    document.querySelectorAll(`[name="${name}"]:checked`).forEach((cb) => {
+                        formData.append(name, cb.value);
+                    });
+                });
 
-            // Existing images (kept ones)
-            formData.append('existingImages', JSON.stringify(existingImages));
-
-            // New images
-            newFiles.forEach(function (file) {
-                formData.append('productImages', file);
+            formData.append('hasVariants', 'true');
+            const variantPayload = variants.map((variant) => ({
+                colorName: variant.colorName || '',
+                colorCode: variant.colorCode || '',
+                existingImages: variant.existingImages || []
+            }));
+            formData.append('variantPayload', JSON.stringify(variantPayload));
+            variants.forEach((variant, index) => {
+                variant.files.forEach((file) => {
+                    formData.append(`variantImages_${index}`, file);
+                });
             });
-
-            // Send hero index for new files (-1 if hero is an existing image)
-            formData.append('newHeroIndex', newFiles._heroIndex);
 
             // Submit via PUT
             const submitBtn = document.getElementById('updateProductBtn');

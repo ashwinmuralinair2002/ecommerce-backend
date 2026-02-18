@@ -1,37 +1,38 @@
-// Seed script to populate the 5 fixed product categories
-const mongoose = require('mongoose');
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+const mongoose = require("mongoose");
+const Category = require("../models/Category");
+require("dotenv").config(); // Load environment variables
 
-const Category = require('../models/Category');
-
-const categories = [
-    { name: 'Wired', imageUrl: '/images/categories/wired.jpg' },
-    { name: 'Wireless', imageUrl: '/images/categories/wireless.jpg' },
-    { name: 'In-Ear', imageUrl: '/images/categories/in-ear.jpg' },
-    { name: 'On-Ear', imageUrl: '/images/categories/on-ear.jpg' },
-    { name: 'Over-Ear', imageUrl: '/images/categories/over-ear.jpg' }
-];
-
-async function seedCategories() {
+const seedCategories = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('Connected to MongoDB');
+        await mongoose.connect(process.env.MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+
+        console.log("Connected to MongoDB");
+
+        const categories = [
+            { name: "In-Ear", isListed: true },
+            { name: "On-Ear", isListed: true },
+            { name: "Over-Ear", isListed: true },
+        ];
 
         for (const cat of categories) {
-            await Category.findOneAndUpdate(
-                { name: cat.name },
-                { $setOnInsert: cat },
-                { upsert: true, new: true }
-            );
-            console.log(`✔ Category "${cat.name}" ensured`);
+            const existing = await Category.findOne({ name: cat.name });
+            if (!existing) {
+                await Category.create(cat);
+                console.log(`Created category: ${cat.name}`);
+            } else {
+                console.log(`Category already exists: ${cat.name}`);
+            }
         }
 
-        console.log('\n✅ All categories seeded successfully!');
-        process.exit(0);
+        console.log("Categories seeded successfully");
+        process.exit();
     } catch (error) {
-        console.error('❌ Seed failed:', error.message);
+        console.error("Error seeding categories:", error);
         process.exit(1);
     }
-}
+};
 
 seedCategories();

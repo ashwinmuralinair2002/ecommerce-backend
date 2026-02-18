@@ -1,27 +1,9 @@
 <!-- Admin dashboard sidebar partial -->
-<div class="flex flex-col gap-4 bg-[#f8fcf8] p-4 min-h-full">
-    <!-- Logo -->
-    <a href="/admin/dashboard" class="flex items-center gap-3 text-[#0d1c0d] hover:opacity-80 transition-opacity mb-4">
-        <div class="size-4">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134
-                C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462
-                C2.19985 28.361 1.76794 23.9758 2.60947 19.7452
-                C3.451 15.5145 5.52816 11.6284 8.57829 8.5783
-                C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948
-                C23.9758 1.76795 28.361 2.19986 32.3462 3.85057
-                C36.3314 5.50129 39.7376 8.29668 42.134 11.8833
-                C44.5305 15.4698 45.8096 19.6865 45.8096 24
-                L24 24 L24 45.8096Z" fill="currentColor" />
-            </svg>
-        </div>
-        <span class="font-bold text-lg">SoundWave</span>
-    </a>
-
+<div class="flex flex-col gap-3 bg-[#BCA6DB] p-3 min-h-full text-[#1F1F1F]">
     <!-- Navigation Links -->
     <div class="space-y-1">
         <a href="/admin/dashboard"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'dashboard' ? 'bg-[#e6f4e6] font-medium' : 'hover:bg-[#e6f4e6]' %>">
+            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'dashboard' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
                 viewBox="0 0 256 256">
                 <path
@@ -32,7 +14,7 @@
         </a>
 
         <a href="/admin/categories"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'categories' ? 'bg-[#e6f4e6] font-medium' : 'hover:bg-[#e6f4e6]' %>">
+            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'categories' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
                 viewBox="0 0 256 256">
                 <path
@@ -43,7 +25,7 @@
         </a>
 
         <a href="/admin/products"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'products' ? 'bg-[#e6f4e6] font-medium' : 'hover:bg-[#e6f4e6]' %>">
+            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'products' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
                 viewBox="0 0 256 256">
                 <path
@@ -54,7 +36,7 @@
         </a>
 
         <a href="/admin/customers"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'customers' ? 'bg-[#e6f4e6] font-medium' : 'hover:bg-[#e6f4e6]' %>">
+            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'customers' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
                 viewBox="0 0 256 256">
                 <path
@@ -65,7 +47,7 @@
         </a>
 
         <a href="/admin/brands"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'brands' ? 'bg-[#e6f4e6] font-medium' : 'hover:bg-[#e6f4e6]' %>">
+            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'brands' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
                 viewBox="0 0 256 256">
                 <path
@@ -76,7 +58,7 @@
         </a>
 
         <a href="#"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'orders' ? 'bg-[#e6f4e6] font-medium' : 'hover:bg-[#e6f4e6]' %>">
+            class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'orders' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
                 viewBox="0 0 256 256">
                 <path
@@ -90,7 +72,7 @@
         <div class="border-t border-gray-200 my-2"></div>
 
         <a href="/" target="_blank"
-            class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#e6f4e6] transition-colors">
+            class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#D3CEEA] transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
                 viewBox="0 0 256 256">
                 <path

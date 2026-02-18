@@ -41,23 +41,25 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'brands' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+            <section class="flex-1 p-6 md:p-8">
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-2 text-sm mb-4">
-                    <a href="/admin/brands" class="text-[#5f8c5f] hover:underline">Brands</a>
+                    <a href="/admin/brands" class="text-[#685BCB] hover:underline">Brands</a>
                     <span class="text-gray-400">/</span>
-                    <span class="text-[#111811]">
+                    <span class="text-[#1F1F1F]">
                         <%= brand.name %>
                     </span>
                 </div>
@@ -66,10 +68,10 @@
                 <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
                     <div class="flex items-center gap-4">
                         <!-- Brand Logo -->
-                        <div class="w-20 h-20 rounded-lg bg-cover bg-center flex-shrink-0 <%= brand.logoUrl ? '' : 'bg-[#e0e5e0]' %>"
+                        <div class="w-20 h-20 rounded-lg bg-cover bg-center flex-shrink-0 <%= brand.logoUrl ? '' : 'bg-[#D3CEEA]' %>"
                             style="<%= brand.logoUrl ? " background-image:url('" + brand.logoUrl + "')" : '' %>"></div>
                         <div>
-                            <h1 class="text-[32px] font-bold text-[#121810]">
+                            <h1 class="text-[32px] font-bold text-[#1F1F1F]">
                                 <%= brand.name %>
                             </h1>
                             <p class="text-sm <%= brand.isActive ? 'text-[#53a145]' : 'text-red-600' %>">
@@ -80,7 +82,7 @@
 
                     <div class="flex gap-3 flex-wrap">
                         <a href="/admin/brands/<%= brand._id %>/edit"
-                            class="flex items-center h-10 px-4 rounded-lg bg-[#f0f5f0] font-medium text-[#121810] hover:bg-[#e0e5e0] transition-colors">
+                            class="flex items-center h-10 px-4 rounded-lg bg-[#FFFFFF] font-medium text-[#1F1F1F] hover:bg-[#D3CEEA] transition-colors">
                             Edit Brand
                         </a>
 
@@ -103,24 +105,24 @@
                 </div>
 
                 <!-- BRAND DETAILS -->
-                <div class="bg-[#f8fcf8] rounded-lg p-6 mb-6">
-                    <h2 class="text-lg font-bold text-[#121810] mb-4">Brand Information</h2>
+                <div class="bg-[#D3CEEA] rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Brand Information</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm text-[#658d5e] mb-1">Website</p>
-                            <p class="text-[#121810]">
+                            <p class="text-sm text-[#685BCB] mb-1">Website</p>
+                            <p class="text-[#1F1F1F]">
                                 <%= brand.website || '-' %>
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-[#658d5e] mb-1">Contact Email</p>
-                            <p class="text-[#121810]">
+                            <p class="text-sm text-[#685BCB] mb-1">Contact Email</p>
+                            <p class="text-[#1F1F1F]">
                                 <%= brand.contactEmail || '-' %>
                             </p>
                         </div>
                         <div class="md:col-span-2">
-                            <p class="text-sm text-[#658d5e] mb-1">Description</p>
-                            <p class="text-[#121810]">
+                            <p class="text-sm text-[#685BCB] mb-1">Description</p>
+                            <p class="text-[#1F1F1F]">
                                 <%= brand.description || '-' %>
                             </p>
                         </div>
@@ -128,30 +130,30 @@
                 </div>
 
                 <!-- METRICS -->
-                <h2 class="text-lg font-bold text-[#121810] mb-4">Key Metrics</h2>
+                <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Key Metrics</h2>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div class="bg-[#f8fcf8] p-4 rounded-lg">
-                        <p class="text-sm text-[#658d5e] mb-1">Total Products</p>
-                        <p class="text-2xl font-bold text-[#121810]">
+                    <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                        <p class="text-sm text-[#685BCB] mb-1">Total Products</p>
+                        <p class="text-2xl font-bold text-[#1F1F1F]">
                             <%= (metrics && metrics.totalProducts) || brand.productCount || 0 %>
                         </p>
                     </div>
 
                     <% if (locals.metrics && metrics.totalSales) { %>
-                        <div class="bg-[#f8fcf8] p-4 rounded-lg">
-                            <p class="text-sm text-[#658d5e] mb-1">Total Sales</p>
-                            <p class="text-2xl font-bold text-[#121810]">₹<%= metrics.totalSales.toLocaleString() %>
+                        <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                            <p class="text-sm text-[#685BCB] mb-1">Total Sales</p>
+                            <p class="text-2xl font-bold text-[#1F1F1F]">₹<%= metrics.totalSales.toLocaleString() %>
                             </p>
                         </div>
-                        <div class="bg-[#f8fcf8] p-4 rounded-lg">
-                            <p class="text-sm text-[#658d5e] mb-1">Avg. Rating</p>
-                            <p class="text-2xl font-bold text-[#121810]">
-                                <%= metrics.avgRating %> <span class="text-sm text-[#658d5e]">/ 5.0</span>
+                        <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                            <p class="text-sm text-[#685BCB] mb-1">Avg. Rating</p>
+                            <p class="text-2xl font-bold text-[#1F1F1F]">
+                                <%= metrics.avgRating %> <span class="text-sm text-[#685BCB]">/ 5.0</span>
                             </p>
                         </div>
-                        <div class="bg-[#f8fcf8] p-4 rounded-lg">
-                            <p class="text-sm text-[#658d5e] mb-1">Active Promos</p>
-                            <p class="text-2xl font-bold text-[#121810]">
+                        <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                            <p class="text-sm text-[#685BCB] mb-1">Active Promos</p>
+                            <p class="text-2xl font-bold text-[#1F1F1F]">
                                 <%= metrics.activePromos %>
                             </p>
                         </div>
@@ -165,17 +167,17 @@
                 </div>
 
                 <!-- PRODUCTS TABLE -->
-                <h2 class="text-lg font-bold text-[#121810] mb-4">Products</h2>
-                <div class="overflow-hidden rounded-lg border border-[#dce7da]">
+                <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Products</h2>
+                <div class="overflow-hidden rounded-lg border border-[#BCA6DB]">
                     <table class="w-full">
-                        <thead class="bg-[#f8fcf8]">
+                        <thead class="bg-[#D3CEEA]">
                             <tr>
-                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Product</th>
-                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">SKU</th>
-                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Price</th>
-                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Stock</th>
-                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Status</th>
-                                <th class="p-3 text-left text-sm font-medium text-[#658d5e]">Actions</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Product</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">SKU</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Price</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Stock</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Status</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -186,16 +188,16 @@
                                 </tr>
                                 <% } else { %>
                                     <% products.forEach(p=> { %>
-                                        <tr class="border-t border-[#dce7da]">
-                                            <td class="p-3 text-[#121810]">
+                                        <tr class="border-t border-[#BCA6DB]">
+                                            <td class="p-3 text-[#1F1F1F]">
                                                 <%= p.name %>
                                             </td>
-                                            <td class="p-3 text-[#658d5e]">
+                                            <td class="p-3 text-[#685BCB]">
                                                 <%= p.sku %>
                                             </td>
-                                            <td class="p-3 text-[#121810]">₹<%= p.price %>
+                                            <td class="p-3 text-[#1F1F1F]">₹<%= p.price %>
                                             </td>
-                                            <td class="p-3 text-[#658d5e]">
+                                            <td class="p-3 text-[#685BCB]">
                                                 <%= p.stock %>
                                             </td>
                                             <td class="p-3">

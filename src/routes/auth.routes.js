@@ -3,7 +3,7 @@
 const express = require('express');
 const { check } = require('express-validator');
 const { signup, login, verifyOtp, resendOtp, forgotPassword, resetPassword } = require('../controllers/auth.controller');
-const { verifyToken } = require('../middleware/auth.middleware');
+// const { verifyToken } = require('../middleware/auth.middleware'); // Removed
 
 const router = express.Router();
 
@@ -30,36 +30,37 @@ router.get('/logout', require('../controllers/auth.controller').logout);
 
 // Google Auth Routes
 const passport = require('passport');
-const jwt = require('jsonwebtoken');
 
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 router.get(
     '/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }), // Removed session: false
+    passport.authenticate('google', { failureRedirect: '/login', session: false }),
     (req, res) => {
-        // Generate JWT
-        const token = jwt.sign(
-            { id: req.user._id, role: req.user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRY || '1h' }
-        );
+        // Successful authentication, data is in req.user (from passport strategy)
 
-        // Set Cookie (Same as in auth.controller.login)
-        res.cookie('token', token, {
-            httpOnly: true,
-            maxAge: 3600000, // 1 hour (matches default expiry)
-            secure: process.env.NODE_ENV === 'production'
+        req.session.regenerate((err) => {
+            if (err) {
+                console.error('Google Auth Session Error:', err);
+                return res.redirect('/login');
+            }
+
+            // Standardize Session
+            req.session.userId = req.user._id.toString();
+            req.session.role = req.user.role || 'user';
+
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Google Auth Session Save Error:', err);
+                    return res.redirect('/login');
+                }
+                res.redirect('/home');
+            });
         });
-
-        // Redirect to home
-        res.redirect('/home');
     }
 );
 
-// Example protected route
-router.get('/protected', verifyToken, (req, res) => {
-    res.json({ message: 'This is a protected route', user: req.user });
-});
+// Example protected route (Cleaned up)
+// router.get('/protected', verifyToken, (req, res) => { ... }); // Removed
 
 module.exports = router;

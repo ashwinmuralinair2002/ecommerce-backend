@@ -1,6 +1,6 @@
 // Authentication business logic including OTP and hashing
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+// JWT removed
 const User = require('../models/user.model');
 const emailService = require('./email.service');
 const fs = require('fs');
@@ -88,14 +88,9 @@ const verifyOtp = async (email, otp) => {
     user.otpExpires = undefined;
     await user.save();
 
-    // Generate Token for Auto-Login
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', {
-        expiresIn: process.env.JWT_EXPIRY || '1h',
-    });
-
+    // Token generation removed
     return {
         message: 'Account verified successfully',
-        token,
         user: {
             id: user._id,
             name: user.name,
@@ -165,11 +160,8 @@ const loginUser = async (email, password) => {
         }
 
         if (passwordValid) {
-            const token = jwt.sign({ id: dbAdmin ? dbAdmin._id : 'admin', role: 'admin' }, process.env.JWT_SECRET || 'secret', {
-                expiresIn: process.env.JWT_EXPIRY || '1h',
-            });
+            // Token generation removed
             return {
-                token,
                 user: {
                     id: dbAdmin ? dbAdmin._id : 'admin',
                     name: dbAdmin ? dbAdmin.name : (process.env.ADMIN_NAME || 'Admin'),
@@ -200,13 +192,8 @@ const loginUser = async (email, password) => {
         throw new Error('Please verify your email first');
     }
 
-    // Generate Token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'secret', {
-        expiresIn: process.env.JWT_EXPIRY || '1h',
-    });
-
+    // Token generation removed
     return {
-        token,
         user: {
             id: user._id,
             name: user.name,

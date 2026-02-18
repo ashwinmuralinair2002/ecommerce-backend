@@ -1,223 +1,192 @@
-<!-- Admin category management page template -->
 <!DOCTYPE html>
 <html>
 
 <head>
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
-        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
-
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
     <title>Admin · Categories</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        /* Toggle Switch */
-        .toggle-switch {
-            position: relative;
-            display: inline-block !important;
-            width: 44px;
-            height: 24px;
-            cursor: pointer;
-            vertical-align: middle;
-            flex-shrink: 0;
+    <script>
+        function confirmAction(options, actionCallback) {
+            Swal.fire({
+                title: options.title,
+                text: options.text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: options.confirmButtonColor || '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: options.confirmButtonText
+            }).then((result) => {
+                if (result.isConfirmed) actionCallback();
+            });
         }
 
-        .toggle-switch input[type="checkbox"] {
-            opacity: 0 !important;
-            width: 0 !important;
-            height: 0 !important;
-            position: absolute !important;
-            pointer-events: none;
+        function confirmCategoryDelete(categoryId) {
+            confirmAction({
+                title: 'Delete Category?',
+                text: 'This will soft delete the category.',
+                confirmButtonText: 'Yes, Delete',
+                confirmButtonColor: '#d33'
+            }, () => document.getElementById('delete-form-' + categoryId)?.submit());
         }
 
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            width: 44px;
-            height: 24px;
-            background-color: #d1d5db;
-            transition: background-color 0.3s ease;
-            border-radius: 24px;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+        function confirmCategoryBlockToggle(categoryId, isBlocked) {
+            confirmAction({
+                title: isBlocked ? 'Unblock Category?' : 'Block Category?',
+                text: isBlocked ? 'Category will become visible to users again.' : 'Category and its products will be hidden on user side.',
+                confirmButtonText: isBlocked ? 'Yes, Unblock' : 'Yes, Block',
+                confirmButtonColor: isBlocked ? '#685BCB' : '#d33'
+            }, () => document.getElementById('block-form-' + categoryId)?.submit());
         }
 
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: transform 0.3s ease;
-            border-radius: 50%;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+        function handleSearch(e) {
+            if (e.key !== 'Enter') return;
+            const val = e.target.value.trim();
+            if (val) window.location.href = '?search=' + encodeURIComponent(val);
+            else window.location.href = window.location.pathname;
         }
 
-        .toggle-switch input:checked+.toggle-slider {
-            background-color: #1e7e34;
+        function clearSearch() {
+            window.location.href = window.location.pathname;
         }
-
-        .toggle-switch input:checked+.toggle-slider:before {
-            transform: translateX(20px);
-        }
-
-        .toggle-switch:hover .toggle-slider {
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 2px rgba(30, 126, 52, 0.12);
-        }
-    </style>
+    </script>
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
-        style='font-family: Inter, "Noto Sans", sans-serif;'>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
 
-        <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
-            <!-- Sidebar -->
-            <aside class="w-80">
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'categories' }) %>
             </aside>
 
-            <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
-                <div class="flex flex-wrap justify-between gap-3 mb-6">
-                    <div class="flex min-w-72 flex-col gap-1">
-                        <h1 class="text-[32px] font-bold text-[#121810]">Category Management</h1>
-                        <p class="text-[#658d5e] text-sm">Manage product category visibility</p>
+            <section class="flex-1 p-6 md:p-8">
+                <div class="admin-page-container max-w-[1400px] mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-3xl font-bold text-[#1F1F1F]">Categories</h1>
+                            <p class="text-sm text-[#685BCB]">Manage categories, block state, and visibility</p>
+                        </div>
+                        <a href="/admin/categories/add"
+                            class="px-4 py-2 rounded-lg bg-[#685BCB] text-white font-bold hover:bg-[#5a4dc0] transition-colors">
+                            Add Category
+                        </a>
                     </div>
-                </div>
 
-                <!-- Divider line -->
-                <div class="border-b border-[#dce7da] mx-4 mb-3"></div>
+                    <div class="mb-4 relative">
+                        <input type="text" name="search" placeholder="Search category name" value="<%= locals.search || '' %>"
+                            onkeydown="handleSearch(event)"
+                            class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
+                        <% if (locals.search) { %>
+                            <button onclick="clearSearch()"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors"
+                                title="Clear Search">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 256 256">
+                                    <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
+                                </svg>
+                            </button>
+                        <% } %>
+                    </div>
 
-                <div class="px-4 py-3 @container">
-                    <div class="flex overflow-hidden rounded-lg border border-[#dce7da] bg-white">
-                        <table class="flex-1">
-                            <thead>
-                                <tr class="bg-white">
-                                    <th
-                                        class="px-4 py-3 text-left text-[#121810] w-14 text-sm font-medium leading-normal">
-                                        Image</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
-                                        Category Name</th>
-                                    <th
-                                        class="px-4 py-3 text-left text-[#121810] w-60 text-sm font-medium leading-normal">
-                                        Status</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
-                                        Toggle</th>
+                    <div class="overflow-hidden rounded-xl border border-[#BCA6DB]">
+                        <table class="w-full">
+                            <thead class="bg-white border-b">
+                                <tr>
+                                    <th class="p-3 text-left">Category</th>
+                                    <th class="p-3 text-left">Slug</th>
+                                    <th class="p-3 text-left">Status</th>
+                                    <th class="p-3 text-left">Last Updated</th>
+                                    <th class="p-3 text-left">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <% if (categories.length===0) { %>
+                                <% if (!categories || categories.length === 0) { %>
                                     <tr>
-                                        <td colspan="4" class="text-center py-4">No categories found</td>
+                                        <td colspan="5" class="p-6 text-center text-[#685BCB]">No categories found</td>
                                     </tr>
-                                    <% } else { %>
-                                        <% categories.forEach(category=> { %>
-                                            <tr id="category-row-<%= category._id %>"
-                                                class="border-t border-t-[#dce7da] hover:bg-gray-50">
-                                                <td class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
-                                                    <div class="w-10 h-10 rounded-lg bg-cover bg-center <%= category.imageUrl ? '' : 'bg-[#e0e5e0]' %>"
-                                                        style="<%= category.imageUrl ? " background-image:url('" +
-                                                        category.imageUrl + "')" : '' %>"></div>
-                                                </td>
-
-                                                <td
-                                                    class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">
-                                                    <%= category.name %>
-                                                </td>
-
-                                                <td class="h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                                                    <button id="badge-<%= category._id %>"
-                                                        class="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none <%= category.isListed ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-[#f3f4f6] text-[#6b7280]' %>"
-                                                        style="pointer-events: none;">
-                                                        <span class="truncate">
-                                                            <%= category.isListed ? 'Listed' : 'Unlisted' %>
-                                                        </span>
-                                                    </button>
-                                                </td>
-
-                                                <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
-                                                    <div class="flex items-center h-full">
-                                                        <label class="toggle-switch">
-                                                            <input type="checkbox" id="toggle-<%= category._id %>"
-                                                                <%=category.isListed ? 'checked' : '' %>
-                                                            onchange="confirmToggle('<%= category._id %>', '<%=
-                                                                    category.name %>', this)" />
-                                                                    <span class="toggle-slider"></span>
-                                                        </label>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                            <% }) %>
-                                                <% } %>
+                                <% } %>
+                                <% (categories || []).forEach(category => { %>
+                                    <tr class="border-t border-[#BCA6DB]">
+                                        <td class="p-3 flex items-center gap-3">
+                                            <div class="w-10 h-10 rounded-lg bg-cover bg-center <%= category.image && category.image.url ? '' : 'bg-[#D3CEEA]' %>"
+                                                style="<%= category.image && category.image.url ? 'background-image:url(' + category.image.url + ')' : '' %>"></div>
+                                            <span class="font-medium text-[#1F1F1F]"><%= category.name %></span>
+                                        </td>
+                                        <td class="p-3 text-[#685BCB]"><%= category.slug || '-' %></td>
+                                        <td class="p-3">
+                                            <span class="px-4 py-1 rounded-lg text-sm font-medium <%= category.isBlocked ? 'bg-[#ffecec] text-red-600' : 'bg-[#e6f4ea] text-[#1e7e34]' %>">
+                                                <%= category.isBlocked ? 'Blocked' : 'Active' %>
+                                            </span>
+                                        </td>
+                                        <td class="p-3 text-[#685BCB]"><%= new Date(category.updatedAt).toDateString() %></td>
+                                        <td class="p-3 flex gap-3 text-sm font-medium text-[#685BCB]">
+                                            <a href="/admin/categories/<%= category._id %>">View</a>
+                                            <a href="/admin/categories/<%= category._id %>/edit">Edit</a>
+                                            <button type="button"
+                                                class="<%= category.isBlocked ? 'text-[#685BCB]' : 'text-red-600' %>"
+                                                onclick="confirmCategoryBlockToggle('<%= category._id %>', <%= category.isBlocked %>)">
+                                                <%= category.isBlocked ? 'Unblock' : 'Block' %>
+                                            </button>
+                                            <button type="button" class="text-red-600"
+                                                onclick="confirmCategoryDelete('<%= category._id %>')">Delete</button>
+                                            <form id="block-form-<%= category._id %>" method="POST"
+                                                action="/admin/categories/<%= category._id %>/block-toggle" style="display:none;"></form>
+                                            <form id="delete-form-<%= category._id %>" method="POST"
+                                                action="/admin/categories/<%= category._id %>/delete" style="display:none;"></form>
+                                        </td>
+                                    </tr>
+                                <% }) %>
                             </tbody>
                         </table>
                     </div>
+
+                    <% if (pagination && pagination.totalPages > 1) { %>
+                        <div class="flex justify-center items-center gap-2 mt-6">
+                            <% if (pagination.hasPrevPage) { %>
+                                <a href="/admin/categories?page=<%= pagination.currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    &laquo; Previous
+                                </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                    &laquo; Previous
+                                </span>
+                            <% } %>
+
+                            <div class="flex gap-1">
+                                <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+                                    <% if (i === pagination.currentPage) { %>
+                                        <span class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold"><%= i %></span>
+                                    <% } else { %>
+                                        <a href="/admin/categories?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                            <%= i %>
+                                        </a>
+                                    <% } %>
+                                <% } %>
+                            </div>
+
+                            <% if (pagination.hasNextPage) { %>
+                                <a href="/admin/categories?page=<%= pagination.currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    Next &raquo;
+                                </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                    Next &raquo;
+                                </span>
+                            <% } %>
+                        </div>
+                    <% } %>
                 </div>
             </section>
         </main>
     </div>
-
-    <script>
-        function confirmToggle(categoryId, categoryName, checkbox) {
-            const newState = checkbox.checked;
-            const actionText = newState ? 'list' : 'unlist';
-
-            Swal.fire({
-                title: `${newState ? 'List' : 'Unlist'} Category?`,
-                text: `Are you sure you want to ${actionText} "${categoryName}"?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: newState ? '#1e7e34' : '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: newState ? 'Yes, List it' : 'Yes, Unlist it',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/admin/categories/${categoryId}/toggle-listing`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                // Update badge — same structure as customers page
-                                const badge = document.getElementById('badge-' + categoryId);
-                                if (data.isListed) {
-                                    badge.className = 'flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none bg-[#e6f4ea] text-[#1e7e34]';
-                                    badge.querySelector('span').textContent = 'Listed';
-                                } else {
-                                    badge.className = 'flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none bg-[#f3f4f6] text-[#6b7280]';
-                                    badge.querySelector('span').textContent = 'Unlisted';
-                                }
-
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Success',
-                                    text: data.message,
-                                    timer: 1500,
-                                    showConfirmButton: false
-                                });
-                            } else {
-                                checkbox.checked = !newState;
-                                Swal.fire('Error', data.message || 'Failed to update', 'error');
-                            }
-                        })
-                        .catch(() => {
-                            checkbox.checked = !newState;
-                            Swal.fire('Error', 'Network error. Please try again.', 'error');
-                        });
-                } else {
-                    checkbox.checked = !newState;
-                }
-            });
-        }
-    </script>
 </body>
 
 </html>
+

@@ -10,307 +10,257 @@
 
     <title>SoundWave | Edit Address</title>
 
+    <%- include('./partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="relative flex min-h-screen w-full flex-col bg-white"
         style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
 
         <!-- ================= NAVBAR ================= -->
-        <header class="flex items-center justify-between border-b border-[#e7f4e7] px-10 py-3 bg-white">
-            <div class="flex items-center gap-10">
-                <!-- Logo -->
-                <a href="/home" class="flex items-center gap-3 text-[#0d1c0d] hover:opacity-80 transition-opacity">
-                    <div class="size-4">
-                        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134
-              C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462
-              C2.19985 28.361 1.76794 23.9758 2.60947 19.7452
-              C3.451 15.5145 5.52816 11.6284 8.57829 8.5783
-              C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948
-              C23.9758 1.76795 28.361 2.19986 32.3462 3.85057
-              C36.3314 5.50129 39.7376 8.29668 42.134 11.8833
-              C44.5305 15.4698 45.8096 19.6865 45.8096 24
-              L24 24 L24 45.8096Z" fill="currentColor" />
-                        </svg>
+        <!-- Navbar -->
+        <%- include('partials/user/navbar') %>
+
+            <!-- ================= CONTENT ================= -->
+            <main class="flex flex-1 gap-0 px-0 py-0 bg-white">
+
+                <!-- SIDEBAR -->
+                <aside class="w-64 theme-filter-sidebar p-3 text-primary">
+                    <div class="space-y-2">
+                        <a href="/account"
+                            class="block px-3 py-2 hover:bg-primary-light/35 rounded-lg transition-colors">Account
+                            Details</a>
+                        <div class="bg-primary-light/35 px-3 py-2 rounded-lg font-medium">Address</div>
+                        <div class="px-3 py-2">Payment Details</div>
+                        <div class="px-3 py-2">Wallet</div>
+                        <div class="px-3 py-2">Your Orders</div>
+                        <a href="/api/auth/logout"
+                            class="block px-3 py-2 text-red-600 hover:bg-primary-light/35 rounded-lg transition-colors">Logout</a>
                     </div>
-                    <span class="font-bold text-lg">SoundWave</span>
-                </a>
+                </aside>
 
-                <!-- Menu -->
-                <nav class="flex gap-8 text-sm font-medium text-[#0d1c0d]">
-                    <a href="/deals">Today's Deals</a>
-                    <a href="/best-sellers">Best Sellers</a>
-                    <a href="/new-arrivals">New Arrivals</a>
-                    <a href="/brands">Brands</a>
-                </nav>
-            </div>
-
-            <!-- Right -->
-            <div class="flex items-center gap-4">
-                <div class="relative">
-                    <input type="text" placeholder="Search"
-                        class="h-10 w-56 rounded-lg bg-[#e7f4e7] pl-10 pr-4 text-sm placeholder:text-[#499c49] focus:outline-none" />
-                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-[#499c49]"
-                        xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
-                        viewBox="0 0 256 256">
-                        <path
-                            d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32Z" />
-                    </svg>
-                </div>
-
-                <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">❤️</button>
-                <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">🛒</button>
-                <a href="/account"
-                    class="h-10 w-10 rounded-full bg-[#e7f4e7] flex items-center justify-center ring-2 ring-green-500 overflow-hidden">
-                    <% if (user && user.profileImage) { %>
-                        <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
-                        <% } else { %>
-                            <% const _np=(user && user.name) ? user.name.trim().split(/\s+/) : []; const
-                                _ini=_np.length> 1 ? (_np[0][0] + _np[_np.length-1][0]).toUpperCase() : (user &&
-                                user.name ? user.name.substring(0,2).toUpperCase() : 'U'); %>
-                                <span class="text-xs font-bold text-[#2d6a2d]">
-                                    <%= _ini %>
-                                </span>
-                                <% } %>
-                </a>
-            </div>
-        </header>
-
-        <!-- ================= CONTENT ================= -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
-
-            <!-- SIDEBAR -->
-            <aside class="w-80 bg-[#f8fcf8] p-4">
-                <div class="space-y-2">
-                    <a href="/account" class="block px-3 py-2 hover:bg-[#e6f4e6] rounded-lg transition-colors">Account
-                        Details</a>
-                    <div class="bg-[#e6f4e6] px-3 py-2 rounded-lg font-medium">Address</div>
-                    <div class="px-3 py-2">Payment Details</div>
-                    <div class="px-3 py-2">Wallet</div>
-                    <div class="px-3 py-2">Your Orders</div>
-                    <a href="/api/auth/logout"
-                        class="block px-3 py-2 text-red-600 hover:bg-[#e6f4e6] rounded-lg transition-colors">Logout</a>
-                </div>
-            </aside>
-
-            <!-- MAIN PANEL -->
-            <section class="flex-1 bg-white rounded-lg p-6">
-                <!-- Breadcrumb -->
-                <div class="flex items-center gap-2 text-sm mb-4">
-                    <a href="/account/addresses" class="text-[#5f8c5f] hover:underline">My Addresses</a>
-                    <span class="text-gray-400">/</span>
-                    <span class="text-[#111811]">Edit</span>
-                </div>
-
-                <h1 class="text-2xl font-bold mb-6">Edit Address</h1>
-
-                <form action="/account/addresses/<%= address._id %>/update" method="POST" class="max-w-2xl">
-                    <!-- Two Column Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <!-- Full Name -->
-                        <div class="relative">
-                            <input name="name" id="name" placeholder="Full Name"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.name) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.name) || address.name || '' %>" required />
-                            <label for="name"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Full
-                                Name</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.name) || '' %>
-                            </p>
-                        </div>
-
-                        <!-- Phone Number -->
-                        <div class="relative">
-                            <input name="phone" id="phone" placeholder="Phone Number"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.phone) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.phone) || address.phone || '' %>" required />
-                            <label for="phone"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Phone
-                                Number</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.phone) || '' %>
-                            </p>
-                        </div>
+                <!-- MAIN PANEL -->
+                <section class="flex-1 bg-white p-6">
+                    <!-- Breadcrumb -->
+                    <div class="flex items-center gap-2 text-sm mb-4">
+                        <a href="/account/addresses" class="text-primary hover:underline">My Addresses</a>
+                        <span class="text-gray-400">/</span>
+                        <span class="text-gray-900">Edit</span>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <!-- House No -->
-                        <div class="relative">
-                            <input name="houseNo" id="houseNo" placeholder="House No"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.houseNo) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.houseNo) || address.houseNo || '' %>"
-                                required />
-                            <label for="houseNo"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">House
-                                No</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.houseNo) || '' %>
-                            </p>
+                    <h1 class="text-2xl font-bold text-primary mb-6">Edit Address</h1>
+
+                    <form action="/account/addresses/<%= address._id %>/update" method="POST" class="max-w-2xl">
+                        <!-- Two Column Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- Full Name -->
+                            <div class="relative">
+                                <input name="name" id="name" placeholder="Full Name"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.name) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.name) || address.name || '' %>" required />
+                                <label for="name"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">Full
+                                    Name</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.name) || '' %>
+                                </p>
+                            </div>
+
+                            <!-- Phone Number -->
+                            <div class="relative">
+                                <input name="phone" id="phone" placeholder="Phone Number"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.phone) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.phone) || address.phone || '' %>"
+                                    required />
+                                <label for="phone"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">Phone
+                                    Number</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.phone) || '' %>
+                                </p>
+                            </div>
                         </div>
 
-                        <!-- Street -->
-                        <div class="relative">
-                            <input name="street" id="street" placeholder="Street"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.street) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.street) || address.street || '' %>" required />
-                            <label for="street"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Street</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.street) || '' %>
-                            </p>
-                        </div>
-                    </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- House No -->
+                            <div class="relative">
+                                <input name="houseNo" id="houseNo" placeholder="House No"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.houseNo) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.houseNo) || address.houseNo || '' %>"
+                                    required />
+                                <label for="houseNo"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">House
+                                    No</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.houseNo) || '' %>
+                                </p>
+                            </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <!-- City -->
-                        <div class="relative">
-                            <input name="city" id="city" placeholder="City"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.city) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.city) || address.city || '' %>" required />
-                            <label for="city"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">City</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.city) || '' %>
-                            </p>
-                        </div>
-
-                        <!-- State -->
-                        <div class="relative">
-                            <input name="state" id="state" placeholder="State"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.state) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.state) || address.state || '' %>" required />
-                            <label for="state"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">State</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.state) || '' %>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <!-- Postal Code -->
-                        <div class="relative">
-                            <input name="postalCode" id="postalCode" placeholder="Postal Code"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.postalCode) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.postalCode) || address.zip || '' %>" required />
-                            <label for="postalCode"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Postal
-                                Code</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.postalCode) || '' %>
-                            </p>
+                            <!-- Street -->
+                            <div class="relative">
+                                <input name="street" id="street" placeholder="Street"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.street) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.street) || address.street || '' %>"
+                                    required />
+                                <label for="street"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">Street</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.street) || '' %>
+                                </p>
+                            </div>
                         </div>
 
-                        <!-- Address Label -->
-                        <div class="relative">
-                            <input name="label" id="label" placeholder="Home, Work, Other"
-                                class="peer form-input w-full rounded-lg text-[#111811] focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.label) ? 'border-red-500' : 'border-[#dbe6db]' %> bg-white focus:border-green-500 h-14 pt-4 placeholder-transparent text-base"
-                                value="<%= (locals.formData && formData.label) || address.label || '' %>" required />
-                            <label for="label"
-                                class="absolute left-4 top-1 text-xs text-[#5f8c5f] transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-[#5f8c5f] peer-focus:top-1 peer-focus:text-xs peer-focus:text-green-600 pointer-events-none">Address
-                                Label</label>
-                            <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
-                                <%= (locals.errors && errors.label) || '' %>
-                            </p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- City -->
+                            <div class="relative">
+                                <input name="city" id="city" placeholder="City"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.city) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.city) || address.city || '' %>" required />
+                                <label for="city"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">City</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.city) || '' %>
+                                </p>
+                            </div>
+
+                            <!-- State -->
+                            <div class="relative">
+                                <input name="state" id="state" placeholder="State"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.state) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.state) || address.state || '' %>"
+                                    required />
+                                <label for="state"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">State</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.state) || '' %>
+                                </p>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Buttons -->
-                    <div class="flex gap-3 justify-end">
-                        <a href="/account/addresses"
-                            class="px-6 py-3 bg-gray-100 text-[#111811] text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
-                            Cancel
-                        </a>
-                        <button type="submit"
-                            class="px-6 py-3 bg-[#1ff91f] text-[#111811] text-sm font-bold rounded-lg hover:bg-green-400 transition-colors">
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <!-- Postal Code -->
+                            <div class="relative">
+                                <input name="postalCode" id="postalCode" placeholder="Postal Code"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.postalCode) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.postalCode) || address.zip || '' %>"
+                                    required />
+                                <label for="postalCode"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">Postal
+                                    Code</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.postalCode) || '' %>
+                                </p>
+                            </div>
 
-                <script>
-                    const form = document.querySelector('form');
-                    const inputs = form.querySelectorAll('input, select');
+                            <!-- Address Label -->
+                            <div class="relative">
+                                <input name="label" id="label" placeholder="Home, Work, Other"
+                                    class="peer form-input w-full rounded-lg text-gray-900 focus:outline-0 focus:ring-0 border <%= (locals.errors && errors.label) ? 'border-red-500' : 'border-primary-light/50' %> bg-white focus:border-primary h-14 pt-4 placeholder-transparent text-base"
+                                    value="<%= (locals.formData && formData.label) || address.label || '' %>"
+                                    required />
+                                <label for="label"
+                                    class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-[18px] peer-placeholder-shown:text-base peer-placeholder-shown:text-primary peer-focus:top-1 peer-focus:text-xs peer-focus:text-primary pointer-events-none">Address
+                                    Label</label>
+                                <p class="text-red-500 text-xs mt-1 empty:hidden error-msg">
+                                    <%= (locals.errors && errors.label) || '' %>
+                                </p>
+                            </div>
+                        </div>
 
-                    const validateField = (input) => {
-                        const name = input.name;
-                        const value = input.value.trim();
-                        let error = '';
+                        <!-- Buttons -->
+                        <div class="flex gap-3 justify-end">
+                            <a href="/account/addresses"
+                                class="px-6 py-3 bg-gray-100 text-gray-900 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                                Cancel
+                            </a>
+                            <button type="submit"
+                                class="theme-primary-btn rounded-lg px-6 py-3 text-sm">
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
 
-                        if (name === 'name') {
-                            if (!value) error = 'Full Name is required';
-                            else if (!/^[A-Za-z ]{3,}$/.test(value)) error = 'Name must be at least 3 chars (letters only)';
-                        } else if (name === 'phone') {
-                            if (!value) error = 'Phone Number is required';
-                            else if (!/^[0-9]{10}$/.test(value)) error = 'Phone must be exactly 10 digits';
-                        } else if (name === 'postalCode') {
-                            if (!value) error = 'Postal Code is required';
-                            else if (!/^[0-9]{6}$/.test(value)) error = 'Postal Code must be exactly 6 digits';
-                        } else if (['houseNo', 'street'].includes(name)) {
-                            if (!value) error = `${input.placeholder} is required`;
-                            else if (value.length < 2) error = 'Must be at least 2 characters';
-                        } else if (name === 'city') {
-                            if (!value) error = 'City is required';
-                            else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(value)) error = 'City must contain only letters and spaces.';
-                        } else if (name === 'state') {
-                            if (!value) error = 'State is required';
-                            else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(value)) error = 'State must contain only letters and spaces.';
-                        } else if (name === 'label') {
-                            if (!value) error = 'Address Label is required';
-                        }
+                    <script>
+                        const form = document.querySelector('form');
+                        const inputs = form.querySelectorAll('input, select');
 
-                        // Display Error
-                        const container = input.closest('div');
-                        const errorMsg = container.querySelector('.error-msg') || container.parentElement.querySelector('.error-msg');
+                        const validateField = (input) => {
+                            const name = input.name;
+                            const value = input.value.trim();
+                            let error = '';
 
-                        // Handle select specifically if needed, but structure assumes generic next sibling or standard placement
-                        // Refined selector for select inside div structure
-                        let errorEl = input.parentElement.querySelector('.error-msg');
-                        if (!errorEl) errorEl = input.nextElementSibling?.classList?.contains('error-msg') ? input.nextElementSibling : null;
+                            if (name === 'name') {
+                                if (!value) error = 'Full Name is required';
+                                else if (!/^[A-Za-z ]{3,}$/.test(value)) error = 'Name must be at least 3 chars (letters only)';
+                            } else if (name === 'phone') {
+                                if (!value) error = 'Phone Number is required';
+                                else if (!/^[0-9]{10}$/.test(value)) error = 'Phone must be exactly 10 digits';
+                            } else if (name === 'postalCode') {
+                                if (!value) error = 'Postal Code is required';
+                                else if (!/^[0-9]{6}$/.test(value)) error = 'Postal Code must be exactly 6 digits';
+                            } else if (['houseNo', 'street'].includes(name)) {
+                                if (!value) error = `${input.placeholder} is required`;
+                                else if (value.length < 2) error = 'Must be at least 2 characters';
+                            } else if (name === 'city') {
+                                if (!value) error = 'City is required';
+                                else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(value)) error = 'City must contain only letters and spaces.';
+                            } else if (name === 'state') {
+                                if (!value) error = 'State is required';
+                                else if (!/^[A-Za-z]+(?:\s[A-Za-z]+)*$/.test(value)) error = 'State must contain only letters and spaces.';
+                            } else if (name === 'label') {
+                                if (!value) error = 'Address Label is required';
+                            }
+
+                            // Display Error
+                            const container = input.closest('div');
+                            const errorMsg = container.querySelector('.error-msg') || container.parentElement.querySelector('.error-msg');
+
+                            // Handle select specifically if needed, but structure assumes generic next sibling or standard placement
+                            // Refined selector for select inside div structure
+                            let errorEl = input.parentElement.querySelector('.error-msg');
+                            if (!errorEl) errorEl = input.nextElementSibling?.classList?.contains('error-msg') ? input.nextElementSibling : null;
 
 
-                        if (error) {
-                            input.classList.add('border-red-500');
-                            input.classList.remove('border-[#dbe6db]');
-                            if (errorEl) errorEl.textContent = error;
-                        } else {
-                            input.classList.remove('border-red-500');
-                            input.classList.add('border-[#dbe6db]');
-                            if (errorEl) errorEl.textContent = '';
-                        }
+                            if (error) {
+                                input.classList.add('border-red-500');
+                                input.classList.remove('border-primary-light/50');
+                                if (errorEl) errorEl.textContent = error;
+                            } else {
+                                input.classList.remove('border-red-500');
+                                input.classList.add('border-primary-light/50');
+                                if (errorEl) errorEl.textContent = '';
+                            }
 
-                        return !error;
-                    };
-
-                    inputs.forEach(input => {
-                        input.addEventListener('input', () => validateField(input));
-                        input.addEventListener('blur', () => validateField(input));
-                    });
-
-                    form.addEventListener('submit', (e) => {
-                        let isValid = true;
-                        let firstError = null;
+                            return !error;
+                        };
 
                         inputs.forEach(input => {
-                            if (!validateField(input)) {
-                                isValid = false;
-                                if (!firstError) firstError = input;
-                            }
+                            input.addEventListener('input', () => validateField(input));
+                            input.addEventListener('blur', () => validateField(input));
                         });
 
-                        if (!isValid) {
-                            e.preventDefault();
-                            firstError.focus();
-                            firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                    });
-                </script>
+                        form.addEventListener('submit', (e) => {
+                            let isValid = true;
+                            let firstError = null;
 
-            </section>
-        </main>
+                            inputs.forEach(input => {
+                                if (!validateField(input)) {
+                                    isValid = false;
+                                    if (!firstError) firstError = input;
+                                }
+                            });
+
+                            if (!isValid) {
+                                e.preventDefault();
+                                firstError.focus();
+                                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        });
+                    </script>
+
+                </section>
+            </main>
     </div>
 </body>
 

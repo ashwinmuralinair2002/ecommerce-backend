@@ -24,10 +24,24 @@ const sampleProducts = [
     { title: 'Travel Noise-Canceling Headphones', sku: 'TV-NCH800', connectionType: 'Wireless', category: 'Over-ear', price: 279.99, originalPrice: 329.99, discountPercentage: 15, stockCount: 65, reservedCount: 7, status: 'Active', badges: ['New'] },
 ];
 
+
 async function seed() {
     try {
         await mongoose.connect(MONGO_URI);
         console.log('MongoDB connected');
+
+        // Fetch Categories
+        const categories = await require('../models/Category').find({});
+        if (categories.length === 0) {
+            console.log('No categories found. Please run seedCategories.js first.');
+            process.exit(1);
+        }
+
+        // Create Map (Name -> ObjectId) - handle case insensitivity
+        const categoryMap = {};
+        categories.forEach(cat => {
+            categoryMap[cat.name.toLowerCase()] = cat._id;
+        });
 
         // Get a brand to assign to products (use first active brand)
         const brands = await Brand.find({ isDeleted: { $ne: true } }).limit(5);
@@ -40,13 +54,23 @@ async function seed() {
         await Product.deleteMany({});
         console.log('Cleared existing products');
 
-        // Assign brands round-robin
-        const productsWithBrands = sampleProducts.map((p, i) => ({
-            ...p,
-            brand: brands[i % brands.length]._id,
-            images: [],
-            isListed: true
-        }));
+        // Assign brands round-robin and Map Categories
+        const productsWithBrands = sampleProducts.map((p, i) => {
+            const catName = p.category;
+            const catId = categoryMap[catName.toLowerCase()];
+
+            if (!catId) {
+                console.warn(`Warning: Category "${catName}" not found in DB. Product "${p.title}" might have invalid category.`);
+            }
+
+            return {
+                ...p,
+                brand: brands[i % brands.length]._id,
+                category: catId, // Use the mapped ObjectId
+                images: [],
+                isListed: true
+            };
+        });
 
         await Product.insertMany(productsWithBrands);
         console.log(`Seeded ${productsWithBrands.length} products`);
@@ -59,5 +83,6 @@ async function seed() {
         process.exit(1);
     }
 }
+
 
 seed();

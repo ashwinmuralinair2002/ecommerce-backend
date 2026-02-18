@@ -28,10 +28,13 @@ const signup = async (req, res) => {
     }
 };
 
-// @desc    Authenticate user & get token
+// @desc    Authenticate user & get session
 // @route   POST /api/auth/login
 // @access  Public
-const login = async (req, res) => {
+// @desc    Authenticate user & get session
+// @route   POST /api/auth/login
+// @access  Public
+const login = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -40,29 +43,32 @@ const login = async (req, res) => {
 
     try {
         const data = await authService.loginUser(email, password);
+        const user = data.user;
 
-        // Set Cookie for Admin Panel / SSR access
-        res.cookie('token', data.token, {
-            httpOnly: true,
-            maxAge: 3600000, // 1 hour
-            secure: process.env.NODE_ENV === 'production'
+        // Regenerate Session for Security
+        req.session.regenerate((err) => {
+            if (err) return next(err);
+
+            // Standardize Session Variables
+            req.session.userId = user.id.toString();
+            req.session.role = user.role;
+
+            req.session.save((err) => {
+                if (err) return next(err);
+
+                return res.status(200).json({
+                    message: 'Login successful',
+                    user: {
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role
+                    },
+                    redirect: user.role === 'admin' ? '/admin/dashboard' : '/home'
+                });
+            });
         });
 
-        // Admin Session Handling (Strict Separation)
-        if (data.user.role === 'admin') {
-            req.session.isAdmin = true;
-            req.session.adminEmail = data.user.email; // Store email for DB lookup
-            // Ensure userId is NOT set for admin to prevent mixing
-            req.session.userId = null;
-        } else {
-            // For regular users, we might rely on the token, but if we used session:
-            // req.session.userId = data.user.id; 
-        }
-
-        res.status(200).json({
-            message: 'Login successful',
-            ...data,
-        });
     } catch (error) {
         res.status(401).json({ error: error.message });
     }
@@ -83,18 +89,26 @@ const verifyOtp = async (req, res) => {
         }
 
         // Auto-Login Logic
-        if (result.token) {
-            res.cookie('token', result.token, {
-                httpOnly: true,
-                maxAge: 3600000, // 1 hour
-                secure: process.env.NODE_ENV === 'production'
+        if (result.user) {
+            req.session.regenerate((err) => {
+                if (err) return res.status(500).json({ error: 'Session error' });
+
+                // Standardize Session Variables
+                req.session.userId = result.user.id.toString();
+                req.session.role = result.user.role;
+
+                req.session.save((err) => {
+                    if (err) return res.status(500).json({ error: 'Session save error' });
+
+                    res.status(200).json({
+                        ...result,
+                        redirect: result.user.role === 'admin' ? '/admin/dashboard' : '/home'
+                    });
+                });
             });
-
-            // Standard user session handling
-            // req.session.userId = result.user.id; // Optional depending on conflicting logic in login
+        } else {
+            res.status(200).json(result);
         }
-
-        res.status(200).json(result);
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
@@ -111,7 +125,7 @@ const resendOtp = async (req, res) => {
     try {
         const result = await authService.resendOtp(email);
         if (result.error) {
-            return res.status(429).json(result); // Handle cooldown specifically if we returned object
+            return res.status(429).json(result);
         }
         req.session.otpEmail = email;
         req.session.save(() => {
@@ -146,8 +160,6 @@ const forgotPassword = async (req, res) => {
             res.status(200).json(result);
         });
     } catch (error) {
-        // In prod, return 200 even if user not found to prevent enumeration
-        // But for this specific task requirement "Invalid email", we return specific error or 404
         res.status(404).json({ error: error.message });
     }
 }
@@ -173,22 +185,15 @@ const resetPassword = async (req, res) => {
 }
 
 const logout = (req, res) => {
-    res.clearCookie('token');
+    // 1. Clear Session
+    req.session.destroy((err) => {
+        if (err) console.error('Session Destroy Error:', err);
 
-    // Clear Admin Flag
-    if (req.session.isAdmin) {
-        delete req.session.isAdmin;
-    }
+        // 2. Clear Cookie
+        res.clearCookie('connect.sid');
 
-    req.logout((err) => {
-        if (err) {
-            console.error('Logout Error:', err);
-            return res.redirect('/home');
-        }
-        req.session.destroy((err) => {
-            if (err) console.error('Session Destroy Error:', err);
-            res.redirect('/');
-        });
+        // 3. Redirect
+        res.redirect('/login');
     });
 };
 

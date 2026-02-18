@@ -31,7 +31,7 @@
                 title: currentStatus ? 'Unblock User?' : 'Block User?',
                 text: `Are you sure you want to ${currentStatus ? 'unblock' : 'block'} this user?`,
                 confirmButtonText: currentStatus ? 'Yes, Unblock' : 'Yes, Block',
-                confirmButtonColor: currentStatus ? '#1ff91f' : '#d33'
+                confirmButtonColor: currentStatus ? '#685BCB' : '#d33'
             }, async () => {
                 try {
                     const response = await fetch(`/admin/customers/${userId}/toggle-block`, { method: 'POST' });
@@ -89,12 +89,12 @@
         function openTab(evt, tabName) {
             document.querySelectorAll('.tabcontent').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.tablinks').forEach(el => {
-                el.classList.remove('border-b-[#121810]', 'text-[#121810]');
-                el.classList.add('border-b-transparent', 'text-[#658d5e]');
+                el.classList.remove('border-b-[#1F1F1F]', 'text-[#1F1F1F]');
+                el.classList.add('border-b-transparent', 'text-[#685BCB]');
             });
             document.getElementById(tabName).style.display = 'block';
-            evt.currentTarget.classList.remove('border-b-transparent', 'text-[#658d5e]');
-            evt.currentTarget.classList.add('border-b-[#121810]', 'text-[#121810]');
+            evt.currentTarget.classList.remove('border-b-transparent', 'text-[#685BCB]');
+            evt.currentTarget.classList.add('border-b-[#1F1F1F]', 'text-[#1F1F1F]');
         }
     </script>
     <style>
@@ -105,34 +105,36 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+            <section class="flex-1 p-6 md:p-8">
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-2 text-sm mb-4">
-                    <a href="/admin/customers" class="text-[#5f8c5f] hover:underline">Customers</a>
+                    <a href="/admin/customers" class="text-[#685BCB] hover:underline">Customers</a>
                     <span class="text-gray-400">/</span>
-                    <span class="text-[#111811]">
+                    <span class="text-[#1F1F1F]">
                         <%= customer.name %>
                     </span>
                 </div>
 
                 <!-- Header -->
                 <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-                    <h1 class="text-[32px] font-bold text-[#121810]">
+                    <h1 class="text-[32px] font-bold text-[#1F1F1F]">
                         <%= customer.name %>
                     </h1>
                     <a href="/admin/customers/<%= customer._id %>/edit"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e6f4e6] transition-colors">
+                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#BCA6DB] transition-colors">
                         Edit profile
                     </a>
                 </div>
@@ -158,22 +160,22 @@
                 </div>
 
                 <!-- Tabs -->
-                <div class="border-b border-[#dce7da] mb-4">
+                <div class="border-b border-[#BCA6DB] mb-4">
                     <div class="flex gap-6">
                         <button onclick="openTab(event, 'Overview')"
-                            class="tablinks pb-3 border-b-[3px] border-b-[#121810] text-[#121810] text-sm font-bold">
+                            class="tablinks pb-3 border-b-[3px] border-b-[#1F1F1F] text-[#1F1F1F] text-sm font-bold">
                             Overview
                         </button>
                         <button onclick="openTab(event, 'Orders')"
-                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#658d5e] text-sm font-bold">
+                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
                             Orders
                         </button>
                         <button onclick="openTab(event, 'Addresses')"
-                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#658d5e] text-sm font-bold">
+                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
                             Addresses
                         </button>
                         <button onclick="openTab(event, 'Notes')"
-                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#658d5e] text-sm font-bold">
+                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
                             Notes
                         </button>
                     </div>
@@ -181,45 +183,45 @@
 
                 <!-- Tab Content: Overview -->
                 <div id="Overview" class="tabcontent" style="display:block;">
-                    <h2 class="text-lg font-bold text-[#121810] mb-4">Contact Information</h2>
+                    <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Contact Information</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div>
-                            <p class="text-sm text-[#658d5e] mb-1">Email</p>
-                            <p class="text-sm text-[#121810] bg-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-sm text-[#685BCB] mb-1">Email</p>
+                            <p class="text-sm text-[#1F1F1F] bg-gray-100 rounded-lg px-3 py-2">
                                 <%= customer.email %>
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-[#658d5e] mb-1">Phone</p>
-                            <p class="text-sm text-[#121810] bg-gray-100 rounded-lg px-3 py-2">
+                            <p class="text-sm text-[#685BCB] mb-1">Phone</p>
+                            <p class="text-sm text-[#1F1F1F] bg-gray-100 rounded-lg px-3 py-2">
                                 <%= customer.phone || 'N/A' %>
                             </p>
                         </div>
                     </div>
 
-                    <h2 class="text-lg font-bold text-[#121810] mb-4">Account Meta</h2>
+                    <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Account Meta</h2>
                     <div class="space-y-3">
                         <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#658d5e]">Joined</span>
-                            <span class="text-sm text-[#121810]">
+                            <span class="w-32 text-sm text-[#685BCB]">Joined</span>
+                            <span class="text-sm text-[#1F1F1F]">
                                 <%= new Date(customer.joinedDate).toLocaleDateString() %>
                             </span>
                         </div>
                         <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#658d5e]">Last Login</span>
-                            <span class="text-sm text-[#121810]">
+                            <span class="w-32 text-sm text-[#685BCB]">Last Login</span>
+                            <span class="text-sm text-[#1F1F1F]">
                                 <%= customer.lastLogin ? new Date(customer.lastLogin).toLocaleDateString() : 'N/A' %>
                             </span>
                         </div>
                         <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#658d5e]">Total Orders</span>
-                            <span class="text-sm text-[#121810]">
+                            <span class="w-32 text-sm text-[#685BCB]">Total Orders</span>
+                            <span class="text-sm text-[#1F1F1F]">
                                 <%= customer.totalOrders %>
                             </span>
                         </div>
                         <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#658d5e]">Lifetime Value</span>
-                            <span class="text-sm text-[#121810]">$<%= customer.lifetimeValue %></span>
+                            <span class="w-32 text-sm text-[#685BCB]">Lifetime Value</span>
+                            <span class="text-sm text-[#1F1F1F]">$<%= customer.lifetimeValue %></span>
                         </div>
                     </div>
                 </div>
@@ -229,7 +231,7 @@
                     <div class="text-center py-8 text-gray-500">
                         <p>No orders found</p>
                         <a href="/admin/customers/<%= customer._id %>/orders"
-                            class="text-[#27ff14] hover:underline mt-2 inline-block">
+                            class="text-[#685BCB] hover:underline mt-2 inline-block">
                             View Orders Page
                         </a>
                     </div>
@@ -241,7 +243,7 @@
                         <div class="space-y-3">
                             <% customer.addresses.forEach(addr=> { %>
                                 <div class="border border-gray-200 rounded-lg p-4">
-                                    <p class="font-bold text-[#121810] mb-1">
+                                    <p class="font-bold text-[#1F1F1F] mb-1">
                                         <%= addr.label || 'Address' %>
                                             <% if(addr.isDefault){ %><span
                                                     class="text-xs text-green-600 ml-2">(Default)</span>
@@ -272,12 +274,12 @@
 
                 <!-- Tab Content: Notes -->
                 <div id="Notes" class="tabcontent">
-                    <label class="block mb-2 text-sm font-bold text-[#121810]">Admin Notes (Internal Use Only)</label>
+                    <label class="block mb-2 text-sm font-bold text-[#1F1F1F]">Admin Notes (Internal Use Only)</label>
                     <textarea id="adminNotes" rows="5"
-                        class="w-full rounded-lg border border-gray-200 p-3 text-sm focus:ring-2 focus:ring-[#27ff14] focus:border-transparent"
+                        class="w-full rounded-lg border border-gray-200 p-3 text-sm focus:ring-2 focus:ring-[#685BCB] focus:border-transparent"
                         placeholder="Add internal notes about this customer..."><%= customer.adminNotes || '' %></textarea>
                     <button onclick="saveNotes('<%= customer._id %>')"
-                        class="mt-4 h-10 px-6 rounded-lg bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                        class="mt-4 h-10 px-6 rounded-lg bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
                         Save Notes
                     </button>
                 </div>

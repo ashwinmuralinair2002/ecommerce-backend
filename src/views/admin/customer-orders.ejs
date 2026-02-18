@@ -13,76 +13,75 @@
 </head>
 
 <body>
-    <div class="relative flex h-auto min-h-screen w-full flex-col bg-white group/design-root overflow-x-hidden"
-        style='font-family: Inter, "Noto Sans", sans-serif;'>
-        <div class="layout-container flex h-full grow flex-col">
-            <div class="gap-1 px-6 flex flex-1 justify-center py-5">
-                <div class="layout-content-container flex flex-col w-80">
-                    <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
-                </div>
-                <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
-                    <%- include('../partials/admin/navbar') %>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include('../partials/admin/navbar') %>
 
-                        <div class="flex flex-wrap gap-2 p-4">
+            <main class="flex flex-1 bg-white">
+                <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                    <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
+                </aside>
+                <section class="flex-1 p-6 md:p-8">
+
+                        <div class="flex flex-wrap gap-2">
                             <a href="/admin/customers"
-                                class="text-[#658d5e] text-base font-medium leading-normal">Customers</a>
-                            <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
+                                class="text-[#685BCB] text-base font-medium leading-normal">Customers</a>
+                            <span class="text-[#685BCB] text-base font-medium leading-normal">/</span>
                             <a href="/admin/customers/<%= customer._id %>"
-                                class="text-[#658d5e] text-base font-medium leading-normal">
+                                class="text-[#685BCB] text-base font-medium leading-normal">
                                 <%= customer.name %>
                             </a>
-                            <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
-                            <span class="text-[#121810] text-base font-medium leading-normal">Orders</span>
+                            <span class="text-[#685BCB] text-base font-medium leading-normal">/</span>
+                            <span class="text-[#1F1F1F] text-base font-medium leading-normal">Orders</span>
                         </div>
-                        <div class="flex flex-wrap justify-between gap-3 p-4">
+                        <div class="flex flex-wrap justify-between gap-3 p-4 pl-0">
                             <div class="flex min-w-72 flex-col gap-3">
-                                <p class="text-[#121810] tracking-light text-[32px] font-bold leading-tight">
+                                <p class="text-[#1F1F1F] tracking-light text-[32px] font-bold leading-tight">
                                     <%= customer.name %>
                                 </p>
-                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Orders</p>
+                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Orders</p>
                             </div>
                         </div>
-                        <h3 class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
+                        <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
                             All Orders</h3>
 
                         <!-- Filters (Visual only for now matching Prompt) -->
                         <div class="flex gap-3 p-3 flex-wrap pr-4">
                             <div
                                 class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-[#f1f5f0] pl-4 pr-4">
-                                <p class="text-[#121810] text-sm font-medium leading-normal">All</p>
+                                <p class="text-[#1F1F1F] text-sm font-medium leading-normal">All</p>
                             </div>
                             <div
                                 class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-[#f1f5f0] pl-4 pr-4">
-                                <p class="text-[#121810] text-sm font-medium leading-normal">Delivered</p>
+                                <p class="text-[#1F1F1F] text-sm font-medium leading-normal">Delivered</p>
                             </div>
                             <div
                                 class="flex h-8 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-[#f1f5f0] pl-4 pr-4">
-                                <p class="text-[#121810] text-sm font-medium leading-normal">In Transit</p>
+                                <p class="text-[#1F1F1F] text-sm font-medium leading-normal">In Transit</p>
                             </div>
                         </div>
 
-                        <div class="px-4 py-3 @container">
+                        <div class="py-3 @container">
                             <div class="flex overflow-hidden rounded-xl border border-[#dde6db] bg-white">
                                 <table class="flex-1">
                                     <thead>
                                         <tr class="bg-white">
                                             <th
-                                                class="px-4 py-3 text-left text-[#121810] w-[400px] text-sm font-medium leading-normal">
+                                                class="px-4 py-3 text-left text-[#1F1F1F] w-[400px] text-sm font-medium leading-normal">
                                                 Order ID</th>
                                             <th
-                                                class="px-4 py-3 text-left text-[#121810] w-14 text-sm font-medium leading-normal">
+                                                class="px-4 py-3 text-left text-[#1F1F1F] w-14 text-sm font-medium leading-normal">
                                                 Products</th>
                                             <th
-                                                class="px-4 py-3 text-left text-[#121810] w-[200px] text-sm font-medium leading-normal">
+                                                class="px-4 py-3 text-left text-[#1F1F1F] w-[200px] text-sm font-medium leading-normal">
                                                 Date</th>
                                             <th
-                                                class="px-4 py-3 text-left text-[#121810] w-[150px] text-sm font-medium leading-normal">
+                                                class="px-4 py-3 text-left text-[#1F1F1F] w-[150px] text-sm font-medium leading-normal">
                                                 Total</th>
                                             <th
-                                                class="px-4 py-3 text-left text-[#121810] w-60 text-sm font-medium leading-normal">
+                                                class="px-4 py-3 text-left text-[#1F1F1F] w-60 text-sm font-medium leading-normal">
                                                 Status</th>
                                             <th
-                                                class="px-4 py-3 text-left text-[#121810] w-60 text-[#658d5e] text-sm font-medium leading-normal">
+                                                class="px-4 py-3 text-left text-[#1F1F1F] w-60 text-[#685BCB] text-sm font-medium leading-normal">
                                                 Actions</th>
                                         </tr>
                                     </thead>
@@ -96,7 +95,7 @@
                                                 <% orders.forEach(order=> { %>
                                                     <tr class="border-t border-t-[#dde6db]">
                                                         <td
-                                                            class="h-[72px] px-4 py-2 w-[400px] text-[#121810] text-sm font-normal leading-normal">
+                                                            class="h-[72px] px-4 py-2 w-[400px] text-[#1F1F1F] text-sm font-normal leading-normal">
                                                             <%= order.orderId %>
                                                         </td>
                                                         <td
@@ -107,16 +106,16 @@
                                                             </div>
                                                         </td>
                                                         <td
-                                                            class="h-[72px] px-4 py-2 w-[200px] text-[#658d5e] text-sm font-normal leading-normal">
+                                                            class="h-[72px] px-4 py-2 w-[200px] text-[#685BCB] text-sm font-normal leading-normal">
                                                             <%= new Date(order.createdAt).toLocaleDateString() %>
                                                         </td>
                                                         <td
-                                                            class="h-[72px] px-4 py-2 w-[150px] text-[#658d5e] text-sm font-normal leading-normal">
+                                                            class="h-[72px] px-4 py-2 w-[150px] text-[#685BCB] text-sm font-normal leading-normal">
                                                             $<%= order.totalAmount.toFixed(2) %>
                                                         </td>
                                                         <td
                                                             class="h-[72px] px-4 py-2 w-60 text-sm font-normal leading-normal">
-                                                            <div class="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-xl h-8 px-4 text-[#121810] text-sm font-medium leading-normal w-full 
+                                                            <div class="flex min-w-[84px] max-w-[480px] items-center justify-center overflow-hidden rounded-xl h-8 px-4 text-[#1F1F1F] text-sm font-medium leading-normal w-full 
                                     <%= order.status === 'Delivered' ? 'bg-green-100 text-green-800' : 
                                         order.status === 'In Transit' ? 'bg-blue-100 text-blue-800' :
                                         order.status === 'Cancelled' ? 'bg-red-100 text-red-800' : 
@@ -127,8 +126,8 @@
                                                             </div>
                                                         </td>
                                                         <td
-                                                            class="h-[72px] px-4 py-2 w-60 text-[#658d5e] text-sm font-bold leading-normal tracking-[0.015em]">
-                                                            <button class="hover:text-[#121810]">View Details</button>
+                                                            class="h-[72px] px-4 py-2 w-60 text-[#685BCB] text-sm font-bold leading-normal tracking-[0.015em]">
+                                                            <button class="hover:text-[#1F1F1F]">View Details</button>
                                                         </td>
                                                     </tr>
                                                     <% }) %>
@@ -137,9 +136,8 @@
                                 </table>
                             </div>
                         </div>
-                </div>
-            </div>
-        </div>
+                </section>
+            </main>
     </div>
 </body>
 

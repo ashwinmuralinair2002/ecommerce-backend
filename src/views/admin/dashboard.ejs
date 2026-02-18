@@ -13,95 +13,99 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 gap-0 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'dashboard' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
-                <h1 class="text-[32px] font-bold text-[#121811] mb-6">Admin Account</h1>
+            <section class="flex-1 bg-white p-6 md:p-8">
+                <h1 class="text-2xl font-bold text-[#1F1F1F] mb-6">Admin Account</h1>
 
                 <!-- Profile Summary -->
-                <section class="flex flex-col items-center gap-4 mb-8">
-                    <div class="w-32 h-32 rounded-full bg-cover bg-center"
+                <section class="flex items-center gap-6 mb-8">
+                    <div class="w-24 h-24 rounded-full bg-cover bg-center border-2 border-[#D3CEEA]"
                         style="background-image:url('/images/admin/profile.jpg');">
                     </div>
 
-                    <div class="text-center">
-                        <p class="text-[22px] font-bold text-[#111810]">Ashwin Murali Nair</p>
-                        <p class="text-sm text-[#628d5e]">Super Admin</p>
+                    <div>
+                        <p class="text-[22px] font-bold text-[#1F1F1F]">
+                            <%= user ? user.name : 'Ashwin Murali Nair' %>
+                        </p>
+                        <p class="text-sm text-[#685BCB]">Super Admin</p>
                     </div>
                 </section>
 
                 <!-- PROFILE DETAILS -->
-                <section class="px-4">
+                <section class="max-w-3xl">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-[22px] font-bold text-[#111810]">Profile Details</h2>
+                        <h2 class="text-[22px] font-bold text-[#1F1F1F]">Profile Details</h2>
                     </div>
 
                     <!-- Inline Messaging Container -->
                     <div id="messageContainer" class="hidden mb-4 p-3 rounded-xl text-sm font-medium"></div>
 
                     <!-- View Mode -->
-                    <div id="viewMode" class="grid grid-cols-2 gap-4">
+                    <div id="viewMode" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div>
-                            <p class="text-sm text-[#628d5e]">Full Name</p>
-                            <p class="text-sm text-[#111810]" id="viewName">
+                            <p class="text-sm text-[#685BCB]">Full Name</p>
+                            <p class="text-sm text-[#1F1F1F]" id="viewName">
                                 <%= user ? user.name : 'Ashwin Murali Nair' %>
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-[#628d5e]">Role</p>
-                            <p class="text-sm text-[#111810]">Super Admin</p>
+                            <p class="text-sm text-[#685BCB]">Role</p>
+                            <p class="text-sm text-[#1F1F1F]">Super Admin</p>
                         </div>
                         <div>
-                            <p class="text-sm text-[#628d5e]">Email</p>
-                            <p class="text-sm text-[#111810]" id="viewEmail">
+                            <p class="text-sm text-[#685BCB]">Email</p>
+                            <p class="text-sm text-[#1F1F1F]" id="viewEmail">
                                 <%= user ? user.email : 'admin@soundwave.com' %>
                             </p>
                         </div>
                         <div>
-                            <p class="text-sm text-[#628d5e]">Phone</p>
-                            <p class="text-sm text-[#111810]" id="viewPhone">
+                            <p class="text-sm text-[#685BCB]">Phone</p>
+                            <p class="text-sm text-[#1F1F1F]" id="viewPhone">
                                 <%= user && user.phone ? user.phone : '—' %>
                             </p>
                         </div>
                     </div>
 
                     <!-- Edit Mode (Hidden by default) -->
-                    <form id="editForm" class="hidden grid grid-cols-1 gap-4" onsubmit="saveAdminInfo(event)">
+                    <form id="editForm" class="hidden grid grid-cols-1 gap-4 max-w-xl" onsubmit="saveAdminInfo(event)">
                         <div>
-                            <label class="block text-sm text-[#628d5e] mb-1">Full Name</label>
+                            <label class="block text-sm text-[#685BCB] mb-1">Full Name</label>
                             <input type="text" id="editName" name="name"
                                 value="<%= user ? user.name : 'Ashwin Murali Nair' %>"
-                                class="w-full h-10 rounded-xl bg-[#f0f5f0] px-3 border-none text-[#111810] focus:ring-1 focus:ring-[#27ff14]" />
+                                class="w-full h-10 rounded-xl bg-[#FFFFFF] px-3 border-none text-[#1F1F1F] focus:ring-1 focus:ring-[#685BCB]" />
                         </div>
                         <div>
-                            <label class="block text-sm text-[#628d5e] mb-1">Email</label>
+                            <label class="block text-sm text-[#685BCB] mb-1">Email</label>
                             <input type="email" id="editEmail" name="email"
                                 value="<%= user ? user.email : 'admin@soundwave.com' %>"
-                                class="w-full h-10 rounded-xl bg-[#f0f5f0] px-3 border-none text-[#111810] focus:ring-1 focus:ring-[#27ff14]" />
+                                class="w-full h-10 rounded-xl bg-[#FFFFFF] px-3 border-none text-[#1F1F1F] focus:ring-1 focus:ring-[#685BCB]" />
                         </div>
                         <div>
-                            <label class="block text-sm text-[#628d5e] mb-1">Phone</label>
+                            <label class="block text-sm text-[#685BCB] mb-1">Phone</label>
                             <input type="tel" id="editPhone" name="phone"
                                 value="<%= user && user.phone ? user.phone : '' %>"
-                                class="w-full h-10 rounded-xl bg-[#f0f5f0] px-3 border-none text-[#111810] focus:ring-1 focus:ring-[#27ff14]" />
+                                class="w-full h-10 rounded-xl bg-[#FFFFFF] px-3 border-none text-[#1F1F1F] focus:ring-1 focus:ring-[#685BCB]" />
                         </div>
 
                         <div class="flex gap-3 mt-2">
                             <button type="submit" id="saveBtn"
-                                class="h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010]">
+                                class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0]">
                                 Save Changes
                             </button>
                             <button type="button" onclick="cancelEdit()"
-                                class="h-10 px-6 rounded-xl bg-[#f0f5f0] font-bold text-[#111810] hover:bg-[#e0e5e0]">
+                                class="h-10 px-6 rounded-xl bg-[#FFFFFF] font-bold text-[#1F1F1F] hover:bg-[#D3CEEA]">
                                 Cancel
                             </button>
                         </div>
@@ -177,7 +181,7 @@
                                 document.getElementById('viewPhone').innerText = phone || '—';
 
                                 // Update Header Name (Visual consistency)
-                                const headerName = document.querySelector('.text-\\[22px\\].font-bold.text-\\[\\#111810\\]');
+                                const headerName = document.querySelector('.text-\\[22px\\].font-bold.text-\\[\\#1F1F1F\\]');
                                 if (headerName) headerName.innerText = name;
 
                                 setTimeout(() => {
@@ -211,14 +215,14 @@
                 </script>
 
                 <!-- SECURITY & ACCOUNT ACTIONS -->
-                <section class="mt-10 px-4 pb-10">
-                    <h2 class="text-[22px] font-bold mb-3 text-[#111810]">Account Actions</h2>
-                    <p class="text-sm text-[#658d5e] mb-4">Manage your profile and security settings</p>
+                <section class="mt-10 pb-10 max-w-3xl">
+                    <h2 class="text-[22px] font-bold mb-3 text-[#1F1F1F]">Account Actions</h2>
+                    <p class="text-sm text-[#685BCB] mb-4">Manage your profile and security settings</p>
 
                     <div class="flex flex-wrap gap-3">
                         <!-- Edit Info Button -->
                         <button id="editInfoBtn" onclick="toggleEditMode()"
-                            class="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                            class="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
                                 viewBox="0 0 256 256">
                                 <path
@@ -230,7 +234,7 @@
 
                         <!-- Change Password Button -->
                         <a href="/admin/change-password"
-                            class="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                            class="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
                                 viewBox="0 0 256 256">
                                 <path

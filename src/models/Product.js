@@ -1,6 +1,19 @@
 // Product schema definition and model
 const mongoose = require('mongoose');
 
+const NOISE_CONTROL_TYPES = ['Active Noise Cancellation', 'Passive Noise Isolation', 'None'];
+const CONTROL_METHODS = ['Touch', 'Button', 'Voice', 'App'];
+const CABLE_FEATURES = ['Detachable Cable', 'Braided Cable', 'Tangle Free', 'Inline Remote'];
+const SMART_FEATURES = ['Voice Assistant', 'Multipoint', 'Companion App', 'Adaptive Audio'];
+const COMPATIBLE_DEVICES = ['Android', 'iOS', 'Windows', 'Mac', 'PlayStation', 'Xbox'];
+const MATERIALS = ['Plastic', 'Aluminium', 'Steel', 'Leather', 'Fabric', 'Silicone'];
+const INCLUDED_COMPONENTS = ['Carrying Case', 'Charging Cable', 'Audio Cable', 'Ear Tips', 'User Manual'];
+const AUDIO_DRIVER_TYPES = ['Dynamic', 'Planar Magnetic', 'Balanced Armature', 'Hybrid'];
+const FORM_FACTORS = ['In-Ear', 'On-Ear', 'Over-Ear'];
+const EARPIECE_SHAPES = ['Round', 'Oval', 'Ergonomic'];
+const IMPEDANCE_RANGES = ['Up to 32 Ohm', '33-80 Ohm', '81-250 Ohm', '250+ Ohm'];
+const SENSITIVITY_RANGES = ['Up to 95 dB', '96-105 dB', '106-115 dB', '115+ dB'];
+
 const productSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -24,8 +37,8 @@ const productSchema = new mongoose.Schema({
         required: true
     },
     category: {
-        type: String,
-        enum: ['In-ear', 'On-ear', 'Over-ear'],
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
         required: true
     },
     shortDescription: {
@@ -69,6 +82,21 @@ const productSchema = new mongoose.Schema({
         public_id: { type: String, required: true },
         isHero: { type: Boolean, default: false }
     }],
+    variants: [{
+        colorName: {
+            type: String,
+            default: ''
+        },
+        colorCode: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        images: [{
+            url: { type: String, required: true },
+            public_id: { type: String, required: true }
+        }]
+    }],
     status: {
         type: String,
         enum: ['Active', 'Inactive'],
@@ -101,9 +129,88 @@ const productSchema = new mongoose.Schema({
     badges: [{
         type: String,
         enum: ['Best seller', 'New', 'Deal']
-    }]
+    }],
+    warranty: {
+        duration: {
+            type: String,
+            enum: ['No Warranty', '6 Months', '1 Year', '2 Years', '3 Years'],
+            default: 'No Warranty'
+        },
+        provider: {
+            type: String,
+            enum: ['Brand', 'SoundWave'],
+            default: 'Brand'
+        }
+    },
+    noiseControlTypes: [{
+        type: String,
+        enum: NOISE_CONTROL_TYPES
+    }],
+    controlMethods: [{
+        type: String,
+        enum: CONTROL_METHODS
+    }],
+    cableFeatures: [{
+        type: String,
+        enum: CABLE_FEATURES
+    }],
+    smartFeatures: [{
+        type: String,
+        enum: SMART_FEATURES
+    }],
+    compatibleDevices: [{
+        type: String,
+        enum: COMPATIBLE_DEVICES
+    }],
+    materials: [{
+        type: String,
+        enum: MATERIALS
+    }],
+    includedComponents: [{
+        type: String,
+        enum: INCLUDED_COMPONENTS
+    }],
+    audioDriverTypes: [{
+        type: String,
+        enum: AUDIO_DRIVER_TYPES
+    }],
+    formFactor: {
+        type: String,
+        enum: FORM_FACTORS,
+        default: null
+    },
+    earpieceShape: {
+        type: String,
+        enum: EARPIECE_SHAPES,
+        default: null
+    },
+    impedanceRange: {
+        type: String,
+        enum: IMPEDANCE_RANGES,
+        default: null
+    },
+    sensitivityRange: {
+        type: String,
+        enum: SENSITIVITY_RANGES,
+        default: null
+    },
+    hasMicrophone: {
+        type: Boolean,
+        default: false
+    },
+    batteryChargingTime: {
+        type: Number,
+        default: null
+    }
 }, {
     timestamps: true
 });
+
+productSchema.index({ formFactor: 1 });
+productSchema.index({ hasMicrophone: 1 });
+productSchema.index({ noiseControlTypes: 1 });
+productSchema.index({ materials: 1 });
+productSchema.index({ audioDriverTypes: 1 });
+productSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Product', productSchema);

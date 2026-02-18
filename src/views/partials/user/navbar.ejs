@@ -1,0 +1,55 @@
+<header class="theme-top-nav sticky top-0 z-50 flex items-center justify-between border-b px-6 py-3">
+    <div class="flex items-center gap-8">
+        <% if (locals.user) { %>
+            <a href="/home" class="flex items-center gap-3 text-white">
+        <% } else { %>
+            <a href="/" class="flex items-center gap-3 text-white">
+        <% } %>
+                <div class="size-4 text-white">
+                    <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134 C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462 C2.19985 28.361 1.76794 23.9758 2.60947 19.7452 C3.451 15.5145 5.52816 11.6284 8.57829 8.5783 C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948 C23.9758 1.76795 28.361 2.19986 32.3462 3.85057 C36.3314 5.50129 39.7376 8.29668 42.134 11.8833 C44.5305 15.4698 45.8096 19.6865 45.8096 24 L24 24 L24 45.8096Z" fill="currentColor" />
+                    </svg>
+                </div>
+                <span class="text-lg font-bold">SoundWave</span>
+            </a>
+
+        <nav class="hidden gap-6 text-sm font-medium lg:flex">
+            <a href="/products" class="theme-nav-hover rounded-md px-2 py-1">Products</a>
+            <a href="/deals" class="theme-nav-hover rounded-md px-2 py-1">Today’s Deals</a>
+            <a href="/best-sellers" class="theme-nav-hover rounded-md px-2 py-1">Best Sellers</a>
+            <a href="/new-arrivals" class="theme-nav-hover rounded-md px-2 py-1">New Arrivals</a>
+            <a href="/brands" class="theme-nav-hover rounded-md px-2 py-1">Brands</a>
+        </nav>
+    </div>
+
+    <div class="flex items-center gap-3">
+        <div class="relative hidden sm:block">
+            <input type="text" placeholder="Search"
+                class="h-10 w-52 rounded-lg border border-white/30 bg-white/20 pl-10 pr-4 text-sm text-white placeholder:text-white/80 focus:outline-none focus:ring-2 focus:ring-white/30" />
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-white" xmlns="http://www.w3.org/2000/svg"
+                width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
+                <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32Z" />
+            </svg>
+        </div>
+
+        <% if (locals.user) { %>
+            <button class="theme-nav-hover h-10 w-10 rounded-lg text-white">❤️</button>
+            <button class="theme-nav-hover h-10 w-10 rounded-lg text-white">🛒</button>
+            <a href="/account"
+                class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/40 bg-white/20">
+                <% if (user.profileImage) { %>
+                    <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
+                <% } else { %>
+                    <span class="text-xs font-bold text-white">
+                        <%= user.name ? user.name.substring(0,2).toUpperCase() : 'U' %>
+                    </span>
+                <% } %>
+            </a>
+        <% } else { %>
+            <a href="/login"
+                class="theme-accent-btn <%= locals.landingPage ? 'landing-login-btn' : '' %> flex h-10 items-center justify-center rounded-lg px-6 text-sm font-bold">
+                Login
+            </a>
+        <% } %>
+    </div>
+</header>

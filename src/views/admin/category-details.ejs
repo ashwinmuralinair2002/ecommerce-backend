@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
+    <title>Admin · Category</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function confirmAction(options, actionCallback) {
+            Swal.fire({
+                title: options.title,
+                text: options.text,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: options.confirmButtonColor || '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: options.confirmButtonText
+            }).then((result) => {
+                if (result.isConfirmed) actionCallback();
+            });
+        }
+
+        function confirmCategoryDelete(id) {
+            confirmAction({
+                title: 'Delete Category?',
+                text: 'This will soft delete the category.',
+                confirmButtonText: 'Yes, Delete',
+                confirmButtonColor: '#d33'
+            }, () => document.getElementById('delete-form-' + id)?.submit());
+        }
+
+        function confirmCategoryBlockToggle(id, isBlocked) {
+            confirmAction({
+                title: isBlocked ? 'Unblock Category?' : 'Block Category?',
+                text: isBlocked ? 'Category will be visible again.' : 'Category and products under it will be hidden on user side.',
+                confirmButtonText: isBlocked ? 'Yes, Unblock' : 'Yes, Block',
+                confirmButtonColor: isBlocked ? '#685BCB' : '#d33'
+            }, () => document.getElementById('block-form-' + id)?.submit());
+        }
+    </script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'categories' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="flex items-center gap-2 text-sm mb-4">
+                    <a href="/admin/categories" class="text-[#685BCB] hover:underline">Categories</a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-[#1F1F1F]"><%= category.name %></span>
+                </div>
+
+                <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-20 h-20 rounded-lg bg-cover bg-center flex-shrink-0 <%= category.image && category.image.url ? '' : 'bg-[#D3CEEA]' %>"
+                            style="<%= category.image && category.image.url ? 'background-image:url(' + category.image.url + ')' : '' %>"></div>
+                        <div>
+                            <h1 class="text-[32px] font-bold text-[#1F1F1F]"><%= category.name %></h1>
+                            <p class="text-sm <%= category.isBlocked ? 'text-red-600' : 'text-[#53a145]' %>">
+                                <%= category.isBlocked ? 'Blocked' : 'Active' %>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 flex-wrap">
+                        <a href="/admin/categories/<%= category._id %>/edit"
+                            class="flex items-center h-10 px-4 rounded-lg bg-[#FFFFFF] font-medium text-[#1F1F1F] hover:bg-[#D3CEEA] transition-colors">
+                            Edit Category
+                        </a>
+                        <button type="button"
+                            onclick="confirmCategoryBlockToggle('<%= category._id %>', <%= category.isBlocked %>)"
+                            class="h-10 px-4 rounded-lg font-medium transition-colors <%= category.isBlocked ? 'bg-[#e8f4e6] text-[#1e7e34] hover:bg-[#d8e4d6]' : 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]' %>">
+                            <%= category.isBlocked ? 'Unblock' : 'Block' %>
+                        </button>
+                        <button type="button" onclick="confirmCategoryDelete('<%= category._id %>')"
+                            class="h-10 px-4 rounded-lg bg-[#ffecec] text-red-600 font-medium hover:bg-[#ffdddd] transition-colors">
+                            Delete
+                        </button>
+                        <form id="block-form-<%= category._id %>" method="POST" action="/admin/categories/<%= category._id %>/block-toggle" style="display:none;"></form>
+                        <form id="delete-form-<%= category._id %>" method="POST" action="/admin/categories/<%= category._id %>/delete" style="display:none;"></form>
+                    </div>
+                </div>
+
+                <div class="bg-[#D3CEEA] rounded-lg p-6 mb-6">
+                    <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Category Information</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-[#685BCB] mb-1">Slug</p>
+                            <p class="text-[#1F1F1F]"><%= category.slug || '-' %></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-[#685BCB] mb-1">Linked Products</p>
+                            <p class="text-[#1F1F1F]"><%= productCount %></p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-[#685BCB] mb-1">Description</p>
+                            <p class="text-[#1F1F1F]"><%= category.description || '-' %></p>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Hero Poster</h2>
+                <div class="overflow-hidden rounded-lg border border-[#BCA6DB] bg-white p-4">
+                    <% if (category.heroImage && category.heroImage.url) { %>
+                        <img src="<%= category.heroImage.url %>" alt="Hero Poster" class="w-full max-h-72 object-contain rounded-lg">
+                    <% } else { %>
+                        <p class="text-gray-500 text-sm">No hero poster uploaded.</p>
+                    <% } %>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>
+

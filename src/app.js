@@ -11,20 +11,17 @@ const addressRoutes = require('./routes/address.routes');
 
 const { getHomePage, getPostLoginHomePage } = require('./controllers/home.controller');
 const productController = require('./controllers/admin.product.controller');
+const userProductController = require('./controllers/user.product.controller');
+const userRoutes = require('./routes/user.routes');
 const productUpload = require('./config/multerUpload');
+const categoryUpload = require('./middleware/category-upload.middleware');
 const nocache = require('./middleware/nocache.middleware');
 require('dotenv').config();
 
 const app = express();
-const cookieParser = require('cookie-parser');
-
-// Connect to Database
-
-connectDB();
-
 // Middleware
 app.use(nocache);
-app.use(cookieParser());
+// cookie-parser removed
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -34,23 +31,78 @@ app.use((req, res, next) => {
     next();
 });
 
-// Global User Middleware (Available in all views)
-app.use((req, res, next) => {
-    res.locals.user = req.user || null;
-    next();
-});
+
 
 // Session Middleware (Required for Google Strategy State)
 app.use(session({
     secret: process.env.JWT_SECRET || 'secret',
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Secure in production
+        sameSite: 'lax', // Recommended for auth cookies
+        path: '/',
+        maxAge: 1000 * 60 * 60 * 24 // 24 hours
+    }
 }));
 
 // Passport Config
 configurePassport();
 app.use(passport.initialize());
-app.use(passport.session());
+// Passport Session removed - using manual session management
+
+// Global User Middleware (Available in all views)
+const User = require('./models/user.model');
+app.use(async (req, res, next) => {
+    try {
+        if (req.session && req.session.userId) {
+            // Fetch user to populate res.locals.user for Navbar
+            const user = await User.findById(req.session.userId).select('name email role profileImage isBlocked');
+
+            if (user) {
+                // Check if user is blocked - OPTIONAL: Force logout here if strictly required, 
+                // but let's stick to just exposing data for now to avoid side-effects in GET requests unless critical.
+                // However, for security, if they are blocked, we should probably kill the session.
+                if (user.isBlocked) {
+                    req.session.destroy((err) => {
+                        if (err) console.error('Session destroy error during block check:', err);
+                        res.locals.user = null;
+                        res.locals.role = null;
+                        res.clearCookie('connect.sid');
+                        // We can't easily redirect inside a global middleware without potentially disrupting non-html requests
+                        // So we just nullify. The auth-check middleware will catch them on protected routes.
+                        next();
+                    });
+                    return; // Stop processing this middleware instance
+                }
+
+                res.locals.user = user;
+                res.locals.role = user.role;
+                req.user = user; // Attach for legacy compatibility/passport-like access
+            } else {
+                // Ghost Session: Session has ID but User not in DB (deleted?)
+                console.warn(`Ghost session detected for userId: ${req.session.userId}. Destroying.`);
+                req.session.destroy((err) => {
+                    if (err) console.error('Session destroy error:', err);
+                    res.locals.user = null;
+                    res.locals.role = null;
+                    res.clearCookie('connect.sid');
+                    next();
+                });
+                return;
+            }
+        } else {
+            res.locals.user = null;
+            res.locals.role = null;
+        }
+    } catch (err) {
+        console.error('Session User Fetch Error:', err);
+        res.locals.user = null;
+        res.locals.role = null;
+    }
+    next();
+});
 
 // View Engine Setup
 app.set('view engine', 'ejs');
@@ -60,7 +112,7 @@ app.use(express.static(path.join(__dirname, 'public'))); // For uploads
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // DEV MODE OVERRIDE: Intercept responses to inject OTP
-const User = require('./models/user.model');
+// User model already required above
 app.use((req, res, next) => {
     const originalJson = res.json;
     res.json = function (body) {
@@ -109,7 +161,15 @@ app.use(addressRoutes);
 const { ensureAuthenticated, ensureOtpVerified, ensureGuest } = require('./middleware/auth-check.middleware');
 
 app.get('/', getHomePage);
-app.get('/home', ensureAuthenticated, ensureOtpVerified, getPostLoginHomePage);
+app.get('/home', ensureAuthenticated, ensureOtpVerified, (req, res, next) => {
+    if (req.session.role === 'admin') {
+        return res.redirect('/admin/dashboard');
+    }
+    next();
+}, getPostLoginHomePage);
+
+// User Product Routes
+app.use('/', userRoutes);
 
 // View Routes
 app.get('/account', require('./middleware/auth-check.middleware').ensureAuthenticated, (req, res) => {
@@ -159,20 +219,33 @@ app.post('/admin/brands/:id/delete', ensureAdminAuthenticated, brandController.d
 
 const categoryController = require('./controllers/admin.category.controller');
 app.get('/admin/categories', ensureAdminAuthenticated, categoryController.getCategoriesPage);
-app.post('/admin/categories/:id/toggle-listing', ensureAdminAuthenticated, categoryController.toggleCategoryListing);
+app.get('/admin/categories/add', ensureAdminAuthenticated, categoryController.renderAddCategory);
+app.post('/admin/categories', ensureAdminAuthenticated, categoryUpload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'heroImage', maxCount: 1 }
+]), categoryController.addCategory);
+app.get('/admin/categories/:id', ensureAdminAuthenticated, categoryController.getCategoryDetails);
+app.get('/admin/categories/:id/edit', ensureAdminAuthenticated, categoryController.renderEditCategory);
+app.post('/admin/categories/:id/edit', ensureAdminAuthenticated, categoryUpload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'heroImage', maxCount: 1 }
+]), categoryController.editCategory);
+app.post('/admin/categories/:id/block-toggle', ensureAdminAuthenticated, categoryController.toggleCategoryBlock);
+app.post('/admin/categories/:id/delete', ensureAdminAuthenticated, categoryController.deleteCategory);
 
 // Admin Product Management
 app.get('/admin/products', ensureAdminAuthenticated, productController.getProductsPage);
 app.get('/admin/products/add', ensureAdminAuthenticated, productController.getAddProductPage);
 app.get('/admin/products/edit/:id', ensureAdminAuthenticated, productController.getEditProductPage);
-app.post('/admin/products', ensureAdminAuthenticated, productUpload.array('productImages', 10), productController.createProduct);
-app.put('/admin/products/:id', ensureAdminAuthenticated, productUpload.array('productImages', 10), productController.updateProduct);
+app.post('/admin/products', ensureAdminAuthenticated, productUpload.any(), productController.createProduct);
+app.put('/admin/products/:id', ensureAdminAuthenticated, productUpload.any(), productController.updateProduct);
 app.delete('/admin/products/:id/images/:imageId', ensureAdminAuthenticated, productController.deleteProductImage);
 app.post('/admin/products/soft-delete', ensureAdminAuthenticated, productController.softDeleteProducts);
 app.delete('/admin/products/:id', ensureAdminAuthenticated, productController.softDeleteProduct);
+app.patch('/admin/products/:id/toggle-list', ensureAdminAuthenticated, productController.toggleProductListing);
 app.get('/admin/products/:id', ensureAdminAuthenticated, productController.getProductDetailPage);
 
-app.get('/login', (req, res) => {
+app.get('/login', ensureGuest, (req, res) => {
     res.render('login');
 });
 

@@ -1,0 +1,94 @@
+:root {
+  --primary: #685BCB;
+  --primary-light: #BCA6DB;
+  --background-soft: #D3CEEA;
+  --accent: #F4DD5D;
+  --white: #FFFFFF;
+}
+
+.theme-body {
+  background: var(--background-soft);
+}
+
+.theme-top-nav {
+  background: var(--primary);
+  color: var(--white);
+  border-color: color-mix(in srgb, var(--white) 25%, var(--primary));
+}
+
+.theme-top-nav a,
+.theme-top-nav button,
+.theme-top-nav svg,
+.theme-top-nav span,
+.theme-top-nav input {
+  color: var(--white);
+}
+
+.theme-top-nav input {
+  background: color-mix(in srgb, var(--white) 20%, transparent);
+}
+
+.theme-top-nav input::placeholder {
+  color: color-mix(in srgb, var(--white) 80%, transparent);
+}
+
+.theme-top-nav .theme-nav-hover:hover {
+  background: color-mix(in srgb, var(--primary-light) 45%, transparent);
+}
+
+.theme-card {
+  background: var(--white);
+  border-radius: 0.75rem;
+  box-shadow: 0 6px 18px rgba(43, 33, 87, 0.08);
+}
+
+.theme-primary-btn {
+  background: var(--primary);
+  color: var(--white);
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(43, 33, 87, 0.18);
+  transition: background-color 0.2s ease, filter 0.2s ease, color 0.2s ease;
+}
+
+.theme-primary-btn:hover {
+  background: #5a4dc0;
+  color: var(--white);
+}
+
+.theme-accent-btn {
+  background: var(--accent);
+  color: #000;
+  transition: filter 0.2s ease;
+}
+
+.theme-accent-btn:hover {
+  filter: brightness(0.92);
+}
+
+.theme-secondary-btn {
+  background: var(--white);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(43, 33, 87, 0.1);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.theme-secondary-btn:hover {
+  background: var(--primary-light);
+  color: var(--white);
+}
+
+.theme-filter-sidebar {
+  background: var(--primary-light);
+}
+
+.theme-auth-shell {
+  background: linear-gradient(140deg, var(--primary), var(--primary-light));
+}
+
+.theme-auth-card {
+  background: var(--white);
+  border-radius: 0.9rem;
+  box-shadow: 0 12px 30px rgba(43, 33, 87, 0.22);
+}

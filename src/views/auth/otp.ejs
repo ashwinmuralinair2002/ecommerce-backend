@@ -8,6 +8,7 @@
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
         href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
     <title>SoundWave | OTP Verification</title>
+    <%- include('../partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/js/utils.js"></script>
@@ -27,32 +28,32 @@
             text-align: center;
             font-size: 1.25rem;
             border-radius: 0.5rem;
-            border: 1px solid #cee8ce;
-            background-color: #f8fcf8;
+            border: 1px solid var(--primary-light);
+            background-color: var(--white);
         }
 
         .otp-input:focus {
-            border-color: #1ff91f;
+            border-color: var(--primary);
             outline: none;
-            box-shadow: 0 0 0 2px #1ff91f;
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent);
         }
     </style>
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8] overflow-x-hidden"
+    <div class="theme-auth-shell relative flex min-h-screen w-full flex-col overflow-x-hidden"
         style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
-        <header class="flex items-center justify-between border-b border-[#e6f4e6] px-10 py-3">
-            <h2 class="text-lg font-bold text-[#0d1c0d]">SoundWave</h2>
+        <header class="theme-top-nav flex items-center justify-between border-b px-10 py-3">
+            <h2 class="text-lg font-bold text-white">SoundWave</h2>
         </header>
 
-        <main class="flex flex-1 items-center justify-center px-4">
-            <div class="w-full max-w-md py-8">
-                <h2 class="text-center text-[28px] font-bold text-[#0d1c0d] mb-2">
+        <main class="flex flex-1 items-center justify-center px-4 py-8">
+            <div class="theme-auth-card w-full max-w-md p-8">
+                <h2 class="text-center text-[28px] font-bold text-primary mb-2">
                     Enter OTP
                 </h2>
 
-                <p class="text-center text-base text-[#0d1c0d] mb-6">
+                <p class="text-center text-base text-primary mb-6">
                     We've sent a 6-digit code to your email address<%= email ? ' (' + email + ')' : '' %>.
                 </p>
 
@@ -65,7 +66,7 @@
                     <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
                 </div>
 
-                <button class="w-full h-10 rounded-lg bg-[#1ff91f] text-sm font-bold text-[#0d1c0d] mb-4">
+                <button id="verifyOtpBtn" class="theme-primary-btn mb-4 h-10 w-full rounded-lg text-sm font-bold">
                     Verify OTP
                 </button>
 
@@ -75,11 +76,11 @@
                 </div>
 
                 <p id="resendOtp"
-                    class="text-[#479e47] text-sm text-center underline cursor-not-allowed opacity-60 mb-2">
+                    class="text-primary text-sm text-center underline cursor-not-allowed opacity-60 mb-2">
                     Resend OTP in <span id="timer">0:59</span> seconds
                 </p>
 
-                <p class="text-[#479e47] text-sm text-center underline">
+                <p class="text-primary text-sm text-center underline">
                     Change Email
                 </p>
 
@@ -111,9 +112,9 @@
                         msgContainer.classList.remove('hidden');
                         if (type === 'error') {
                             msgContainer.classList.add('bg-red-100', 'text-red-700');
-                            msgContainer.classList.remove('bg-green-100', 'text-green-700');
+                            msgContainer.classList.remove('bg-primary-light/40', 'text-primary');
                         } else {
-                            msgContainer.classList.add('bg-green-100', 'text-green-700');
+                            msgContainer.classList.add('bg-primary-light/40', 'text-primary');
                             msgContainer.classList.remove('bg-red-100', 'text-red-700');
                         }
                     };
@@ -178,7 +179,7 @@
                     });
 
                     // Verify OTP
-                    const verifyButton = document.querySelector('button.bg-\\[\\#1ff91f\\]');
+                    const verifyButton = document.getElementById('verifyOtpBtn');
                     verifyButton.addEventListener('click', async () => {
                         const otp = Array.from(inputs).map(input => input.value).join('');
 
@@ -266,7 +267,14 @@
                             }
 
                             showMessage('Email verified successfully!', 'success');
-                            window.location.href = '/home?signup=success'; // Go to post-login home
+
+                            setTimeout(() => {
+                                if (data.redirect) {
+                                    window.location.href = data.redirect;
+                                } else {
+                                    window.location.href = '/home?signup=success';
+                                }
+                            }, 1000);
 
                         } catch (error) {
                             showMessage(error.message, 'error');

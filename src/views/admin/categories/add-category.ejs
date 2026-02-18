@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
+    <title>Admin · Add Category</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../../partials/admin/sidebar', { page: 'categories' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="flex items-center gap-2 text-sm mb-4">
+                    <a href="/admin/categories" class="text-[#685BCB] hover:underline">Categories</a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-[#1F1F1F]">Add Category</span>
+                </div>
+
+                <h1 class="text-[32px] font-bold text-[#1F1F1F] mb-2">Add New Category</h1>
+                <p class="text-sm text-[#685BCB] mb-6">Add category details and images for user-side display</p>
+
+                <% if (locals.error) { %>
+                    <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800"><%= error %></div>
+                <% } %>
+
+                <form action="/admin/categories" method="POST" enctype="multipart/form-data" class="max-w-lg space-y-5" id="addCategoryForm">
+                    <div>
+                        <label class="block text-sm text-[#685BCB] mb-1">Category Name <span class="text-red-500">*</span></label>
+                        <input type="text" name="name" value="<%= oldInput && oldInput.name ? oldInput.name : '' %>"
+                            class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
+                            placeholder="Enter category name" />
+                        <% if (errors && errors.name) { %><p class="text-red-500 text-xs mt-1"><%= errors.name %></p><% } %>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-[#685BCB] mb-1">Description</label>
+                        <textarea name="description" rows="3"
+                            class="w-full rounded-xl bg-[#FFFFFF] px-4 py-3 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]"
+                            placeholder="Category description"><%= oldInput && oldInput.description ? oldInput.description : '' %></textarea>
+                    </div>
+
+                    <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
+                        <p class="text-[#1F1F1F] font-medium mb-3">Category Image</p>
+                        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                            class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
+                    </div>
+
+                    <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
+                        <p class="text-[#1F1F1F] font-medium mb-3">Hero Poster</p>
+                        <input type="file" name="heroImage" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                            class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit"
+                            class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Create Category</button>
+                        <a href="/admin/categories"
+                            class="h-10 px-6 rounded-xl bg-[#FFFFFF] font-bold text-[#1F1F1F] hover:bg-[#D3CEEA] transition-colors flex items-center">Cancel</a>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>
+

@@ -13,30 +13,32 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+            <section class="flex-1 p-6 md:p-8">
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-2 text-sm mb-4">
-                    <a href="/admin/customers" class="text-[#5f8c5f] hover:underline">Customers</a>
+                    <a href="/admin/customers" class="text-[#685BCB] hover:underline">Customers</a>
                     <span class="text-gray-400">/</span>
-                    <a href="/admin/customers/<%= customer._id %>" class="text-[#5f8c5f] hover:underline">
+                    <a href="/admin/customers/<%= customer._id %>" class="text-[#685BCB] hover:underline">
                         <%= customer.name %>
                     </a>
                     <span class="text-gray-400">/</span>
-                    <span class="text-[#111811]">Edit</span>
+                    <span class="text-[#1F1F1F]">Edit</span>
                 </div>
 
-                <h1 class="text-[32px] font-bold text-[#121811] mb-6">Edit Customer: <%= customer.name %>
+                <h1 class="text-[32px] font-bold text-[#1F1F1F] mb-6">Edit Customer: <%= customer.name %>
                 </h1>
 
                 <!-- General Error -->
@@ -51,11 +53,11 @@
 
                             <!-- Name -->
                             <div>
-                                <label class="block text-sm text-[#628d5e] mb-1">Full Name <span
+                                <label class="block text-sm text-[#685BCB] mb-1">Full Name <span
                                         class="text-red-500">*</span></label>
                                 <input type="text" name="name"
                                     value="<%= locals.oldInput ? oldInput.name || '' : customer.name %>"
-                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
+                                    class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (locals.errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
                                     placeholder="Full Name" />
                                 <% if (locals.errors && errors.name) { %>
                                     <p class="text-red-500 text-xs mt-1">
@@ -67,11 +69,11 @@
 
                             <!-- Email -->
                             <div>
-                                <label class="block text-sm text-[#628d5e] mb-1">Email Address <span
+                                <label class="block text-sm text-[#685BCB] mb-1">Email Address <span
                                         class="text-red-500">*</span></label>
                                 <input type="email" name="email"
                                     value="<%= locals.oldInput ? oldInput.email || '' : customer.email %>"
-                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.email) ? 'ring-2 ring-red-400' : '' %>"
+                                    class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (locals.errors && errors.email) ? 'ring-2 ring-red-400' : '' %>"
                                     placeholder="Email Address" />
                                 <% if (locals.errors && errors.email) { %>
                                     <p class="text-red-500 text-xs mt-1">
@@ -83,10 +85,10 @@
 
                             <!-- Phone -->
                             <div>
-                                <label class="block text-sm text-[#628d5e] mb-1">Phone Number</label>
+                                <label class="block text-sm text-[#685BCB] mb-1">Phone Number</label>
                                 <input type="tel" name="phone"
                                     value="<%= locals.oldInput ? oldInput.phone || '' : customer.phone || '' %>"
-                                    class="w-full h-12 rounded-xl bg-[#f0f5f0] px-4 border-none text-[#111810] focus:ring-2 focus:ring-[#27ff14] <%= (locals.errors && errors.phone) ? 'ring-2 ring-red-400' : '' %>"
+                                    class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (locals.errors && errors.phone) ? 'ring-2 ring-red-400' : '' %>"
                                     placeholder="Phone Number" />
                                 <% if (locals.errors && errors.phone) { %>
                                     <p class="text-red-500 text-xs mt-1">
@@ -99,11 +101,11 @@
                             <!-- Buttons -->
                             <div class="flex gap-3 pt-4">
                                 <button type="submit"
-                                    class="h-10 px-6 rounded-xl bg-[#27ff14] font-bold text-[#111810] hover:bg-[#20e010] transition-colors">
+                                    class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
                                     Save Changes
                                 </button>
                                 <a href="/admin/customers/<%= customer._id %>"
-                                    class="h-10 px-6 rounded-xl bg-[#f0f5f0] font-bold text-[#111810] hover:bg-[#e0e5e0] transition-colors flex items-center">
+                                    class="h-10 px-6 rounded-xl bg-[#FFFFFF] font-bold text-[#1F1F1F] hover:bg-[#D3CEEA] transition-colors flex items-center">
                                     Cancel
                                 </a>
                             </div>

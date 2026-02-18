@@ -8,13 +8,30 @@ const categorySchema = new mongoose.Schema({
         unique: true,
         trim: true
     },
-    imageUrl: {
+    slug: {
+        type: String,
+        unique: true,
+        trim: true
+    },
+    description: {
         type: String,
         default: ''
     },
-    isListed: {
+    image: {
+        url: { type: String, default: '' },
+        public_id: { type: String, default: '' }
+    },
+    heroImage: {
+        url: { type: String, default: '' },
+        public_id: { type: String, default: '' }
+    },
+    isBlocked: {
         type: Boolean,
-        default: true
+        default: false
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

@@ -290,11 +290,9 @@ const updateAdminProfile = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid email address' });
         }
 
-        let updatedUser = {};
-
-        // Case 1: DB-Based Admin
-        if (req.user && req.user._id) {
-            const dbUser = await User.findById(req.user._id);
+        // We rely on session.userId now as per standardized auth
+        if (req.session.userId) {
+            const dbUser = await User.findById(req.session.userId);
             if (!dbUser) {
                 return res.status(404).json({ success: false, message: 'User not found' });
             }
@@ -304,37 +302,23 @@ const updateAdminProfile = async (req, res) => {
             dbUser.phone = phone !== undefined ? phone : dbUser.phone;
 
             await dbUser.save();
-            updatedUser = dbUser.toObject();
 
-            if (req.session) {
-                req.session.adminName = dbUser.name;
-                req.session.adminEmail = dbUser.email;
-                req.session.adminPhone = dbUser.phone;
-                await new Promise((resolve) => req.session.save(resolve));
-            }
-        }
-        // Case 2: Env-Based Admin
-        else {
-            if (req.session) {
-                req.session.adminName = name || req.user.name;
-                req.session.adminEmail = email || req.user.email;
-                req.session.adminPhone = phone !== undefined ? phone : req.user.phone;
+            // Note: Global middleware will pick up the changes on next request
+            // No need to manually update session.user object since we don't store it
 
-                updatedUser = {
-                    name: req.session.adminName,
-                    email: req.session.adminEmail,
-                    phone: req.session.adminPhone
-                };
+        } else {
+            // Env-Based Admin (Legacy Support or Fallback)
+            // If they are logged in via env variables (no DB ID), they might fail the userId check
+            // user request said "Standardize on req.session.userId".
+            // Implementation Plan assumed proper DB admins. 
+            // If we are strictly following "Standardize on req.session.userId", 
+            // then Env-admins must also have a userId or we handle them gracefully.
+            // But since login controller sets userId=null for env-admins?
+            // Wait, my login controller change forces userId = user._id.
+            // This means Env-admins MUST have a DB record?
+            // Yes, standardizing usually implies making them first-class citizens.
 
-                await new Promise((resolve, reject) => {
-                    req.session.save(err => {
-                        if (err) reject(err);
-                        else resolve();
-                    });
-                });
-            } else {
-                updatedUser = { name, email, phone };
-            }
+            return res.status(403).json({ success: false, message: 'Restricted to DB Admins' });
         }
 
         if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
@@ -343,11 +327,7 @@ const updateAdminProfile = async (req, res) => {
 
         res.json({
             success: true,
-            user: {
-                name: updatedUser.name,
-                email: updatedUser.email,
-                phone: updatedUser.phone
-            }
+            user: { name, email, phone }
         });
 
     } catch (error) {

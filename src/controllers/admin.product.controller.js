@@ -1,7 +1,138 @@
 // Admin product management controller
 const Product = require('../models/Product');
 const Brand = require('../models/Brand');
+const Category = require('../models/Category'); // Added Category import
 const cloudinary = require('../config/cloudinary');
+
+const ENUM_MAP = {
+    noiseControlTypes: ['Active Noise Cancellation', 'Passive Noise Isolation', 'None'],
+    controlMethods: ['Touch', 'Button', 'Voice', 'App'],
+    cableFeatures: ['Detachable Cable', 'Braided Cable', 'Tangle Free', 'Inline Remote'],
+    smartFeatures: ['Voice Assistant', 'Multipoint', 'Companion App', 'Adaptive Audio'],
+    compatibleDevices: ['Android', 'iOS', 'Windows', 'Mac', 'PlayStation', 'Xbox'],
+    materials: ['Plastic', 'Aluminium', 'Steel', 'Leather', 'Fabric', 'Silicone'],
+    includedComponents: ['Carrying Case', 'Charging Cable', 'Audio Cable', 'Ear Tips', 'User Manual'],
+    audioDriverTypes: ['Dynamic', 'Planar Magnetic', 'Balanced Armature', 'Hybrid'],
+    formFactor: ['In-Ear', 'On-Ear', 'Over-Ear'],
+    earpieceShape: ['Round', 'Oval', 'Ergonomic'],
+    impedanceRange: ['Up to 32 Ohm', '33-80 Ohm', '81-250 Ohm', '250+ Ohm'],
+    sensitivityRange: ['Up to 95 dB', '96-105 dB', '106-115 dB', '115+ dB']
+};
+
+function asArray(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (typeof value === 'string' && value.trim()) return [value.trim()];
+    return [];
+}
+
+function normalizeArrayEnum(value, allowedValues) {
+    return asArray(value).filter((item) => allowedValues.includes(item));
+}
+
+function normalizeSingleEnum(value, allowedValues) {
+    return allowedValues.includes(value) ? value : null;
+}
+
+function parseBooleanLike(value) {
+    return value === true || value === 'true' || value === 'on' || value === '1';
+}
+
+function normalizeHexColor(input) {
+    if (!input) return '';
+    const value = String(input).trim().toUpperCase();
+    if (/^#?[0-9A-F]{6}$/.test(value)) {
+        return value.startsWith('#') ? value : `#${value}`;
+    }
+    return '';
+}
+
+function parseVariantPayload(payloadRaw) {
+    if (!payloadRaw) return [];
+    try {
+        const parsed = typeof payloadRaw === 'string' ? JSON.parse(payloadRaw) : payloadRaw;
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+async function migrateLegacyProductImages(product) {
+    if (!product) return product;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const images = Array.isArray(product.images) ? product.images : [];
+    if (variants.length === 0 && images.length >= 3) {
+        product.variants = [{
+            colorName: 'Default',
+            colorCode: '#000000',
+            images: images.map((img) => ({
+                url: img.url,
+                public_id: img.public_id
+            }))
+        }];
+        product.images = [];
+        product.markModified('variants');
+        product.markModified('images');
+        await product.save();
+    }
+    return product;
+}
+
+async function buildVariantsFromRequest(req, existingVariants = []) {
+    const payload = parseVariantPayload(req.body.variantPayload);
+    if (!payload.length) return [];
+
+    const variants = [];
+    for (let i = 0; i < payload.length; i++) {
+        const row = payload[i] || {};
+        const colorCode = normalizeHexColor(row.colorCode);
+        if (!colorCode) {
+            throw new Error('Invalid variant color. Use valid HEX or CSS color name.');
+        }
+
+        const colorName = String(row.colorName || '').trim();
+        const keptImages = Array.isArray(row.existingImages)
+            ? row.existingImages
+                .map((img) => ({
+                    url: img && img.url ? img.url : '',
+                    public_id: img && img.public_id ? img.public_id : ''
+                }))
+                .filter((img) => img.url && img.public_id)
+            : [];
+
+        const newFiles = (req.files || []).filter((file) => file.fieldname === `variantImages_${i}`);
+        const uploadedImages = newFiles.map((file) => ({
+            url: file.path,
+            public_id: file.filename
+        }));
+
+        const mergedImages = [...keptImages, ...uploadedImages];
+        if (mergedImages.length < 3 || mergedImages.length > 10) {
+            throw new Error('Each variant must contain between 3 and 10 images.');
+        }
+
+        variants.push({
+            colorName,
+            colorCode,
+            images: mergedImages
+        });
+    }
+
+    // Cleanup removed variant images when editing.
+    const incomingPublicIds = new Set(
+        variants.flatMap((v) => v.images.map((img) => img.public_id)).filter(Boolean)
+    );
+    const oldPublicIds = new Set(
+        (existingVariants || []).flatMap((v) => (v.images || []).map((img) => img.public_id)).filter(Boolean)
+    );
+
+    for (const publicId of oldPublicIds) {
+        if (!incomingPublicIds.has(publicId)) {
+            await cloudinary.uploader.destroy(publicId).catch(() => { });
+        }
+    }
+
+    return variants;
+}
 
 // @desc    Get Products Page (with Search, Filter, Sort, Pagination)
 // @route   GET /admin/products
@@ -11,7 +142,7 @@ const getProductsPage = async (req, res) => {
         const limit = 10;
         const currentPage = parseInt(page) || 1;
 
-        // Base query: only listed products
+        // Base query: show only listed (not soft-deleted) products in admin table
         let query = { isListed: { $ne: false } };
 
         // Search by title or SKU
@@ -22,9 +153,17 @@ const getProductsPage = async (req, res) => {
             ];
         }
 
+        const categories = await Category.find({ isDeleted: { $ne: true } }).sort({ name: 1 }).lean();
+
         // Filters
         if (category) {
-            query.category = category;
+            if (/^[a-f\d]{24}$/i.test(category)) {
+                query.category = category;
+            } else {
+                // Backward compatibility for name-based query values.
+                const categoryDoc = categories.find((cat) => cat.name === category);
+                query.category = categoryDoc ? categoryDoc._id : null;
+            }
         }
         if (brand) {
             query.brand = brand;
@@ -67,16 +206,33 @@ const getProductsPage = async (req, res) => {
 
         const products = await Product.find(query)
             .populate('brand', 'name')
+            .populate('category', 'name') // Populate category
             .sort(sortObj)
             .skip(skip)
             .limit(limit);
+
+        for (const product of products) {
+            await migrateLegacyProductImages(product);
+        }
+
+        // Transform products for view (map category object back to name string for UI consistency)
+        const productsForView = products.map(p => {
+            const pObj = p.toObject();
+            if (pObj.category && pObj.category.name) {
+                pObj.category = pObj.category.name;
+            } else {
+                pObj.category = 'Uncategorized';
+            }
+            return pObj;
+        });
 
         // Get listed brands for filter dropdown
         const brands = await Brand.find({ isDeleted: { $ne: true }, isActive: true }).sort({ name: 1 });
 
         res.render('admin/admin-products', {
-            products,
+            products: productsForView,
             brands,
+            categories,
             search: search || '',
             filters: {
                 category: category || '',
@@ -97,6 +253,7 @@ const getProductsPage = async (req, res) => {
         res.render('admin/admin-products', {
             products: [],
             brands: [],
+            categories: [],
             search: '',
             filters: { category: '', brand: '', connectionType: '' },
             currentSort: 'newest',
@@ -143,11 +300,23 @@ const softDeleteProduct = async (req, res) => {
 // @route   GET /admin/products/:id
 const getProductDetailPage = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id).populate('brand', 'name');
+        const product = await Product.findById(req.params.id)
+            .populate('brand', 'name')
+            .populate('category', 'name'); // Populate category
+
         if (!product) {
             return res.redirect('/admin/products');
         }
-        res.render('admin/admin-product-detail', { product });
+
+        await migrateLegacyProductImages(product);
+
+        // Transform for view
+        const productForView = product.toObject();
+        if (productForView.category && productForView.category.name) {
+            productForView.category = productForView.category.name;
+        }
+
+        res.render('admin/admin-product-detail', { product: productForView });
     } catch (error) {
         console.error('Error loading product detail:', error);
         return res.redirect('/admin/products');
@@ -159,10 +328,11 @@ const getProductDetailPage = async (req, res) => {
 const getAddProductPage = async (req, res) => {
     try {
         const brands = await Brand.find({ isDeleted: { $ne: true }, isActive: true }).sort({ name: 1 });
-        res.render('admin/admin-add-product', { brands });
+        const categories = await Category.find({ isDeleted: { $ne: true }, isBlocked: { $ne: true } }).sort({ name: 1 }).lean();
+        res.render('admin/admin-add-product', { brands, categories });
     } catch (error) {
         console.error('Error loading add product page:', error);
-        res.render('admin/admin-add-product', { brands: [] });
+        res.render('admin/admin-add-product', { brands: [], categories: [] });
     }
 };
 
@@ -170,12 +340,26 @@ const getAddProductPage = async (req, res) => {
 // @route   GET /admin/products/edit/:id
 const getEditProductPage = async (req, res) => {
     try {
-        const product = await Product.findById(req.params.id).populate('brand', 'name');
+        const product = await Product.findById(req.params.id)
+            .populate('brand', 'name')
+            .populate('category', 'name'); // Populate category
+
         if (!product) {
             return res.redirect('/admin/products');
         }
+
+        await migrateLegacyProductImages(product);
+
         const brands = await Brand.find({ isDeleted: { $ne: true }, isActive: true }).sort({ name: 1 });
-        res.render('admin/admin-edit-product', { product, brands });
+        const categories = await Category.find({ isDeleted: { $ne: true }, isBlocked: { $ne: true } }).sort({ name: 1 }).lean();
+
+        // Transform for view
+        const productForView = product.toObject();
+        if (productForView.category && productForView.category.name) {
+            productForView.category = productForView.category.name;
+        }
+
+        res.render('admin/admin-edit-product', { product: productForView, brands, categories });
     } catch (error) {
         console.error('Error loading edit product page:', error);
         return res.redirect('/admin/products');
@@ -192,43 +376,51 @@ const createProduct = async (req, res) => {
             stockCount, reservedCount, reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
             bluetoothVersion, batteryLife, chargingTime, wirelessRange, noiseCancellation,
+            warrantyDuration, warrantyProvider,
             length, width, height, weight,
-            metaTitle, metaDescription, badges
+            metaTitle, metaDescription, badges,
+            noiseControlTypes, controlMethods, cableFeatures, smartFeatures,
+            compatibleDevices, materials, includedComponents, audioDriverTypes,
+            formFactor, earpieceShape, impedanceRange, sensitivityRange,
+            hasMicrophone, batteryChargingTime
         } = req.body;
 
-        // Build images array from uploaded files
-        const images = [];
-        if (req.files && req.files.length > 0) {
-            req.files.forEach((file, index) => {
-                images.push({
-                    url: file.path,
-                    public_id: file.filename,
-                    isHero: index === 0
-                });
-            });
-        }
-
-        // Validate minimum 3 images
-        if (images.length < 3) {
-            // Clean up uploaded images from Cloudinary
-            for (const img of images) {
-                await cloudinary.uploader.destroy(img.public_id);
-            }
+        const variants = await buildVariantsFromRequest(req);
+        if (!variants.length) {
             return res.status(400).json({
                 success: false,
-                message: 'Minimum 3 images required'
+                message: 'At least one variant is required.'
             });
         }
 
         // Auto-generate SKU if not provided
         const productSku = sku || `SKU-${Date.now()}`;
 
+        // Find Category ID
+        let categoryId = null;
+        if (category) {
+            // Try explicit lookup first (e.g. "In-Ear")
+            let categoryDoc = await Category.findOne({ name: category, isDeleted: { $ne: true }, isBlocked: { $ne: true } });
+
+            // If not found, try varying case just in case inputs are messy
+            if (!categoryDoc) {
+                categoryDoc = await Category.findOne({ name: { $regex: new RegExp(`^${category}$`, 'i') }, isDeleted: { $ne: true }, isBlocked: { $ne: true } });
+            }
+
+            if (categoryDoc) categoryId = categoryDoc._id;
+        }
+
+        if (!categoryId) {
+            return res.status(400).json({ success: false, message: 'Invalid Category' });
+        }
+
+
         const product = new Product({
             title,
             sku: productSku,
             brand,
             connectionType,
-            category,
+            category: categoryId, // Use ID
             shortDescription: shortDescription || '',
             price: parseFloat(price),
             originalPrice: originalPrice ? parseFloat(originalPrice) : null,
@@ -236,7 +428,8 @@ const createProduct = async (req, res) => {
             stockCount: parseInt(stockCount) || 0,
             reservedCount: parseInt(reservedCount) || 0,
             reorderThreshold: parseInt(reorderThreshold) || 5,
-            images,
+            images: [],
+            variants,
             cableLength: cableLength || '',
             connectorType: connectorType || '',
             impedance: impedance || '',
@@ -246,6 +439,24 @@ const createProduct = async (req, res) => {
             chargingTime: chargingTime || '',
             wirelessRange: wirelessRange || '',
             noiseCancellation: noiseCancellation || '',
+            warranty: {
+                duration: warrantyDuration || 'No Warranty',
+                provider: warrantyProvider || 'Brand'
+            },
+            noiseControlTypes: normalizeArrayEnum(noiseControlTypes, ENUM_MAP.noiseControlTypes),
+            controlMethods: normalizeArrayEnum(controlMethods, ENUM_MAP.controlMethods),
+            cableFeatures: normalizeArrayEnum(cableFeatures, ENUM_MAP.cableFeatures),
+            smartFeatures: normalizeArrayEnum(smartFeatures, ENUM_MAP.smartFeatures),
+            compatibleDevices: normalizeArrayEnum(compatibleDevices, ENUM_MAP.compatibleDevices),
+            materials: normalizeArrayEnum(materials, ENUM_MAP.materials),
+            includedComponents: normalizeArrayEnum(includedComponents, ENUM_MAP.includedComponents),
+            audioDriverTypes: normalizeArrayEnum(audioDriverTypes, ENUM_MAP.audioDriverTypes),
+            formFactor: normalizeSingleEnum(formFactor, ENUM_MAP.formFactor),
+            earpieceShape: normalizeSingleEnum(earpieceShape, ENUM_MAP.earpieceShape),
+            impedanceRange: normalizeSingleEnum(impedanceRange, ENUM_MAP.impedanceRange),
+            sensitivityRange: normalizeSingleEnum(sensitivityRange, ENUM_MAP.sensitivityRange),
+            hasMicrophone: parseBooleanLike(hasMicrophone),
+            batteryChargingTime: batteryChargingTime ? parseFloat(batteryChargingTime) : null,
             length: length ? parseFloat(length) : null,
             width: width ? parseFloat(width) : null,
             height: height ? parseFloat(height) : null,
@@ -284,71 +495,31 @@ const updateProduct = async (req, res) => {
             stockCount, reservedCount, reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
             bluetoothVersion, batteryLife, chargingTime, wirelessRange, noiseCancellation,
+            warrantyDuration, warrantyProvider,
             length, width, height, weight,
             metaTitle, metaDescription, badges,
-            existingImages, // JSON string of kept image objects
-            newHeroIndex    // Index of new file that should be hero (-1 if hero is existing)
+            hasVariants,
+            noiseControlTypes, controlMethods, cableFeatures, smartFeatures,
+            compatibleDevices, materials, includedComponents, audioDriverTypes,
+            formFactor, earpieceShape, impedanceRange, sensitivityRange,
+            hasMicrophone, batteryChargingTime
         } = req.body;
 
-        // Parse existing images that user wants to keep
-        let keptImages = [];
-        if (existingImages) {
-            try {
-                // Strip Mongoose _id to avoid subdocument conflicts on save
-                keptImages = JSON.parse(existingImages).map(img => ({
-                    url: img.url,
-                    public_id: img.public_id,
-                    isHero: img.isHero || false
-                }));
-            } catch (e) {
-                keptImages = [];
-            }
-        }
-
-        // Find images that were removed
-        const keptPublicIds = keptImages.map(img => img.public_id);
-        const removedImages = product.images.filter(img => !keptPublicIds.includes(img.public_id));
-
-        // Delete removed images from Cloudinary
-        for (const img of removedImages) {
-            await cloudinary.uploader.destroy(img.public_id).catch(() => { });
-        }
-
-        // Build new images array: kept + newly uploaded
-        const newImages = [];
-        const heroIdx = parseInt(newHeroIndex) || -1;
-        if (req.files && req.files.length > 0) {
-            // If a new file is hero, clear hero from all kept images
-            if (heroIdx >= 0) {
-                keptImages.forEach(img => { img.isHero = false; });
-            }
-            req.files.forEach((file, i) => {
-                newImages.push({
-                    url: file.path,
-                    public_id: file.filename,
-                    isHero: (i === heroIdx)
-                });
-            });
-        }
-
-        const allImages = [...keptImages, ...newImages];
-
-        // Validate minimum 3 images
-        if (allImages.length < 3) {
-            // Clean up newly uploaded images
-            for (const img of newImages) {
-                await cloudinary.uploader.destroy(img.public_id).catch(() => { });
-            }
+        await migrateLegacyProductImages(product);
+        const variantsEnabled = String(hasVariants || '').toLowerCase() === 'true';
+        const variants = variantsEnabled ? await buildVariantsFromRequest(req, product.variants || []) : [];
+        if (!variants.length) {
             return res.status(400).json({
                 success: false,
-                message: 'Minimum 3 images required'
+                message: 'At least one variant is required.'
             });
         }
 
-        // Ensure exactly one hero image — respect isHero flag from frontend
-        const hasHero = allImages.some(img => img.isHero);
-        if (!hasHero && allImages.length > 0) {
-            allImages[0].isHero = true;
+        // Find Category ID
+        let categoryId = product.category;
+        if (category) {
+            const categoryDoc = await Category.findOne({ name: category, isDeleted: { $ne: true }, isBlocked: { $ne: true } });
+            if (categoryDoc) categoryId = categoryDoc._id;
         }
 
         // Update product fields
@@ -356,7 +527,7 @@ const updateProduct = async (req, res) => {
         product.sku = sku || product.sku;
         product.brand = brand;
         product.connectionType = connectionType;
-        product.category = category;
+        product.category = categoryId; // Use ID
         product.shortDescription = shortDescription || '';
         product.price = parseFloat(price);
         product.originalPrice = originalPrice ? parseFloat(originalPrice) : null;
@@ -364,7 +535,7 @@ const updateProduct = async (req, res) => {
         product.stockCount = parseInt(stockCount) || 0;
         product.reservedCount = parseInt(reservedCount) || 0;
         product.reorderThreshold = parseInt(reorderThreshold) || 5;
-        product.images = allImages;
+        product.images = [];
         product.markModified('images');
         product.cableLength = cableLength || '';
         product.connectorType = connectorType || '';
@@ -375,6 +546,24 @@ const updateProduct = async (req, res) => {
         product.chargingTime = chargingTime || '';
         product.wirelessRange = wirelessRange || '';
         product.noiseCancellation = noiseCancellation || '';
+        product.warranty = {
+            duration: warrantyDuration || 'No Warranty',
+            provider: warrantyProvider || 'Brand'
+        };
+        product.noiseControlTypes = normalizeArrayEnum(noiseControlTypes, ENUM_MAP.noiseControlTypes);
+        product.controlMethods = normalizeArrayEnum(controlMethods, ENUM_MAP.controlMethods);
+        product.cableFeatures = normalizeArrayEnum(cableFeatures, ENUM_MAP.cableFeatures);
+        product.smartFeatures = normalizeArrayEnum(smartFeatures, ENUM_MAP.smartFeatures);
+        product.compatibleDevices = normalizeArrayEnum(compatibleDevices, ENUM_MAP.compatibleDevices);
+        product.materials = normalizeArrayEnum(materials, ENUM_MAP.materials);
+        product.includedComponents = normalizeArrayEnum(includedComponents, ENUM_MAP.includedComponents);
+        product.audioDriverTypes = normalizeArrayEnum(audioDriverTypes, ENUM_MAP.audioDriverTypes);
+        product.formFactor = normalizeSingleEnum(formFactor, ENUM_MAP.formFactor);
+        product.earpieceShape = normalizeSingleEnum(earpieceShape, ENUM_MAP.earpieceShape);
+        product.impedanceRange = normalizeSingleEnum(impedanceRange, ENUM_MAP.impedanceRange);
+        product.sensitivityRange = normalizeSingleEnum(sensitivityRange, ENUM_MAP.sensitivityRange);
+        product.hasMicrophone = parseBooleanLike(hasMicrophone);
+        product.batteryChargingTime = batteryChargingTime ? parseFloat(batteryChargingTime) : null;
         product.length = length ? parseFloat(length) : null;
         product.width = width ? parseFloat(width) : null;
         product.height = height ? parseFloat(height) : null;
@@ -382,6 +571,8 @@ const updateProduct = async (req, res) => {
         product.metaTitle = metaTitle || '';
         product.metaDescription = metaDescription || '';
         product.badges = badges ? (Array.isArray(badges) ? badges : [badges]) : [];
+        product.variants = variants;
+        product.markModified('variants');
 
         await product.save();
         return res.json({ success: true, message: 'Product updated successfully' });
@@ -405,30 +596,34 @@ const deleteProductImage = async (req, res) => {
         if (!product) {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
-
-        const imageToRemove = product.images.id(req.params.imageId);
-        if (!imageToRemove) {
-            return res.status(404).json({ success: false, message: 'Image not found' });
-        }
-
-        // Delete from Cloudinary
-        await cloudinary.uploader.destroy(imageToRemove.public_id).catch(() => { });
-
-        const wasHero = imageToRemove.isHero;
-
-        // Remove from product
-        product.images.pull(req.params.imageId);
-
-        // If removed image was hero, promote first remaining
-        if (wasHero && product.images.length > 0) {
-            product.images[0].isHero = true;
-        }
-
-        await product.save();
-        return res.json({ success: true, message: 'Image removed' });
+        await migrateLegacyProductImages(product);
+        return res.status(400).json({ success: false, message: 'Global product images are no longer supported. Use variant images.' });
     } catch (error) {
         console.error('Error deleting product image:', error);
         return res.status(500).json({ success: false, message: 'Failed to delete image' });
+    }
+};
+
+// @desc    Toggle product listing status
+// @route   PATCH /admin/products/:id/toggle-list
+const toggleProductListing = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+
+        product.isListed = !product.isListed;
+        await product.save();
+
+        return res.json({
+            success: true,
+            isListed: product.isListed,
+            message: product.isListed ? 'Product listed successfully' : 'Product unlisted successfully'
+        });
+    } catch (error) {
+        console.error('Error toggling product listing:', error);
+        return res.status(500).json({ success: false, message: 'Failed to toggle product listing' });
     }
 };
 
@@ -441,5 +636,6 @@ module.exports = {
     getEditProductPage,
     createProduct,
     updateProduct,
-    deleteProductImage
+    deleteProductImage,
+    toggleProductListing
 };

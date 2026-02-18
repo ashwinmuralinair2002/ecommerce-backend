@@ -1,10 +1,21 @@
 // Address management controller for user account
+const User = require('../models/user.model');
 const profileService = require('../services/profile.service');
 
 // @desc    Render Address List Page
 // @route   GET /account/addresses
-const getAddresses = (req, res) => {
-    res.render('user-addresses', { user: req.user || {} });
+const getAddresses = async (req, res) => {
+    const userId = req.session && req.session.userId;
+    if (!userId) {
+        return res.redirect('/login');
+    }
+
+    try {
+        const user = await User.findById(userId).select('name addresses').lean();
+        res.render('user-addresses', { user: user || {} });
+    } catch (error) {
+        res.render('user-addresses', { user: {} });
+    }
 };
 
 // @desc    Render Add Address Form
@@ -16,7 +27,12 @@ const renderAddAddress = (req, res) => {
 // @desc    Add New Address
 // @route   POST /account/addresses
 const addAddress = async (req, res) => {
-    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
+    const userId = req.session && req.session.userId;
+    if (!userId) {
+        return res.redirect('/login');
+    }
+
+    const { name, phone, houseNo, street, city, state, postalCode, label, isDefault } = req.body;
     const errors = {};
 
     if (!name || !/^[A-Za-z ]{3,}$/.test(name.trim())) {
@@ -60,7 +76,7 @@ const addAddress = async (req, res) => {
             state: toTitleCase(state),
             zip: postalCode,
             country: 'India',
-            isDefault: false,
+            isDefault: isDefault === 'Yes',
             name,
             phone,
             label,
@@ -68,7 +84,7 @@ const addAddress = async (req, res) => {
             originalStreet: street
         };
 
-        await profileService.addAddress(req.user.id, addressData);
+        await profileService.addAddress(userId, addressData);
         res.redirect('/account/addresses?success=address_saved');
     } catch (error) {
         res.status(500).render('add-address', {
@@ -81,17 +97,32 @@ const addAddress = async (req, res) => {
 
 // @desc    Render Edit Address Form
 // @route   GET /account/addresses/:id/edit
-const renderEditAddress = (req, res) => {
-    const address = req.user.addresses.id(req.params.id);
+const renderEditAddress = async (req, res) => {
+    const userId = req.session && req.session.userId;
+    if (!userId) {
+        return res.redirect('/login');
+    }
+
+    const user = await User.findById(userId).select('name addresses');
+    if (!user) {
+        return res.redirect('/account/addresses');
+    }
+
+    const address = user.addresses.id(req.params.id);
     if (!address) {
         return res.redirect('/account/addresses');
     }
-    res.render('edit-address', { user: req.user, address });
+    res.render('edit-address', { user, address });
 };
 
 // @desc    Update Address
 // @route   POST /account/addresses/:id/update
 const updateAddress = async (req, res) => {
+    const userId = req.session && req.session.userId;
+    if (!userId) {
+        return res.redirect('/login');
+    }
+
     const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
     const errors = {};
 
@@ -144,7 +175,7 @@ const updateAddress = async (req, res) => {
             label
         };
 
-        await profileService.updateAddress(req.user.id, req.params.id, addressData);
+        await profileService.updateAddress(userId, req.params.id, addressData);
         res.redirect('/account/addresses?success=address_updated');
     } catch (error) {
         const mockAddress = { _id: req.params.id, ...req.body, zip: postalCode };
@@ -160,8 +191,13 @@ const updateAddress = async (req, res) => {
 // @desc    Delete Address
 // @route   POST /account/addresses/:id/delete
 const deleteAddress = async (req, res) => {
+    const userId = req.session && req.session.userId;
+    if (!userId) {
+        return res.redirect('/login');
+    }
+
     try {
-        await profileService.deleteAddress(req.user.id, req.params.id);
+        await profileService.deleteAddress(userId, req.params.id);
         res.redirect('/account/addresses');
     } catch (error) {
         res.redirect('/account/addresses?error=delete_failed');

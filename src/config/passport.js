@@ -77,23 +77,6 @@ const configurePassport = () => {
             }
         )
     );
-
-    passport.serializeUser((user, done) => {
-        done(null, user.id);
-    });
-
-    passport.deserializeUser(async (id, done) => {
-        try {
-            const user = await User.findById(id);
-            // Reject deleted or blocked users during deserialization
-            if (!user || user.isDeleted || user.isBlocked) {
-                return done(null, false);
-            }
-            done(null, user);
-        } catch (err) {
-            done(err, null);
-        }
-    });
 };
 
 module.exports = configurePassport;

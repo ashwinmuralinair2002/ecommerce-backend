@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
+    <title>
+        <%= product.title %> | SoundWave
+    </title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.svg" /> <!-- Fixed favicon path -->
+    <%- include('../partials/user/theme-config') %>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+</head>
+
+<body class="bg-background-soft" style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+    <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+        <div class="layout-container flex h-full grow flex-col">
+
+            <!-- Navbar -->
+            <%- include('../partials/user/navbar') %>
+
+                <div class="w-full px-4 md:px-6 lg:px-8 xl:px-10 py-5">
+                    <% const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+                        const selectedVariant = hasVariants ? product.variants[0] : null;
+                        const variantImages = selectedVariant && Array.isArray(selectedVariant.images) ? selectedVariant.images : [];
+                        const allImages = variantImages;
+                        const heroImage=allImages.find(img=> img.isHero) || allImages[0];
+                        const heroUrl = heroImage ? heroImage.url : '/images/placeholder.png';
+                        const warrantyDuration = product.warranty && product.warranty.duration ? product.warranty.duration : '';
+                        const warrantyProvider = product.warranty && product.warranty.provider ? product.warranty.provider : 'Brand';
+                        const hasWarranty = warrantyDuration && warrantyDuration !== 'No Warranty';
+                        const nonEmpty = (arr) => Array.isArray(arr) ? arr.filter(Boolean) : [];
+                        const advancedAudio = nonEmpty(product.noiseControlTypes).concat(nonEmpty(product.audioDriverTypes));
+                        const buildMeta = nonEmpty(product.materials).concat(nonEmpty(product.cableFeatures));
+                        const smartMeta = nonEmpty(product.controlMethods).concat(nonEmpty(product.smartFeatures));
+                        const compatibilityMeta = nonEmpty(product.compatibleDevices).concat(nonEmpty(product.includedComponents));
+                        %>
+                        <div class="w-full">
+                            <nav class="flex text-sm text-gray-500 mb-3" aria-label="Breadcrumb">
+                                <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                                    <li class="inline-flex items-center">
+                                        <a href="/" class="inline-flex items-center text-gray-500 hover:text-primary">
+                                            Home
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <div class="flex items-center">
+                                            <span class="mx-2 text-gray-400">/</span>
+                                            <a href="/products" class="text-gray-500 hover:text-primary">Products</a>
+                                        </div>
+                                    </li>
+                                    <li aria-current="page">
+                                        <div class="flex items-center">
+                                            <span class="mx-2 text-gray-400">/</span>
+                                            <span class="text-primary font-medium">
+                                                <%= product.title %>
+                                            </span>
+                                        </div>
+                                    </li>
+                                </ol>
+                            </nav>
+
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+                                <!-- Left Column -->
+                                <section class="lg:col-span-5">
+                                    <div class="lg:sticky lg:top-24">
+                                        <div class="flex flex-col sm:flex-row gap-3 relative z-20">
+                                            <% if (allImages.length> 1) { %>
+                                                <div
+                                                    class="order-2 sm:order-1 flex sm:flex-col gap-2 overflow-x-auto sm:overflow-visible py-1 scrollbar-hide sm:min-w-[88px]">
+                                                    <% allImages.forEach((img, index)=> { %>
+                                                        <button
+                                                            class="thumbnail-image w-20 h-20 border-2 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 bg-white p-1 <%= (img.url === heroUrl) ? 'border-primary ring-1 ring-primary scale-105' : 'border-gray-200 hover:border-primary-light' %>"
+                                                            data-index="<%= index %>">
+                                                            <img src="<%= img.url %>" class="w-full h-full object-contain">
+                                                        </button>
+                                                        <% }); %>
+                                                </div>
+                                                <% } %>
+
+                                                    <div class="order-1 sm:order-2 flex-1">
+                                                        <div id="imageContainer"
+                                                            class="group relative w-full aspect-square bg-white rounded-xl border border-gray-200 shadow-sm flex justify-center items-center overflow-visible cursor-crosshair">
+                                                            <img src="<%= heroUrl %>" alt="<%= product.title %>"
+                                                                class="w-full h-full object-contain p-4 rounded-xl"
+                                                                id="mainImage">
+
+                                                            <button id="prevBtn"
+                                                                class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
+                                                                aria-label="Previous image">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                                    viewBox="0 0 24 24" stroke-width="2"
+                                                                    stroke="currentColor" class="w-5 h-5">
+                                                                    <path stroke-linecap="round"
+                                                                        stroke-linejoin="round"
+                                                                        d="M15.75 19.5L8.25 12l7.5-7.5" />
+                                                                </svg>
+                                                            </button>
+                                                            <button id="nextBtn"
+                                                                class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
+                                                                aria-label="Next image">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                                    viewBox="0 0 24 24" stroke-width="2"
+                                                                    stroke="currentColor" class="w-5 h-5">
+                                                                    <path stroke-linecap="round"
+                                                                        stroke-linejoin="round"
+                                                                        d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                                                </svg>
+                                                            </button>
+
+                                                            <div id="zoomBox"
+                                                                class="hidden xl:block absolute left-[102%] top-0 w-[95%] h-full bg-white border border-gray-200 shadow-2xl rounded-xl z-50 bg-no-repeat opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none"
+                                                                style="background-size: 200%;">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <!-- Middle Column -->
+                                <section class="lg:col-span-4 space-y-4">
+                                    <h1 class="text-primary tracking-light text-[30px] font-bold leading-tight">
+                                        <%= product.title %>
+                                    </h1>
+                                    <div class="flex items-center gap-3 text-sm text-primary">
+                                        <span class="font-semibold">4.2</span>
+                                        <div class="text-yellow-500">★★★★☆</div>
+                                        <span class="text-gray-500">No reviews yet</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600">
+                                        Brand:
+                                        <span class="text-primary font-medium">
+                                            <%= product.brand ? product.brand.name : 'N/A' %>
+                                        </span>
+                                    </p>
+
+                                    <div class="bg-white border border-primary-light/40 rounded-lg p-4">
+                                        <h3 class="text-primary text-lg font-bold leading-tight mb-2">Description</h3>
+                                        <p class="text-primary text-sm leading-6 whitespace-pre-line">
+                                            <%= product.description || product.shortDescription %>
+                                        </p>
+                                    </div>
+
+                                    <div class="bg-white border border-primary-light/40 rounded-lg p-4">
+                                        <h3 class="text-primary text-lg font-bold leading-tight mb-2">Specifications
+                                        </h3>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                                            <div
+                                                class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                                <p class="text-primary text-sm font-normal leading-normal">Brand</p>
+                                                <p class="text-primary text-sm font-normal leading-normal">
+                                                    <%= product.brand ? product.brand.name : 'N/A' %>
+                                                </p>
+                                            </div>
+                                            <div
+                                                class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                                <p class="text-primary text-sm font-normal leading-normal">Category</p>
+                                                <p class="text-primary text-sm font-normal leading-normal">
+                                                    <%= product.category %>
+                                                </p>
+                                            </div>
+                                            <div
+                                                class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                                <p class="text-primary text-sm font-normal leading-normal">SKU</p>
+                                                <p class="text-primary text-sm font-normal leading-normal">
+                                                    <%= product.sku %>
+                                                </p>
+                                            </div>
+                                            <div
+                                                class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                                <p class="text-primary text-sm font-normal leading-normal">Connection
+                                                    Type
+                                                </p>
+                                                <p class="text-primary text-sm font-normal leading-normal">
+                                                    <%= product.connectionType %>
+                                                </p>
+                                            </div>
+                                            <% if (product.driverSize) { %>
+                                                <div
+                                                    class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                                    <p class="text-primary text-sm font-normal leading-normal">Driver
+                                                        Size
+                                                    </p>
+                                                    <p class="text-primary text-sm font-normal leading-normal">
+                                                        <%= product.driverSize %>
+                                                    </p>
+                                                </div>
+                                                <% } %>
+                                                    <% if (product.batteryLife) { %>
+                                                        <div
+                                                            class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                                            <p
+                                                                class="text-primary text-sm font-normal leading-normal">
+                                                                Battery Life</p>
+                                                            <p
+                                                                class="text-primary text-sm font-normal leading-normal">
+                                                                <%= product.batteryLife %>
+                                                            </p>
+                                                        </div>
+                                                        <% } %>
+                                                            <% if (product.bluetoothVersion) { %>
+                                                                <div
+                                                                    class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                                                    <p
+                                                                        class="text-primary text-sm font-normal leading-normal">
+                                                                        Bluetooth Version</p>
+                                                                    <p
+                                                                        class="text-primary text-sm font-normal leading-normal">
+                                                                        <%= product.bluetoothVersion %>
+                                                                    </p>
+                                                                </div>
+                                                                <% } %>
+                                                                    <% if (product.weight) { %>
+                                                                        <div
+                                                                            class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                                                            <p
+                                                                                class="text-primary text-sm font-normal leading-normal">
+                                                                                Weight</p>
+                                                                            <p
+                                                                                class="text-primary text-sm font-normal leading-normal">
+                                                                                <%= product.weight %>g
+                                                                            </p>
+                                                                        </div>
+                                                                        <% } %>
+                                        </div>
+                                    </div>
+
+                                    <% if (advancedAudio.length || buildMeta.length || smartMeta.length || compatibilityMeta.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange || product.hasMicrophone || product.batteryChargingTime) { %>
+                                        <div class="bg-white border border-primary-light/40 rounded-lg p-4 space-y-4">
+                                            <h3 class="text-primary text-lg font-bold leading-tight">Technical Highlights</h3>
+                                            <% if (advancedAudio.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange) { %>
+                                                <div>
+                                                    <p class="text-sm font-semibold text-primary mb-1">Audio</p>
+                                                    <p class="text-sm text-gray-700">
+                                                        <%= [product.formFactor, product.earpieceShape, product.impedanceRange, product.sensitivityRange].filter(Boolean).join(' • ') %>
+                                                        <%= [advancedAudio.length ? advancedAudio.join(', ') : ''].filter(Boolean).join(' • ') %>
+                                                    </p>
+                                                </div>
+                                            <% } %>
+                                            <% if (buildMeta.length) { %>
+                                                <div>
+                                                    <p class="text-sm font-semibold text-primary mb-1">Build & Materials</p>
+                                                    <p class="text-sm text-gray-700"><%= buildMeta.join(', ') %></p>
+                                                </div>
+                                            <% } %>
+                                            <% if (smartMeta.length || typeof product.hasMicrophone === 'boolean' || product.batteryChargingTime) { %>
+                                                <div>
+                                                    <p class="text-sm font-semibold text-primary mb-1">Controls & Smart</p>
+                                                    <p class="text-sm text-gray-700">
+                                                        <%= smartMeta.join(', ') %>
+                                                        <%= product.hasMicrophone ? (smartMeta.length ? ' • ' : '') + 'Microphone' : '' %>
+                                                        <%= product.batteryChargingTime ? ((smartMeta.length || product.hasMicrophone) ? ' • ' : '') + ('Charging: ' + product.batteryChargingTime + 'h') : '' %>
+                                                    </p>
+                                                </div>
+                                            <% } %>
+                                            <% if (compatibilityMeta.length) { %>
+                                                <div>
+                                                    <p class="text-sm font-semibold text-primary mb-1">Compatibility & Box Contents</p>
+                                                    <p class="text-sm text-gray-700"><%= compatibilityMeta.join(', ') %></p>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    <% } %>
+
+                                    <div class="bg-white border border-primary-light/40 rounded-lg p-4">
+                                        <h3 class="text-primary text-lg font-bold leading-tight mb-2">Customer Reviews
+                                        </h3>
+                                        <p class="text-primary text-base font-normal leading-normal">No reviews yet.</p>
+                                    </div>
+                                </section>
+
+                                <!-- Right Column -->
+                                <aside class="lg:col-span-3">
+                                    <div
+                                        class="lg:sticky lg:top-24 border border-primary-light/45 bg-white rounded-lg shadow-sm p-4 space-y-4">
+                                        <div class="pb-3 border-b border-primary-light/30">
+                                            <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">
+                                                ₹<%= product.price.toLocaleString('en-IN') %>
+                                            </h2>
+                                            <% if (product.originalPrice && product.originalPrice> product.price) { %>
+                                                <div class="flex items-center gap-2 mt-1">
+                                                    <span class="text-gray-500 line-through text-sm">
+                                                        ₹<%= product.originalPrice.toLocaleString('en-IN') %>
+                                                    </span>
+                                                    <span
+                                                        class="rounded-md bg-accent px-2 py-1 text-xs font-bold text-black">
+                                                        <%= product.discountPercentage %>% OFF
+                                                    </span>
+                                                </div>
+                                                <% } %>
+                                        </div>
+
+                                        <div>
+                                            <% if (product.stockCount> 0) { %>
+                                                <span class="text-green-700 font-semibold">In Stock</span>
+                                                <% } else { %>
+                                                    <span class="text-red-600 font-semibold">Out of Stock</span>
+                                                    <% } %>
+                                        </div>
+
+                                        <% if (hasVariants) { %>
+                                            <div>
+                                                <p class="text-sm text-primary font-semibold mb-2">Color</p>
+                                                <div id="colorSelector" class="flex flex-wrap gap-2">
+                                                    <% product.variants.forEach((variant, index) => { %>
+                                                        <button type="button" class="variant-chip h-8 w-8 rounded-full border-2 <%= index === 0 ? 'border-primary ring-1 ring-primary' : 'border-gray-300' %>"
+                                                            data-variant-index="<%= index %>"
+                                                            title="<%= variant.colorName || variant.colorCode %>"
+                                                            style="background-color:<%= variant.colorCode %>"></button>
+                                                    <% }) %>
+                                                </div>
+                                                <p id="selectedColorLabel" class="text-xs text-[#685BCB] mt-2">
+                                                    <%= selectedVariant && (selectedVariant.colorName || selectedVariant.colorCode) %>
+                                                </p>
+                                            </div>
+                                        <% } %>
+
+                                        <div class="space-y-3">
+                                            <div class="flex items-center border border-primary-light/45 rounded-lg">
+                                                <button
+                                                    class="px-3 py-2 text-primary hover:bg-primary-light/35 font-bold">-</button>
+                                                <span class="px-3 py-2 text-primary font-medium">1</span>
+                                                <button
+                                                    class="px-3 py-2 text-primary hover:bg-primary-light/35 font-bold">+</button>
+                                            </div>
+
+                                            <button
+                                                class="theme-primary-btn w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 text-sm leading-normal tracking-[0.015em]">
+                                                Add to Cart
+                                            </button>
+                                            <button
+                                                class="theme-accent-btn w-full flex h-10 items-center justify-center rounded-lg px-6 text-sm font-bold">
+                                                Buy Now
+                                            </button>
+                                            <button
+                                                class="w-full flex items-center justify-center gap-2 rounded-lg h-10 border border-primary-light/45 text-primary hover:bg-primary-light/35">
+                                                <span>❤️</span>
+                                                <span>Add to Wishlist</span>
+                                            </button>
+                                        </div>
+
+                                        <div class="pt-3 border-t border-primary-light/30 space-y-2 text-sm text-primary">
+                                            <p><span class="font-semibold">Delivery:</span> Free delivery by tomorrow
+                                                for eligible locations.</p>
+                                            <% if (hasWarranty) { %>
+                                                <p>
+                                                    <span class="font-semibold">Warranty:</span>
+                                                    <%= warrantyDuration %> <%= warrantyProvider === 'SoundWave' ? 'SoundWave warranty.' : 'manufacturer warranty.' %>
+                                                </p>
+                                                <% } %>
+                                            <p class="text-gray-600">Secure transaction. Your data is protected.</p>
+                                        </div>
+                                    </div>
+                                </aside>
+                            </div>
+
+                            <div class="mt-8 space-y-6">
+                                <section>
+                                    <h3
+                                        class="text-primary text-lg font-bold leading-tight tracking-[-0.015em] pb-2">
+                                        Similar Products</h3>
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                        <% if (relatedProducts && relatedProducts.length> 0) { %>
+                                            <% relatedProducts.forEach(relProduct=> {
+                                                const relVariant = Array.isArray(relProduct.variants) && relProduct.variants.length > 0 && Array.isArray(relProduct.variants[0].images) ? relProduct.variants[0].images : [];
+                                                const relImg = relVariant.length > 0 ? relVariant[0].url : '/images/placeholder.png';
+                                                %>
+                                                <div
+                                                    class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white">
+                                                    <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
+                                                        style='background-image: url("<%= relImg %>");'></div>
+                                                    <div>
+                                                        <a href="/product/<%= relProduct._id %>"
+                                                            class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
+                                                            <%= relProduct.title %>
+                                                        </a>
+                                                        <p class="text-primary text-sm font-normal leading-normal">₹
+                                                            <%= relProduct.price.toLocaleString('en-IN') %>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <div class="col-span-full py-2">
+                                                    <p class="text-gray-500 italic">No related products available.</p>
+                                                </div>
+                                                <% } %>
+                                    </div>
+                                </section>
+
+                                <section>
+                                    <h3
+                                        class="text-primary text-lg font-bold leading-tight tracking-[-0.015em] pb-2">
+                                        Customers Also Bought</h3>
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                                        <% if (alsoBought && alsoBought.length> 0) { %>
+                                            <% alsoBought.forEach(abProduct=> {
+                                                const abVariant = Array.isArray(abProduct.variants) && abProduct.variants.length > 0 && Array.isArray(abProduct.variants[0].images) ? abProduct.variants[0].images : [];
+                                                const abImg = abVariant.length > 0 ? abVariant[0].url : '/images/placeholder.png';
+                                                %>
+                                                <div
+                                                    class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white">
+                                                    <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
+                                                        style='background-image: url("<%= abImg %>");'></div>
+                                                    <div>
+                                                        <a href="/product/<%= abProduct._id %>"
+                                                            class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
+                                                            <%= abProduct.title %>
+                                                        </a>
+                                                        <p class="text-primary text-sm font-normal leading-normal">₹
+                                                            <%= abProduct.price.toLocaleString('en-IN') %>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <% }); %>
+                                                    <% } else { %>
+                                                        <div class="col-span-full py-2">
+                                                            <p class="text-gray-500 italic">No recommendations
+                                                                available.
+                                                            </p>
+                                                        </div>
+                                                        <% } %>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        let currentIndex = 0;
+                        let currentVariantIndex = 0;
+                        const baseImages = [];
+                        const variants = <%- JSON.stringify(product && Array.isArray(product.variants) ? product.variants : []) %>;
+
+                        const mainImg = document.getElementById("mainImage");
+                        const zoomBox = document.getElementById("zoomBox");
+                        const container = document.getElementById("imageContainer");
+                        const prevBtn = document.getElementById("prevBtn");
+                        const nextBtn = document.getElementById("nextBtn");
+                        const colorLabel = document.getElementById("selectedColorLabel");
+                        const colorChips = Array.from(document.querySelectorAll(".variant-chip"));
+                        const thumbnailStrip = document.querySelector(".thumbnail-image")?.parentElement || null;
+
+                        function toUrls(images) {
+                            return (images || [])
+                                .map((img) => (img && typeof img === 'object' ? img.url : img))
+                                .filter((url) => typeof url === 'string' && url.trim().length > 0);
+                        }
+
+                        function getActiveImageUrls() {
+                            if (variants.length > 0) {
+                                const variant = variants[currentVariantIndex] || {};
+                                const variantUrls = toUrls(variant.images || []);
+                                if (variantUrls.length > 0) return variantUrls;
+                            }
+                            return [];
+                        }
+
+                        let activeImageUrls = getActiveImageUrls();
+                        if (activeImageUrls.length === 0) return;
+
+                        // Sync initial index with server rendered image
+                        if (mainImg) {
+                            const currentSrc = mainImg.getAttribute('src');
+                            const found = activeImageUrls.findIndex((url) => (
+                                url === currentSrc ||
+                                mainImg.src === url ||
+                                mainImg.src.endsWith(url)
+                            ));
+                            if (found !== -1) currentIndex = found;
+                        }
+
+                        function updateZoomBackground() {
+                            if (zoomBox && mainImg) {
+                                zoomBox.style.backgroundImage = `url('${mainImg.src}')`;
+                                zoomBox.style.backgroundSize = "200% 200%";
+                            }
+                        }
+
+                        function renderThumbnails() {
+                            if (!thumbnailStrip) return;
+                            thumbnailStrip.innerHTML = '';
+                            if (activeImageUrls.length <= 1) {
+                                thumbnailStrip.classList.add('hidden');
+                                return;
+                            }
+                            thumbnailStrip.classList.remove('hidden');
+                            activeImageUrls.forEach((url, index) => {
+                                const btn = document.createElement('button');
+                                btn.className = `thumbnail-image w-20 h-20 border-2 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 bg-white p-1 ${index === currentIndex ? 'border-primary ring-1 ring-primary scale-105' : 'border-gray-200 hover:border-primary-light'}`;
+                                btn.dataset.index = String(index);
+                                btn.innerHTML = `<img src="${url}" class="w-full h-full object-contain">`;
+                                btn.addEventListener('click', () => updateHeroImage(index));
+                                thumbnailStrip.appendChild(btn);
+                            });
+                        }
+
+                        function updateSelectedColorState() {
+                            if (!colorChips.length) return;
+                            colorChips.forEach((chip, idx) => {
+                                if (idx === currentVariantIndex) {
+                                    chip.classList.add('border-primary', 'ring-1', 'ring-primary');
+                                    chip.classList.remove('border-gray-300');
+                                } else {
+                                    chip.classList.remove('border-primary', 'ring-1', 'ring-primary');
+                                    chip.classList.add('border-gray-300');
+                                }
+                            });
+                            if (colorLabel && variants[currentVariantIndex]) {
+                                colorLabel.textContent = variants[currentVariantIndex].colorName || variants[currentVariantIndex].colorCode || '';
+                            }
+                        }
+
+                        // Initialize Zoom
+                        updateZoomBackground();
+                        renderThumbnails();
+                        updateSelectedColorState();
+
+                        function updateHeroImage(index) {
+                            if (!activeImageUrls.length || !mainImg) return;
+
+                            if (index < 0) index = activeImageUrls.length - 1;
+                            if (index >= activeImageUrls.length) index = 0;
+
+                            currentIndex = index;
+                            mainImg.src = activeImageUrls[currentIndex];
+
+                            updateZoomBackground();
+
+                            // Update thumbnails visual state
+                            document.querySelectorAll(".thumbnail-image").forEach((btn, idx) => {
+                                if (idx === currentIndex) {
+                                    btn.classList.add('border-primary', 'ring-1', 'ring-primary', 'scale-105');
+                                    btn.classList.remove('border-gray-200', 'hover:border-primary-light');
+                                } else {
+                                    btn.classList.remove('border-primary', 'ring-1', 'ring-primary', 'scale-105');
+                                    btn.classList.add('border-gray-200', 'hover:border-primary-light');
+                                }
+                            });
+                        }
+
+                        function switchVariant(variantIndex) {
+                            currentVariantIndex = variantIndex;
+                            activeImageUrls = getActiveImageUrls();
+                            currentIndex = 0;
+                            if (mainImg && activeImageUrls.length > 0) {
+                                mainImg.src = activeImageUrls[0];
+                            }
+                            updateZoomBackground();
+                            renderThumbnails();
+                            updateSelectedColorState();
+                        }
+
+                        // Event Listeners
+                        if (prevBtn) {
+                            prevBtn.addEventListener("click", function () {
+                                updateHeroImage(currentIndex - 1);
+                            });
+                        }
+
+                        if (nextBtn) {
+                            nextBtn.addEventListener("click", function () {
+                                updateHeroImage(currentIndex + 1);
+                            });
+                        }
+                        colorChips.forEach((chip) => {
+                            chip.addEventListener('click', () => {
+                                switchVariant(Number(chip.dataset.variantIndex));
+                            });
+                        });
+
+                        // Amazon-style Zoom Logic
+                        if (container && zoomBox) {
+                            container.addEventListener("mousemove", function (e) {
+                                const rect = container.getBoundingClientRect();
+
+                                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                                const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+                                zoomBox.style.backgroundPosition = `${x}% ${y}%`;
+                                zoomBox.style.display = "block";
+                                // Ensure visible if CSS was hiding it
+                                zoomBox.style.visibility = "visible";
+                                zoomBox.style.opacity = "1";
+                            });
+
+                            container.addEventListener("mouseleave", function () {
+                                zoomBox.style.display = "none";
+                            });
+                        }
+                    });
+                </script>
+
+                <footer class="flex justify-center border-t border-primary-light/45 mt-10 bg-white">
+                    <div class="flex max-w-[960px] flex-1 flex-col">
+                        <footer class="flex flex-col gap-6 px-5 py-10 text-center @container">
+                            <div
+                                class="flex flex-wrap items-center justify-center gap-6 @[480px]:flex-row @[480px]:justify-around">
+                                <a class="text-primary text-base font-normal leading-normal min-w-40"
+                                    href="#">About</a>
+                                <a class="text-primary text-base font-normal leading-normal min-w-40"
+                                    href="#">Support</a>
+                                <a class="text-primary text-base font-normal leading-normal min-w-40"
+                                    href="#">Contact</a>
+                                <a class="text-primary text-base font-normal leading-normal min-w-40" href="#">Privacy
+                                    Policy</a>
+                                <a class="text-primary text-base font-normal leading-normal min-w-40" href="#">Terms
+                                    of
+                                    Service</a>
+                            </div>
+                            <p class="text-primary text-base font-normal leading-normal">
+                                ©2024 SoundWave. All rights reserved.
+                            </p>
+                        </footer>
+                    </div>
+                </footer>
+
+        </div>
+    </div>
+</body>
+
+</html>

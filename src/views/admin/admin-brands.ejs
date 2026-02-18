@@ -42,26 +42,29 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'brands' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+            <section class="flex-1 p-6 md:p-8">
+                <div class="admin-page-container max-w-[1400px] mx-auto">
                 <!-- HEADER -->
                 <div class="flex justify-between items-center mb-6">
                     <div>
-                        <h1 class="text-3xl font-bold text-[#121810]">Brands</h1>
-                        <p class="text-sm text-[#658d5e]">Manage product brands and their status</p>
+                        <h1 class="text-3xl font-bold text-[#1F1F1F]">Brands</h1>
+                        <p class="text-sm text-[#685BCB]">Manage product brands and their status</p>
                     </div>
                     <a href="/admin/brands/add"
-                        class="px-4 py-2 rounded-lg bg-[#37ff14] text-[#121810] font-bold hover:bg-[#2ae60f] transition-colors">
+                        class="px-4 py-2 rounded-lg bg-[#685BCB] text-white font-bold hover:bg-[#5a4dc0] transition-colors">
                         Add Brand
                     </a>
                 </div>
@@ -71,7 +74,7 @@
                 <div class="mb-4 relative">
                     <input type="text" name="search" placeholder="Search brand name" value="<%= locals.search || '' %>"
                         onkeydown="handleSearch(event)"
-                        class="w-full h-12 rounded-xl bg-[#f0f5f0] pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-[#37ff14]" />
+                        class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
 
                     <% if (locals.search) { %>
                         <button onclick="clearSearch()"
@@ -105,7 +108,7 @@
                 </script>
 
                 <!-- TABLE -->
-                <div class="overflow-hidden rounded-xl border border-[#dce7da]">
+                <div class="overflow-hidden rounded-xl border border-[#BCA6DB]">
                     <table class="w-full">
                         <thead class="bg-white border-b">
                             <tr>
@@ -119,34 +122,34 @@
 
                         <tbody>
                             <% brands.forEach(brand=> { %>
-                                <tr class="border-t border-[#dce7da]">
+                                <tr class="border-t border-[#BCA6DB]">
                                     <td class="p-3 flex items-center gap-3">
-                                        <div class="w-10 h-10 rounded-full bg-cover bg-center <%= brand.logoUrl ? '' : 'bg-[#e0e5e0]' %>"
+                                        <div class="w-10 h-10 rounded-full bg-cover bg-center <%= brand.logoUrl ? '' : 'bg-[#D3CEEA]' %>"
                                             style="<%= brand.logoUrl ? " background-image:url('" + brand.logoUrl + "')"
                                             : '' %>"></div>
-                                        <span class="font-medium text-[#121810]">
+                                        <span class="font-medium text-[#1F1F1F]">
                                             <%= brand.name %>
                                         </span>
                                     </td>
 
-                                    <td class="p-3 text-[#658d5e]">
+                                    <td class="p-3 text-[#685BCB]">
                                         <%= brand.productCount %>
                                     </td>
 
                                     <td class="p-3">
                                         <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
                                             <button class="px-4 py-1 rounded-lg text-sm font-medium
-                                                <%= brand.isActive ? 'bg-[#f0f5f0]' : 'bg-[#ffecec] text-red-600' %>">
+                                                <%= brand.isActive ? 'bg-[#FFFFFF]' : 'bg-[#ffecec] text-red-600' %>">
                                                 <%= brand.isActive ? 'Active' : 'Inactive' %>
                                             </button>
                                         </form>
                                     </td>
 
-                                    <td class="p-3 text-[#658d5e]">
+                                    <td class="p-3 text-[#685BCB]">
                                         <%= brand.updatedAt.toDateString() %>
                                     </td>
 
-                                    <td class="p-3 flex gap-3 text-sm font-medium text-[#658d5e]">
+                                    <td class="p-3 flex gap-3 text-sm font-medium text-[#685BCB]">
                                         <a href="/admin/brands/<%= brand._id %>">View</a>
                                         <button type="button" class="text-red-600"
                                             onclick="confirmBrandDelete('<%= brand._id %>')">Delete</button>
@@ -166,7 +169,7 @@
                         <!-- Previous Button -->
                         <% if (pagination.hasPrevPage) { %>
                             <a href="/admin/brands?page=<%= pagination.currentPage - 1 %>"
-                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                 &laquo; Previous
                             </a>
                             <% } else { %>
@@ -181,12 +184,12 @@
                                         <% for (let i=1; i <=pagination.totalPages; i++) { %>
                                             <% if (i===pagination.currentPage) { %>
                                                 <span
-                                                    class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#27ff14] text-[#111810] text-sm font-bold">
+                                                    class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold">
                                                     <%= i %>
                                                 </span>
                                                 <% } else { %>
                                                     <a href="/admin/brands?page=<%= i %>"
-                                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                         <%= i %>
                                                     </a>
                                                     <% } %>
@@ -196,7 +199,7 @@
                                     <!-- Next Button -->
                                     <% if (pagination.hasNextPage) { %>
                                         <a href="/admin/brands?page=<%= pagination.currentPage + 1 %>"
-                                            class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                            class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                             Next &raquo;
                                         </a>
                                         <% } else { %>
@@ -208,11 +211,12 @@
                     </div>
 
                     <!-- Pagination Info -->
-                    <p class="text-center text-sm text-[#658d5e] mt-2">
+                    <p class="text-center text-sm text-[#685BCB] mt-2">
                         Showing page <%= pagination.currentPage %> of <%= pagination.totalPages %> (<%=
                                     pagination.totalBrands %> brands)
                     </p>
                     <% } %>
+                </div>
             </section>
         </main>
     </div>

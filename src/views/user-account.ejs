@@ -10,7 +10,8 @@
 
   <title>SoundWave | User Account</title>
 
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <%- include('./partials/user/theme-config') %>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="/js/utils.js"></script>
   <script>
@@ -42,10 +43,10 @@
     function showInlineMessage(message, type) {
       const msgDiv = document.getElementById('profile-message');
       msgDiv.textContent = message;
-      msgDiv.classList.remove('hidden', 'text-green-600', 'text-red-600', 'bg-green-50', 'bg-red-50');
+      msgDiv.classList.remove('hidden', 'text-primary', 'text-red-600', 'bg-primary-light/35', 'bg-red-50');
 
       if (type === 'success') {
-        msgDiv.classList.add('text-green-600', 'bg-green-50', 'border', 'border-green-200');
+        msgDiv.classList.add('text-primary', 'bg-primary-light/35', 'border', 'border-primary-light/70');
       } else {
         msgDiv.classList.add('text-red-600', 'bg-red-50', 'border', 'border-red-200');
       }
@@ -89,7 +90,7 @@
 
           input.readOnly = false;
           input.classList.remove('bg-gray-50');
-          input.classList.add('bg-white', 'border-green-500');
+          input.classList.add('bg-white', 'border-primary');
         });
 
         editBtn.classList.add('hidden');
@@ -111,7 +112,7 @@
       inputs.forEach((input, index) => {
         input.readOnly = true;
         input.classList.add('bg-gray-50');
-        input.classList.remove('bg-white', 'border-green-500');
+        input.classList.remove('bg-white', 'border-primary');
 
         if (input.name === 'name') input.value = originalData.name;
         if (input.name === 'email') input.value = originalData.email;
@@ -220,7 +221,7 @@
           inputs.forEach(input => {
             input.readOnly = true;
             input.classList.add('bg-gray-50');
-            input.classList.remove('bg-white', 'border-green-500');
+            input.classList.remove('bg-white', 'border-primary');
           });
 
           editBtn.classList.remove('hidden');
@@ -262,7 +263,7 @@
 
       const statusEl = document.getElementById('upload-status');
       statusEl.textContent = 'Uploading...';
-      statusEl.classList.remove('hidden', 'text-red-500', 'text-green-600');
+      statusEl.classList.remove('hidden', 'text-red-500', 'text-primary');
       statusEl.classList.add('text-blue-600');
 
       try {
@@ -278,7 +279,7 @@
           document.getElementById('profile-image-preview').src = data.profileImage;
           statusEl.textContent = 'Photo updated successfully';
           statusEl.classList.remove('text-blue-600');
-          statusEl.classList.add('text-green-600');
+          statusEl.classList.add('text-primary');
           setTimeout(() => statusEl.classList.add('hidden'), 3000);
           showInlineMessage('Profile photo updated', 'success');
         } else {
@@ -298,166 +299,110 @@
 </head>
 
 <body>
-  <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+  <div class="relative flex min-h-screen w-full flex-col bg-white"
     style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
 
-    <!-- ================= NAVBAR ================= -->
-    <header class="flex items-center justify-between border-b border-[#e7f4e7] px-10 py-3 bg-white">
-      <div class="flex items-center gap-10">
-        <!-- Logo -->
-        <a href="/home" class="flex items-center gap-3 text-[#0d1c0d] hover:opacity-80 transition-opacity">
-          <div class="size-4">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134
-              C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462
-              C2.19985 28.361 1.76794 23.9758 2.60947 19.7452
-              C3.451 15.5145 5.52816 11.6284 8.57829 8.5783
-              C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948
-              C23.9758 1.76795 28.361 2.19986 32.3462 3.85057
-              C36.3314 5.50129 39.7376 8.29668 42.134 11.8833
-              C44.5305 15.4698 45.8096 19.6865 45.8096 24
-              L24 24 L24 45.8096Z" fill="currentColor" />
-            </svg>
+    <!-- Navbar -->
+    <%- include('./partials/user/navbar') %>
+
+      <!-- ================= CONTENT ================= -->
+      <main class="flex flex-1 gap-0 px-0 py-0 bg-white">
+
+        <!-- SIDEBAR -->
+        <aside class="w-64 theme-filter-sidebar p-3 text-primary">
+          <div class="space-y-2">
+            <div class="bg-primary-light/35 px-3 py-2 rounded-lg font-medium">Account Details</div>
+            <a href="/account/addresses"
+              class="block px-3 py-2 hover:bg-primary-light/35 rounded-lg transition-colors">Address</a>
+            <div class="px-3 py-2">Payment Details</div>
+            <div class="px-3 py-2">Wallet</div>
+            <div class="px-3 py-2">Your Orders</div>
+            <a href="/api/auth/logout"
+              class="block px-3 py-2 text-red-600 hover:bg-primary-light/35 rounded-lg transition-colors">Logout</a>
           </div>
-          <span class="font-bold text-lg">SoundWave</span>
-        </a>
+        </aside>
 
-        <!-- Menu -->
-        <nav class="flex gap-8 text-sm font-medium text-[#0d1c0d]">
-          <a href="/deals">Today's Deals</a>
-          <a href="/best-sellers">Best Sellers</a>
-          <a href="/new-arrivals">New Arrivals</a>
-          <a href="/brands">Brands</a>
-        </nav>
-      </div>
+        <!-- MAIN PANEL -->
+        <section class="flex-1 bg-white p-6">
+          <h1 class="text-2xl font-bold mb-6">Account Details</h1>
 
-      <!-- Right -->
-      <div class="flex items-center gap-4">
-        <div class="relative">
-          <input type="text" placeholder="Search"
-            class="h-10 w-56 rounded-lg bg-[#e7f4e7] pl-10 pr-4 text-sm placeholder:text-[#499c49] focus:outline-none" />
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-[#499c49]" xmlns="http://www.w3.org/2000/svg"
-            width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-            <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32Z" />
-          </svg>
-        </div>
-
-        <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">❤️</button>
-        <button class="h-10 w-10 rounded-lg bg-[#e7f4e7]">🛒</button>
-        <a href="/account"
-          class="h-10 w-10 rounded-full bg-[#e7f4e7] flex items-center justify-center ring-2 ring-green-500 overflow-hidden">
-          <% if (user && user.profileImage) { %>
-            <img src="<%= user.profileImage %>" alt="Profile" class="h-full w-full object-cover" />
-            <% } else { %>
-              <% const _np=(user && user.name) ? user.name.trim().split(/\s+/) : []; const _ini=_np.length> 1 ?
-                (_np[0][0] + _np[_np.length-1][0]).toUpperCase() : (user && user.name ?
-                user.name.substring(0,2).toUpperCase() : 'U'); %>
-                <span class="text-xs font-bold text-[#2d6a2d]">
-                  <%= _ini %>
-                </span>
-                <% } %>
-        </a>
-      </div>
-    </header>
-
-    <!-- ================= CONTENT ================= -->
-    <main class="flex flex-1 gap-6 px-6 py-5">
-
-      <!-- SIDEBAR -->
-      <aside class="w-80 bg-[#f8fcf8] p-4">
-        <div class="space-y-2">
-          <div class="bg-[#e6f4e6] px-3 py-2 rounded-lg font-medium">Account Details</div>
-          <a href="/account/addresses"
-            class="block px-3 py-2 hover:bg-[#e6f4e6] rounded-lg transition-colors">Address</a>
-          <div class="px-3 py-2">Payment Details</div>
-          <div class="px-3 py-2">Wallet</div>
-          <div class="px-3 py-2">Your Orders</div>
-          <a href="/api/auth/logout"
-            class="block px-3 py-2 text-red-600 hover:bg-[#e6f4e6] rounded-lg transition-colors">Logout</a>
-        </div>
-      </aside>
-
-      <!-- MAIN PANEL -->
-      <section class="flex-1 bg-white rounded-lg p-6">
-        <h1 class="text-2xl font-bold mb-6">Account Details</h1>
-
-        <div class="flex items-center gap-6 mb-8">
-          <div class="relative group">
-            <div class="h-24 w-24 rounded-full overflow-hidden border-2 border-green-100 ring-2 ring-green-50">
-              <img id="profile-image-preview"
-                src="<%= user.profileImage || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name) + '&background=random' %>"
-                alt="Profile Photo" class="h-full w-full object-cover" />
+          <div class="flex items-center gap-6 mb-8">
+            <div class="relative group">
+              <div class="h-24 w-24 rounded-full overflow-hidden border-2 border-primary-light/60 ring-2 ring-primary-light/35">
+                <img id="profile-image-preview"
+                  src="<%= user.profileImage || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.name) + '&background=random' %>"
+                  alt="Profile Photo" class="h-full w-full object-cover" />
+              </div>
+              <label for="profile-upload"
+                class="absolute bottom-0 right-0 h-8 w-8 bg-primary rounded-full flex items-center justify-center cursor-pointer hover:brightness-90 transition-colors shadow-lg border-2 border-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </label>
+              <input type="file" id="profile-upload" accept="image/jpeg, image/jpg" class="hidden"
+                onchange="uploadProfilePhoto(this)" />
             </div>
-            <label for="profile-upload"
-              class="absolute bottom-0 right-0 h-8 w-8 bg-green-600 rounded-full flex items-center justify-center cursor-pointer hover:bg-green-700 transition-colors shadow-lg border-2 border-white">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </label>
-            <input type="file" id="profile-upload" accept="image/jpeg, image/jpg" class="hidden"
-              onchange="uploadProfilePhoto(this)" />
-          </div>
-          <div>
-            <h3 class="font-bold text-lg">
-              <%= user.name %>
-            </h3>
-            <p class="text-sm text-gray-500">
-              <%= user.email %>
-            </p>
-            <p id="upload-status" class="text-xs text-green-600 font-medium mt-1 hidden">Uploading...</p>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="font-bold">Personal Information</h3>
-          <div id="action-btns" class="hidden flex gap-2">
-            <button onclick="saveProfile()" class="text-sm text-green-600 font-bold hover:underline">Save</button>
-            <button onclick="cancelEdit()" class="text-sm text-gray-500 font-bold hover:underline">Cancel</button>
-          </div>
-        </div>
-
-        <div class="space-y-4 max-w-md">
-          <!-- Inline Message Container -->
-          <div id="profile-message" class="hidden w-full p-3 rounded-lg text-sm font-medium transition-all"></div>
-
-          <input name="name" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Name"
-            value="<%= user.name %>" readonly />
-          <input name="email" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Email"
-            value="<%= user.email %>" readonly />
-          <input name="phone" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50 text-gray-500"
-            placeholder="Phone Number" value="<%= user.phone || '' %>" readonly />
-
-          <!-- Action Buttons (Change Password & Edit Profile) -->
-          <div class="pt-4 flex flex-col sm:flex-row gap-3">
-            <a href="/account/change-password"
-              class="flex-1 flex items-center justify-center h-10 rounded-lg bg-green-100 text-green-700 font-bold hover:bg-green-200 transition-colors">
-              Change Password
-            </a>
-            <button id="edit-btn" onclick="toggleEdit()"
-              class="flex-1 h-10 rounded-lg bg-green-100 text-green-700 font-bold hover:bg-green-200 transition-colors">
-              Edit Profile
-            </button>
+            <div>
+              <h3 class="font-bold text-lg">
+                <%= user.name %>
+              </h3>
+              <p class="text-sm text-gray-500">
+                <%= user.email %>
+              </p>
+              <p id="upload-status" class="text-xs text-primary font-medium mt-1 hidden">Uploading...</p>
+            </div>
           </div>
 
-          <!-- Delete Account Button (Repositioned) -->
-          <div class="pt-4">
-            <button onclick="confirmDeleteAccount()"
-              class="w-full h-10 rounded-lg bg-red-100 text-red-700 font-bold hover:bg-red-200 transition-colors">
-              Delete Account
-            </button>
-            <p class="text-xs text-red-500 mt-1 text-center">This action is permanent and cannot be undone.</p>
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold">Personal Information</h3>
+            <div id="action-btns" class="hidden flex gap-2">
+              <button onclick="saveProfile()" class="text-sm text-primary font-bold hover:underline">Save</button>
+              <button onclick="cancelEdit()" class="text-sm text-gray-500 font-bold hover:underline">Cancel</button>
+            </div>
           </div>
 
-        </div>
+          <div class="space-y-4 max-w-md">
+            <!-- Inline Message Container -->
+            <div id="profile-message" class="hidden w-full p-3 rounded-lg text-sm font-medium transition-all"></div>
 
-        <!-- Original Delete Button Location (Removed) -->
-      </section>
+            <input name="name" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Name"
+              value="<%= user.name %>" readonly />
+            <input name="email" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Email"
+              value="<%= user.email %>" readonly />
+            <input name="phone" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50 text-gray-500"
+              placeholder="Phone Number" value="<%= user.phone || '' %>" readonly />
 
-    </main>
+            <!-- Action Buttons (Change Password & Edit Profile) -->
+            <div class="pt-4 flex flex-col sm:flex-row gap-3">
+              <a href="/account/change-password"
+                class="theme-primary-btn flex h-10 flex-1 items-center justify-center rounded-lg text-sm">
+                Change Password
+              </a>
+              <button id="edit-btn" onclick="toggleEdit()"
+                class="theme-primary-btn flex-1 h-10 rounded-lg text-sm">
+                Edit Profile
+              </button>
+            </div>
+
+            <!-- Delete Account Button (Repositioned) -->
+            <div class="pt-4">
+              <button onclick="confirmDeleteAccount()"
+                class="w-full h-10 rounded-lg bg-red-100 text-red-700 font-bold hover:bg-red-200 transition-colors">
+                Delete Account
+              </button>
+              <p class="text-xs text-red-500 mt-1 text-center">This action is permanent and cannot be undone.</p>
+            </div>
+
+          </div>
+
+          <!-- Original Delete Button Location (Removed) -->
+        </section>
+
+      </main>
   </div>
 </body>
 

@@ -63,8 +63,8 @@
         }
 
         function getSelectedIds() {
-            const checked = document.querySelectorAll('.product-checkbox:checked');
-            return Array.from(checked).map(cb => cb.dataset.id);
+            const checked = document.querySelectorAll('input[name="selectedProducts"]:checked');
+            return Array.from(checked).map(cb => cb.value || cb.dataset.id);
         }
 
         // ──── Delete ────
@@ -111,6 +111,60 @@
             });
         }
 
+        async function deleteSingle(productId) {
+            const result = await Swal.fire({
+                title: 'Delete Product?',
+                text: 'This will unlist the product.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#aaa',
+                confirmButtonText: 'Yes, Delete'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const response = await fetch(`/admin/products/${productId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Product unlisted successfully',
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+                    window.location.reload();
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to delete product', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'An unexpected error occurred', 'error');
+            }
+        }
+
+        // ──── List / Unlist Toggle ────
+        async function toggleProductList(productId) {
+            try {
+                const response = await fetch(`/admin/products/${productId}/toggle-list`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    window.location.reload();
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to update listing', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'An unexpected error occurred', 'error');
+            }
+        }
+
         // ──── Build pagination query string (preserves search + filters + sort) ────
         function paginationQuery(pageNum) {
             const params = new URLSearchParams(window.location.search);
@@ -121,88 +175,81 @@
 </head>
 
 <body>
-    <div class="relative flex min-h-screen w-full flex-col bg-[#f8fcf8]"
+    <div class="min-h-screen flex flex-col bg-white"
         style='font-family: Inter, "Noto Sans", sans-serif;'>
 
+        <%- include("../partials/admin/navbar") %>
+
         <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 gap-6 px-6 py-5">
+        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
-            <aside class="w-80">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'products' }) %>
             </aside>
 
             <!-- Main Content Panel -->
-            <section class="flex-1 bg-white rounded-lg p-6">
+            <section class="flex-1 p-6 md:p-8">
+                <div class="admin-page-container max-w-[1400px] mx-auto">
 
                 <!-- Header: Title + Add Product -->
                 <div class="flex flex-wrap justify-between gap-3 mb-6">
                     <div class="flex min-w-72 flex-col gap-1">
-                        <h1 class="text-[32px] font-bold text-[#121810]">Products</h1>
-                        <p class="text-[#658d5e] text-sm">Manage your product catalog</p>
+                        <h1 class="text-[32px] font-bold text-[#1F1F1F]">Products</h1>
+                        <p class="text-[#685BCB] text-sm">Manage your product catalog</p>
                     </div>
                     <a href="/admin/products/add"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#27ff14] text-[#111810] text-sm font-bold hover:bg-[#20e010] transition-colors">
+                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#685BCB] text-white text-sm font-bold hover:bg-[#5a4dc0] transition-colors">
                         <span>Add Product</span>
                     </a>
                 </div>
 
                 <!-- Action Buttons: Select + Delete -->
-                <div class="flex justify-between gap-2 px-4 py-3">
+                <div class="flex flex-wrap items-center gap-3 px-4 py-4">
                     <button id="selectBtn" onclick="toggleSelectMode()"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#f0f5f0] text-[#121810] text-sm font-bold hover:bg-[#e0e5e0] transition-colors">
+                        class="flex items-center justify-center rounded-lg h-10 px-5 bg-[#685BCB] text-white text-sm font-bold shadow-sm hover:bg-[#5a4dc0] transition-colors">
                         Select
                     </button>
                     <button onclick="deleteSelected()"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#f0f5f0] text-red-600 text-sm font-bold hover:bg-red-50 transition-colors">
+                        class="flex items-center justify-center rounded-lg h-10 px-5 bg-red-500 text-white text-sm font-bold shadow-sm hover:bg-red-600 transition-colors">
                         Delete
                     </button>
                 </div>
 
-                <!-- Search Bar (same style as Customers) -->
-                <div class="px-4 py-3">
-                    <label class="flex flex-col min-w-40 h-12 w-full">
-                        <div class="flex w-full flex-1 items-stretch rounded-lg h-full relative">
-                            <div
-                                class="text-[#658d5e] flex border-none bg-[#f0f5f0] items-center justify-center pl-4 rounded-l-lg border-r-0">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
+                <!-- Search Bar -->
+                <div class="px-4 pt-1 pb-4">
+                    <div class="relative">
+                        <input id="searchInput" type="text" placeholder="Search by product title or SKU"
+                            value="<%= search %>" onkeydown="handleSearch(event)"
+                            class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
+                        <% if (search) { %>
+                            <button onclick="clearSearch()"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors"
+                                title="Clear Search">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                                     viewBox="0 0 256 256">
                                     <path
-                                        d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z">
+                                        d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
                                     </path>
                                 </svg>
-                            </div>
-                            <input id="searchInput" placeholder="Search by product title or SKU"
-                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#121810] focus:outline-0 focus:ring-0 border-none bg-[#f0f5f0] focus:border-none h-full placeholder:text-[#658d5e] pl-2 pr-10 rounded-l-none border-l-0 text-base font-normal leading-normal"
-                                value="<%= search %>" onkeydown="handleSearch(event)" />
-
-                            <% if (search) { %>
-                                <button onclick="clearSearch()"
-                                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors z-10"
-                                    title="Clear Search">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                                        viewBox="0 0 256 256">
-                                        <path
-                                            d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
-                                        </path>
-                                    </svg>
-                                </button>
-                                <% } %>
-                        </div>
-                    </label>
+                            </button>
+                            <% } %>
+                    </div>
                 </div>
 
                 <!-- Filter & Sort Row -->
-                <div class="flex flex-wrap gap-3 px-4 py-3">
+                <div class="flex flex-wrap gap-4 px-4 pb-4">
                     <select id="filterCategory" onchange="applyFilters()"
-                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da]">
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
                         <option value="">All Categories</option>
-                        <option value="In-ear" <%=filters.category==='In-ear' ? 'selected' : '' %>>In-ear</option>
-                        <option value="On-ear" <%=filters.category==='On-ear' ? 'selected' : '' %>>On-ear</option>
-                        <option value="Over-ear" <%=filters.category==='Over-ear' ? 'selected' : '' %>>Over-ear</option>
+                        <% (categories || []).forEach(cat => { %>
+                            <option value="<%= cat._id %>" <%= String(filters.category || '')===String(cat._id) ? 'selected' : '' %>>
+                                <%= cat.name %><%= cat.isBlocked ? ' (Blocked)' : '' %>
+                            </option>
+                        <% }) %>
                     </select>
 
                     <select id="filterBrand" onchange="applyFilters()"
-                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da]">
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
                         <option value="">All Brands</option>
                         <% brands.forEach(b=> { %>
                             <option value="<%= b._id %>" <%=filters.brand===b._id.toString() ? 'selected' : '' %>><%=
@@ -212,7 +259,7 @@
                     </select>
 
                     <select id="filterConnection" onchange="applyFilters()"
-                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da]">
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
                         <option value="">All Connection Types</option>
                         <option value="Wired" <%=filters.connectionType==='Wired' ? 'selected' : '' %>>Wired</option>
                         <option value="Wireless" <%=filters.connectionType==='Wireless' ? 'selected' : '' %>>Wireless
@@ -220,7 +267,7 @@
                     </select>
 
                     <select id="sortSelect" onchange="applyFilters()"
-                        class="form-input rounded-lg border border-[#dce7da] bg-white text-[#121810] text-sm h-10 px-3 focus:outline-0 focus:ring-0 focus:border-[#dce7da] ml-auto">
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB] ml-auto">
                         <option value="newest" <%=currentSort==='newest' ? 'selected' : '' %>>Newest First</option>
                         <option value="az" <%=currentSort==='az' ? 'selected' : '' %>>A–Z</option>
                         <option value="za" <%=currentSort==='za' ? 'selected' : '' %>>Z–A</option>
@@ -232,69 +279,76 @@
                 </div>
 
                 <!-- Divider -->
-                <div class="border-b border-[#dce7da] mx-4 mb-3"></div>
+                <div class="border-b border-[#BCA6DB] mx-4 mb-4"></div>
 
                 <!-- Product Table -->
-                <div class="px-4 py-3 @container">
-                    <div class="flex overflow-hidden rounded-lg border border-[#dce7da] bg-white">
+                <div class="px-4 py-2 @container">
+                    <div class="flex overflow-hidden rounded-lg border border-[#BCA6DB] bg-white">
                         <table class="flex-1">
                             <thead>
                                 <tr class="bg-white">
                                     <th
-                                        class="checkbox-cell hidden px-4 py-3 w-10 text-sm font-medium text-[#121810] leading-normal">
+                                        class="checkbox-cell hidden px-4 py-3 w-10 text-sm font-medium text-[#1F1F1F] leading-normal">
                                         <input type="checkbox" id="selectAll"
                                             onchange="document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = this.checked)"
-                                            class="h-4 w-4 rounded border-[#dce7da] text-[#37ff14] focus:ring-0" />
+                                            class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-0" />
                                     </th>
                                     <th
-                                        class="px-4 py-3 text-left text-[#121810] w-14 text-sm font-medium leading-normal">
+                                        class="px-4 py-3 text-left text-[#1F1F1F] w-14 text-sm font-medium leading-normal">
                                         Image</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Title</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         SKU</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Brand</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Category</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Price</th>
-                                    <th class="px-4 py-3 text-left text-[#121810] text-sm font-medium leading-normal">
+                                    <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Stock</th>
                                     <th
-                                        class="px-4 py-3 text-left text-[#121810] w-28 text-sm font-medium leading-normal">
+                                        class="px-4 py-3 text-left text-[#1F1F1F] w-28 text-sm font-medium leading-normal">
                                         Status</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-[#1F1F1F] w-36 text-sm font-medium leading-normal">
+                                        Listing</th>
+                                    <th
+                                        class="px-4 py-3 text-left text-[#1F1F1F] w-28 text-sm font-medium leading-normal">
+                                        Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <% if (products.length===0) { %>
                                     <tr>
-                                        <td colspan="9" class="text-center py-8 text-[#658d5e]">No products found</td>
+                                        <td colspan="11" class="text-center py-8 text-[#685BCB]">No products found</td>
                                     </tr>
                                     <% } else { %>
                                         <% products.forEach(product=> { %>
-                                            <tr class="border-t border-t-[#dce7da] hover:bg-gray-50 cursor-pointer"
+                                            <tr class="border-t border-t-[#BCA6DB] hover:bg-gray-50 cursor-pointer"
                                                 onclick="window.location.href='/admin/products/<%= product._id %>'">
 
                                                 <!-- Checkbox (hidden by default) -->
                                                 <td class="checkbox-cell hidden h-[72px] px-4 py-2 w-10"
                                                     onclick="event.stopPropagation()">
                                                     <input type="checkbox"
-                                                        class="product-checkbox h-4 w-4 rounded border-[#dce7da] text-[#37ff14] focus:ring-0"
+                                                        class="product-checkbox h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-0"
+                                                        name="selectedProducts"
+                                                        value="<%= product._id %>"
                                                         data-id="<%= product._id %>" />
                                                 </td>
 
                                                 <!-- Thumbnail -->
                                                 <td class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
-                                                    <% if (product.images && product.images.length> 0) { %>
-                                                        <% const heroImg=product.images.find(i=> i.isHero) ||
-                                                            product.images[0]; %>
+                                                    <% if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) { %>
+                                                        <% const heroImg = product.variants[0].images[0]; %>
                                                             <div class="w-10 h-10 rounded bg-center bg-cover bg-no-repeat"
                                                                 style="background-image: url('<%= heroImg.url %>');">
                                                             </div>
                                                             <% } else { %>
                                                                 <div
-                                                                    class="w-10 h-10 rounded bg-[#f0f5f0] flex items-center justify-center text-[#658d5e] text-xs font-bold">
+                                                                    class="w-10 h-10 rounded bg-[#FFFFFF] flex items-center justify-center text-[#685BCB] text-xs font-bold">
                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="20"
                                                                         height="20" fill="currentColor"
                                                                         viewBox="0 0 256 256">
@@ -307,37 +361,37 @@
 
                                                 <!-- Title -->
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">
                                                     <%= product.title %>
                                                 </td>
 
                                                 <!-- SKU -->
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= product.sku %>
                                                 </td>
 
                                                 <!-- Brand -->
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= product.brand ? product.brand.name : 'N/A' %>
                                                 </td>
 
                                                 <!-- Category -->
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= product.category %>
                                                 </td>
 
                                                 <!-- Price -->
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#121810] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">
                                                     ₹<%= product.price.toLocaleString('en-IN') %>
                                                 </td>
 
                                                 <!-- Stock -->
                                                 <td
-                                                    class="h-[72px] px-4 py-2 text-[#658d5e] text-sm font-normal leading-normal">
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
                                                     <%= product.stockCount %>
                                                 </td>
 
@@ -349,6 +403,22 @@
                                                         <%= product.status %>
                                                     </span>
                                                 </td>
+
+                                                <td class="h-[72px] px-4 py-2 w-36 text-sm font-normal leading-normal"
+                                                    onclick="event.stopPropagation()">
+                                                    <button onclick="toggleProductList('<%= product._id %>')"
+                                                        class="inline-flex items-center justify-center rounded-lg h-8 px-4 text-xs font-bold transition-colors <%= product.isListed ? 'bg-[#FFFFFF] border border-[#BCA6DB] text-[#1F1F1F] hover:bg-[#D3CEEA]' : 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]' %>">
+                                                        <%= product.isListed ? 'Unlist' : 'List' %>
+                                                    </button>
+                                                </td>
+
+                                                <td class="h-[72px] px-4 py-2 w-28 text-sm font-normal leading-normal"
+                                                    onclick="event.stopPropagation()">
+                                                    <button onclick="deleteSingle('<%= product._id %>')"
+                                                        class="inline-flex items-center justify-center rounded-lg h-8 px-4 text-xs font-bold bg-red-500 text-white hover:bg-red-600 transition-colors">
+                                                        Delete
+                                                    </button>
+                                                </td>
                                             </tr>
                                             <% }) %>
                                                 <% } %>
@@ -359,16 +429,16 @@
                     <!-- Pagination -->
                     <% if (pagination && pagination.totalPages> 0) { %>
                         <% var qp=[]; if (search) qp.push('search=' + encodeURIComponent(search));
-                            if (filters.category) qp.push(' category=' + encodeURIComponent(filters.category));
-                            if (filters.brand) qp.push(' brand=' + encodeURIComponent(filters.brand));
-                            if (filters.connectionType) qp.push(' connectionType=' + encodeURIComponent(filters.connectionType));
-                            if (currentSort && currentSort !== ' newest') qp.push('sort=' + encodeURIComponent(currentSort));
-                            var baseQs = qp.length > 0 ? ' &' + qp.join('&') : '' ; %>
+                            if (filters.category) qp.push('category=' + encodeURIComponent(filters.category));
+                            if (filters.brand) qp.push('brand=' + encodeURIComponent(filters.brand));
+                            if (filters.connectionType) qp.push('connectionType=' + encodeURIComponent(filters.connectionType));
+                            if (currentSort && currentSort !== 'newest') qp.push('sort=' + encodeURIComponent(currentSort));
+                            var baseQs = qp.length > 0 ? '&' + qp.join('&') : '' ; %>
                             <div class="flex justify-center items-center gap-2 mt-6">
                                 <!-- Previous -->
                                 <% if (pagination.hasPrevPage) { %>
                                     <a href="/admin/products?page=<%= pagination.currentPage - 1 %><%= baseQs %>"
-                                        class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                        class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                         &laquo; Previous
                                     </a>
                                     <% } else { %>
@@ -383,12 +453,12 @@
                                                 <% for (let i=1; i <=pagination.totalPages; i++) { %>
                                                     <% if (i===pagination.currentPage) { %>
                                                         <span
-                                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#27ff14] text-[#111810] text-sm font-bold">
+                                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold">
                                                             <%= i %>
                                                         </span>
                                                         <% } else { %>
                                                             <a href="/admin/products?page=<%= i %><%= baseQs %>"
-                                                                class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                                class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                                 <%= i %>
                                                             </a>
                                                             <% } %>
@@ -398,7 +468,7 @@
                                             <!-- Next -->
                                             <% if (pagination.hasNextPage) { %>
                                                 <a href="/admin/products?page=<%= pagination.currentPage + 1 %><%= baseQs %>"
-                                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#f0f5f0] text-[#121810] text-sm font-medium hover:bg-[#e0e5e0] transition-colors">
+                                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                     Next &raquo;
                                                 </a>
                                                 <% } else { %>
@@ -410,11 +480,12 @@
                             </div>
 
                             <!-- Pagination Info -->
-                            <p class="text-center text-sm text-[#658d5e] mt-2">
+                            <p class="text-center text-sm text-[#685BCB] mt-2">
                                 Showing page <%= pagination.currentPage %> of <%= pagination.totalPages %> (<%=
                                             pagination.totalProducts %> products)
                             </p>
                             <% } %>
+                </div>
                 </div>
             </section>
         </main>

@@ -25,20 +25,20 @@
 </head>
 
 <body>
-    <div class="flex min-h-screen bg-[#f8fcf8]" style='font-family: Inter, "Noto Sans", sans-serif;'>
-        <!-- Sidebar -->
-        <aside class="w-64 flex-shrink-0">
-            <%- include('../partials/admin/sidebar', { page: 'products' }) %>
-        </aside>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
 
-        <!-- Main Content Panel -->
-        <main class="flex-1 px-8 py-6">
-            <section class="bg-white rounded-lg p-6 shadow-sm">
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'products' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
                 <!-- Breadcrumb -->
                 <div class="flex flex-wrap gap-2 pb-4">
-                    <a class="text-[#658d5e] text-base font-medium leading-normal" href="/admin/products">Products</a>
-                    <span class="text-[#658d5e] text-base font-medium leading-normal">/</span>
-                    <span class="text-[#121810] text-base font-medium leading-normal">
+                    <a class="text-[#685BCB] text-base font-medium leading-normal" href="/admin/products">Products</a>
+                    <span class="text-[#685BCB] text-base font-medium leading-normal">/</span>
+                    <span class="text-[#1F1F1F] text-base font-medium leading-normal">
                         <%= product.title %>
                     </span>
                 </div>
@@ -46,10 +46,10 @@
                 <!-- Page Header -->
                 <div class="flex flex-wrap justify-between gap-3 pb-4">
                     <div class="flex min-w-72 flex-col gap-3">
-                        <p class="text-[#121810] tracking-light text-[32px] font-bold leading-tight">
+                        <p class="text-[#1F1F1F] tracking-light text-[32px] font-bold leading-tight">
                             <%= product.title %>
                         </p>
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">SKU: <%= product.sku %>
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">SKU: <%= product.sku %>
                         </p>
                     </div>
                 </div>
@@ -58,34 +58,32 @@
                 <div class="flex justify-stretch">
                     <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
                         <a href="/admin/products/edit/<%= product._id %>"
-                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#37ff14] text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]">
+                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#685BCB] text-white text-sm font-bold leading-normal tracking-[0.015em]">
                             <span class="truncate">Edit</span>
                         </a>
                         <button id="deleteBtn"
-                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-transparent text-[#121810] text-sm font-bold leading-normal tracking-[0.015em]">
+                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-transparent text-[#1F1F1F] text-sm font-bold leading-normal tracking-[0.015em]">
                             <span class="truncate">Delete</span>
                         </button>
                     </div>
                 </div>
 
-                <p class="text-[#658d5e] text-sm font-normal leading-normal pb-3 pt-1 px-4">
+                <p class="text-[#685BCB] text-sm font-normal leading-normal pb-3 pt-1 px-4">
                     Status: <%= product.status %> | Created: <%= product.createdAt ?
                             product.createdAt.toLocaleDateString('en-IN', { year: 'numeric' , month: 'short' ,
                             day: 'numeric' }) : 'N/A' %>
                 </p>
 
                 <!-- Product Details -->
-                <h2 class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                     Product Details</h2>
                 <div class="p-4 @container">
                     <div class="flex flex-col items-stretch justify-start rounded-xl @xl:flex-row @xl:items-start">
                         <!-- Image Gallery -->
                         <div class="w-full @xl:w-1/2">
                             <div class="max-w-xl mx-auto">
-                                <% if (product.images && product.images.length> 0) { %>
-                                    <% // Sort images: hero first, then rest in original order var
-                                        sortedImages=product.images.slice().sort(function(a, b) { return (b.isHero ? 1 :
-                                        0) - (a.isHero ? 1 : 0); }); %>
+                                <% if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) { %>
+                                    <% var sortedImages = product.variants[0].images.slice(); %>
                                         <div class="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
                                             <% const mainImage=sortedImages[0]; %>
                                                 <img id="galleryMainImg"
@@ -119,19 +117,15 @@
                                         <!-- Thumbnail Strip -->
                                         <% if (sortedImages.length> 1) { %>
                                             <div class="flex gap-2 mt-3 overflow-x-auto pb-1" id="galleryThumbs"
-                                                style="scrollbar-width: thin; scrollbar-color: #dce7da transparent;">
+                                                style="scrollbar-width: thin; scrollbar-color: #BCA6DB transparent;">
                                                 <% sortedImages.forEach(function(img, idx) { %>
                                                     <button type="button"
-                                                        class="gallery-thumb relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer <%= idx === 0 ? 'border-[#37ff14] opacity-100' : 'border-transparent opacity-60 hover:opacity-90' %>"
+                                                        class="gallery-thumb relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer <%= idx === 0 ? 'border-[#685BCB] opacity-100' : 'border-transparent opacity-60 hover:opacity-90' %>"
                                                         data-index="<%= idx %>" data-url="<%= img.url %>">
                                                         <img src="<%= img.url || '/images/placeholder.png' %>"
                                                             alt="Thumbnail <%= idx + 1 %>"
                                                             class="w-full h-full object-cover"
                                                             onerror="this.src='/images/placeholder.png'" />
-                                                        <% if (img.isHero) { %>
-                                                            <span
-                                                                class="absolute bottom-0 left-0 right-0 bg-[#37ff14] text-[#121810] text-center text-[0.5rem] font-bold leading-tight py-0.5">HERO</span>
-                                                            <% } %>
                                                     </button>
                                                     <% }) %>
                                             </div>
@@ -154,10 +148,10 @@
                         </div>
                         <div
                             class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1 py-4 @xl:px-4">
-                            <p class="text-[#121810] text-lg font-bold leading-tight tracking-[-0.015em]">
+                            <p class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em]">
                                 <%= product.title %>
                             </p>
-                            <p class="text-[#658d5e] text-base font-normal leading-normal">
+                            <p class="text-[#685BCB] text-base font-normal leading-normal">
                                 <%= product.shortDescription || 'No description available.' %>
                             </p>
                         </div>
@@ -165,81 +159,81 @@
                 </div>
 
                 <!-- Technical Specifications -->
-                <h2 class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                     Technical Specifications</h2>
                 <div class="p-4 grid grid-cols-2">
-                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pr-2">
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Connection Type</p>
-                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Connection Type</p>
+                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                             <%= product.connectionType %>
                         </p>
                     </div>
-                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pl-2">
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Category</p>
-                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Category</p>
+                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                             <%= product.category %>
                         </p>
                     </div>
-                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pr-2">
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Brand</p>
-                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Brand</p>
+                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                             <%= product.brand ? product.brand.name : 'N/A' %>
                         </p>
                     </div>
 
                     <% if (product.connectionType==='Wired' ) { %>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pl-2">
-                            <p class="text-[#658d5e] text-sm font-normal leading-normal">Cable Length</p>
-                            <p class="text-[#121810] text-sm font-normal leading-normal">
+                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
+                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Cable Length</p>
+                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                 <%= product.cableLength || '—' %>
                             </p>
                         </div>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pr-2">
-                            <p class="text-[#658d5e] text-sm font-normal leading-normal">Connector Type</p>
-                            <p class="text-[#121810] text-sm font-normal leading-normal">
+                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
+                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Connector Type</p>
+                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                 <%= product.connectorType || '—' %>
                             </p>
                         </div>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pl-2">
-                            <p class="text-[#658d5e] text-sm font-normal leading-normal">Impedance</p>
-                            <p class="text-[#121810] text-sm font-normal leading-normal">
+                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
+                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Impedance</p>
+                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                 <%= product.impedance || '—' %>
                             </p>
                         </div>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pr-2">
-                            <p class="text-[#658d5e] text-sm font-normal leading-normal">Driver Size</p>
-                            <p class="text-[#121810] text-sm font-normal leading-normal">
+                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
+                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Driver Size</p>
+                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                 <%= product.driverSize || '—' %>
                             </p>
                         </div>
                         <% } else if (product.connectionType==='Wireless' ) { %>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pl-2">
-                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Bluetooth Version</p>
-                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
+                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Bluetooth Version</p>
+                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                     <%= product.bluetoothVersion || '—' %>
                                 </p>
                             </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pr-2">
-                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Battery Life</p>
-                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
+                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Battery Life</p>
+                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                     <%= product.batteryLife || '—' %>
                                 </p>
                             </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pl-2">
-                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Charging Time</p>
-                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
+                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Charging Time</p>
+                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                     <%= product.chargingTime || '—' %>
                                 </p>
                             </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pr-2">
-                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Wireless Range</p>
-                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
+                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Wireless Range</p>
+                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                     <%= product.wirelessRange || '—' %>
                                 </p>
                             </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#dce7da] py-4 pl-2">
-                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Noise Cancellation</p>
-                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
+                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Noise Cancellation</p>
+                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                     <%= product.noiseCancellation || '—' %>
                                 </p>
                             </div>
@@ -247,27 +241,27 @@
                 </div>
 
                 <!-- Pricing & Offers -->
-                <h2 class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                     Pricing &amp; Offers</h2>
                 <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Current Price</p>
-                        <p class="text-[#121810] text-sm font-normal leading-normal">₹<%=
+                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Current Price</p>
+                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">₹<%=
                                 product.price.toLocaleString('en-IN') %>
                         </p>
                     </div>
                     <% if (product.originalPrice) { %>
-                        <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                            <p class="text-[#658d5e] text-sm font-normal leading-normal">Original Price</p>
-                            <p class="text-[#121810] text-sm font-normal leading-normal">₹<%=
+                        <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Original Price</p>
+                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">₹<%=
                                     product.originalPrice.toLocaleString('en-IN') %>
                             </p>
                         </div>
                         <% } %>
                             <% if (product.discountPercentage> 0) { %>
-                                <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                    <p class="text-[#658d5e] text-sm font-normal leading-normal">Discount</p>
-                                    <p class="text-[#121810] text-sm font-normal leading-normal">
+                                <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                                    <p class="text-[#685BCB] text-sm font-normal leading-normal">Discount</p>
+                                    <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                         <%= product.discountPercentage %>%
                                     </p>
                                 </div>
@@ -275,24 +269,24 @@
                 </div>
 
                 <!-- Inventory -->
-                <h2 class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                     Inventory</h2>
                 <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Stock Count</p>
-                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Stock Count</p>
+                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                             <%= product.stockCount %>
                         </p>
                     </div>
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Reserved Count</p>
-                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Reserved Count</p>
+                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                             <%= product.reservedCount %>
                         </p>
                     </div>
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Reorder Threshold</p>
-                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Reorder Threshold</p>
+                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                             <%= product.reorderThreshold %>
                         </p>
                     </div>
@@ -300,40 +294,40 @@
 
                 <!-- Shipping & Weight -->
                 <% if (product.length || product.width || product.height || product.weight) { %>
-                    <h2 class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                    <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                         Shipping &amp; Weight</h2>
                     <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
                         <% if (product.length) { %>
-                            <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Length</p>
-                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                            <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Length</p>
+                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                     <%= product.length %> cm
                                 </p>
                             </div>
                             <% } %>
                                 <% if (product.width) { %>
-                                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Width</p>
-                                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Width</p>
+                                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                             <%= product.width %> cm
                                         </p>
                                     </div>
                                     <% } %>
                                         <% if (product.height) { %>
                                             <div
-                                                class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Height</p>
-                                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                                                class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Height</p>
+                                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                                     <%= product.height %> cm
                                                 </p>
                                             </div>
                                             <% } %>
                                                 <% if (product.weight) { %>
                                                     <div
-                                                        class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                                        <p class="text-[#658d5e] text-sm font-normal leading-normal">
+                                                        class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                                                        <p class="text-[#685BCB] text-sm font-normal leading-normal">
                                                             Weight</p>
-                                                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                                                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                                             <%= product.weight %> kg
                                                         </p>
                                                     </div>
@@ -344,24 +338,24 @@
                         <!-- SEO & Metadata -->
                         <% if (product.metaTitle || product.metaDescription) { %>
                             <h2
-                                class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                                class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                                 SEO
                                 &amp; Metadata</h2>
                             <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
                                 <% if (product.metaTitle) { %>
-                                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                        <p class="text-[#658d5e] text-sm font-normal leading-normal">Meta Title</p>
-                                        <p class="text-[#121810] text-sm font-normal leading-normal">
+                                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Meta Title</p>
+                                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                             <%= product.metaTitle %>
                                         </p>
                                     </div>
                                     <% } %>
                                         <% if (product.metaDescription) { %>
                                             <div
-                                                class="col-span-2 grid grid-cols-subgrid border-t border-t-[#dce7da] py-5">
-                                                <p class="text-[#658d5e] text-sm font-normal leading-normal">Meta
+                                                class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
+                                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Meta
                                                     Description</p>
-                                                <p class="text-[#121810] text-sm font-normal leading-normal">
+                                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
                                                     <%= product.metaDescription %>
                                                 </p>
                                             </div>
@@ -372,7 +366,7 @@
                                 <!-- Badges -->
                                 <% if (product.badges && product.badges.length> 0) { %>
                                     <h2
-                                        class="text-[#121810] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
+                                        class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
                                         Badges</h2>
                                     <div class="flex flex-wrap gap-2 px-4 pb-4">
                                         <% product.badges.forEach(function(badge) { %>
@@ -409,11 +403,11 @@
                 }, 150);
                 thumbs.forEach((t, i) => {
                     if (i === current) {
-                        t.classList.add('border-[#37ff14]', 'opacity-100');
+                        t.classList.add('border-[#685BCB]', 'opacity-100');
                         t.classList.remove('border-transparent', 'opacity-60');
                         t.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                     } else {
-                        t.classList.remove('border-[#37ff14]', 'opacity-100');
+                        t.classList.remove('border-[#685BCB]', 'opacity-100');
                         t.classList.add('border-transparent', 'opacity-60');
                     }
                 });
