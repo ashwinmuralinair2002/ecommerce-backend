@@ -10,6 +10,8 @@
 
     <title>Admin · Add Product</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
     <style>
         :root {
             --checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(18,24,16)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e');
@@ -73,6 +75,103 @@
             justify-content: center;
             line-height: 1;
         }
+
+        .admin-product-form-shell {
+            width: 100%;
+            max-width: 1400px;
+        }
+
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        @media (min-width: 1200px) {
+            .admin-layout {
+                grid-template-columns: minmax(0, 7fr) minmax(300px, 3fr);
+                gap: 1rem;
+            }
+        }
+
+        .admin-main,
+        .admin-side {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .admin-side {
+            position: sticky;
+            top: 92px;
+            align-self: start;
+        }
+
+        .admin-card {
+            background: #fff;
+            border: 1px solid #E6E0F2;
+            border-radius: 14px;
+            padding: 0.75rem;
+        }
+
+        .admin-card h3 {
+            margin: 0 0 0.55rem;
+            color: #1F1F1F;
+            font-size: 1.03rem;
+            font-weight: 700;
+        }
+
+        .admin-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+        }
+
+        @media (min-width: 768px) {
+            .admin-grid-2 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .admin-card .px-4 {
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
+        }
+
+        .admin-card div[class*="max-w-[480px]"] {
+            max-width: 100%;
+            margin: 0;
+            padding-top: 0.35rem;
+            padding-bottom: 0.35rem;
+        }
+
+        .feature-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .feature-tab-btn {
+            border: 1px solid #D8CCEE;
+            background: #F8F5FF;
+            color: #685BCB;
+            border-radius: 999px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .feature-tab-btn.active {
+            background: #685BCB;
+            color: #fff;
+            border-color: #685BCB;
+        }
+
+        .feature-pane.hidden {
+            display: none;
+        }
     </style>
 </head>
 
@@ -105,17 +204,20 @@
                 </div>
 
                 <!-- Form Content -->
-                <form id="addProductForm" class="max-w-[960px]" enctype="multipart/form-data" novalidate>
+                <form id="addProductForm" class="admin-product-form-shell" action="/admin/products" method="POST" enctype="multipart/form-data" novalidate>
+                    <input type="hidden" name="heroPosterEnabled" id="heroPosterEnabledInput" value="false" disabled>
+                    <input type="hidden" name="heroPosterCropMeta" id="heroPosterCropMetaInput" value="" disabled>
+                    <p id="formSubmitError" class="field-error <%= (typeof formError !== 'undefined' && formError) ? 'visible' : '' %>"><%= (typeof formError !== 'undefined' && formError) ? formError : '' %></p>
                     <!-- Title -->
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                         <label class="flex flex-col min-w-40 flex-1">
                             <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Title <span
                                     class="text-red-500">*</span></p>
                             <input id="productTitle" name="title" placeholder="Product Title" required
-                                pattern="^[a-zA-Z0-9 ]+$"
+                                pattern="^[A-Za-z0-9 -]+$" minlength="3" maxlength="150"
                                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                 value="" />
-                            <p class="field-error" id="productTitleError">Only letters, numbers, and spaces allowed</p>
+                            <p class="field-error" id="productTitleError">Use only letters, numbers, spaces, and hyphens</p>
                         </label>
                     </div>
 
@@ -178,7 +280,9 @@
                                 <option value="">Select Category</option>
                                 <% if (categories && categories.length > 0) { %>
                                     <% categories.forEach(function(category) { %>
-                                        <option value="<%= category.name %>"><%= category.name %></option>
+                                        <% if (!['wired', 'wireless'].includes(String(category.name || '').trim().toLowerCase())) { %>
+                                            <option value="<%= category._id %>"><%= category.name %></option>
+                                        <% } %>
                                     <% }) %>
                                 <% } %>
                             </select>
@@ -191,8 +295,10 @@
                         <label class="flex flex-col min-w-40 flex-1">
                             <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Short Description</p>
                             <textarea id="shortDescription" name="shortDescription"
-                                placeholder="Brief product description"
+                                placeholder="Brief product description" maxlength="1500"
                                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] min-h-36 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"></textarea>
+                            <p class="field-error" id="shortDescriptionError">Short description is required</p>
+                            <p id="shortDescriptionCounter" class="text-xs text-[#685BCB] pt-1">0/1500</p>
                         </label>
                     </div>
 
@@ -288,6 +394,29 @@
                         <p class="field-error" id="variantError">Please fix variant details before submitting.</p>
                     </div>
 
+                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Hero Poster</h3>
+                    <div class="px-4 py-2">
+                        <div class="rounded-xl border border-[#BCA6DB] bg-white p-4 space-y-3">
+                            <label class="inline-flex items-center gap-2 text-sm font-medium text-[#1F1F1F]">
+                                <input type="checkbox" id="heroPosterEnabledToggle"
+                                    class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]">
+                                Enable Hero Poster
+                            </label>
+                            <div id="heroPosterPanel" class="hidden space-y-3">
+                                <input type="file" id="heroPosterImageInput" name="heroPosterImage" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    class="block w-full text-sm text-[#1F1F1F]">
+                                <p id="heroPosterError" class="field-error">Hero poster image is required when enabled.</p>
+                                <div id="heroPosterPreviewWrap" class="hidden p-3 bg-[#F8F7FD] border border-[#D8D1EE] rounded-lg">
+                                    <img id="heroPosterPreview" src="" alt="Hero poster preview" class="w-full max-h-40 rounded-lg object-cover">
+                                    <div class="mt-2">
+                                        <button type="button" id="heroPosterRecropBtn"
+                                            class="text-xs font-semibold px-3 py-2 rounded-lg bg-[#685BCB] text-white hover:bg-[#5a4dc0]">Re-crop (21:9)</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Conditional Specs: Wired -->
                     <div id="wiredSpecs" class="hidden">
                         <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">
@@ -303,12 +432,19 @@
                             </label>
                             <label class="flex flex-col min-w-40 flex-1">
                                 <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Connector Type</p>
-                                <input id="connectorType" name="connectorType" placeholder="e.g., 3.5mm Jack"
-                                    pattern="^[a-zA-Z0-9 .]+$"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                    value="" />
-                                <p class="field-error" id="connectorTypeError">Only letters, numbers, spaces, and
-                                    periods allowed</p>
+                                <select id="connectorType" name="connectorType"
+                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
+                                    <option value="">Select Connector Type</option>
+                                    <option value="3.5mm Jack (Mini-jack)">3.5mm Jack (Mini-jack)</option>
+                                    <option value="USB-C">USB-C</option>
+                                    <option value="Lightning">Lightning</option>
+                                    <option value="6.35mm (1/4-inch) Jack">6.35mm (1/4-inch) Jack</option>
+                                    <option value="2.5mm Jack">2.5mm Jack</option>
+                                    <option value="4.4mm Pentaconn">4.4mm Pentaconn</option>
+                                    <option value="XLR (3-pin or 4-pin)">XLR (3-pin or 4-pin)</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <p class="field-error" id="connectorTypeError">Please select a valid connector type</p>
                             </label>
                         </div>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
@@ -356,15 +492,7 @@
                             </label>
                         </div>
                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                            <label class="flex flex-col min-w-40 flex-1">
-                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Charging Time
-                                    (hours)</p>
-                                <input id="chargingTime" name="chargingTime" placeholder="e.g., 2" type="number"
-                                    step="0.1" min="0"
-                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                    value="" />
-                                <p class="field-error" id="chargingTimeError">Must be a positive number</p>
-                            </label>
+                            <div id="batteryChargingTimeHost" class="flex flex-col min-w-40 flex-1"></div>
                             <label class="flex flex-col min-w-40 flex-1">
                                 <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Wireless Range (m)
                                 </p>
@@ -386,6 +514,7 @@
                                     <option value="Passive">Passive</option>
                                     <option value="None">None</option>
                                 </select>
+                                <p class="field-error" id="noiseCancellationError">Please select noise cancellation</p>
                             </label>
                         </div>
                     </div>
@@ -404,6 +533,7 @@
                                 <option value="2 Years">2 Years</option>
                                 <option value="3 Years">3 Years</option>
                             </select>
+                            <p class="field-error" id="warrantyDurationError">Please select warranty duration</p>
                         </label>
                     </div>
                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
@@ -414,6 +544,7 @@
                                 <option value="Brand">Brand</option>
                                 <option value="SoundWave">SoundWave</option>
                             </select>
+                            <p class="field-error" id="warrantyProviderError">Please select warranty provider</p>
                         </label>
                     </div>
 
@@ -421,15 +552,6 @@
                         <summary class="cursor-pointer text-[#1F1F1F] font-bold">3. Audio Specs</summary>
                         <div class="mt-4 space-y-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label class="flex flex-col">
-                                    <span class="text-sm text-[#685BCB] mb-1">Form Factor</span>
-                                    <select name="formFactor" class="rounded-xl border border-[#BCA6DB] h-11 px-3">
-                                        <option value="">Select</option>
-                                        <option value="In-Ear">In-Ear</option>
-                                        <option value="On-Ear">On-Ear</option>
-                                        <option value="Over-Ear">Over-Ear</option>
-                                    </select>
-                                </label>
                                 <label class="flex flex-col">
                                     <span class="text-sm text-[#685BCB] mb-1">Earpiece Shape</span>
                                     <select name="earpieceShape" class="rounded-xl border border-[#BCA6DB] h-11 px-3">
@@ -467,11 +589,6 @@
                                         <option value="false">No</option>
                                         <option value="true">Yes</option>
                                     </select>
-                                </label>
-                                <label class="flex flex-col">
-                                    <span class="text-sm text-[#685BCB] mb-1">Battery Charging Time</span>
-                                    <input type="number" step="0.1" min="0" name="batteryChargingTime"
-                                        class="rounded-xl border border-[#BCA6DB] h-11 px-3" placeholder="hours" />
                                 </label>
                             </div>
                             <div class="space-y-2">
@@ -661,6 +778,180 @@
 
     <!-- Scripts -->
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        (function buildAdminAddProductLayout() {
+            const form = document.getElementById('addProductForm');
+            if (!form) return;
+
+            const submitBtn = document.getElementById('createProductBtn');
+            const actionRow = submitBtn ? submitBtn.closest('.flex.justify-stretch') : null;
+            if (!actionRow) return;
+
+            const nodes = Array.from(form.children).filter((el) => el !== actionRow);
+            const takeByHeading = (headingText) => {
+                const heading = nodes.find((el) =>
+                    el.tagName === 'H3' && el.textContent.trim().toLowerCase().startsWith(headingText.toLowerCase())
+                );
+                if (!heading) return [];
+                const out = [heading];
+                let cursor = heading.nextElementSibling;
+                while (cursor && cursor !== actionRow && cursor.tagName !== 'H3' && cursor.tagName !== 'DETAILS') {
+                    out.push(cursor);
+                    cursor = cursor.nextElementSibling;
+                }
+                return out;
+            };
+            const takeDetailByHeading = (headingText) =>
+                nodes.find((el) =>
+                    el.tagName === 'DETAILS' &&
+                    el.querySelector('summary') &&
+                    el.querySelector('summary').textContent.toLowerCase().includes(headingText.toLowerCase())
+                );
+            const pickByIds = (ids) => nodes.filter((el) => ids.some((id) => el.querySelector && el.querySelector(`#${id}`)));
+
+            const basicNodes = pickByIds(['productTitle', 'productSku', 'brandSelect', 'connectionType', 'categorySelect', 'shortDescription']);
+            const pricingNodes = takeByHeading('Pricing').filter((el) => !/^\s*pricing\s*$/i.test(el.textContent.trim()));
+            const inventoryNodes = takeByHeading('Inventory').filter((el) => !/^\s*inventory\s*$/i.test(el.textContent.trim()));
+            const variantsNodes = takeByHeading('Variants').filter((el) => !/^\s*variants\s*$/i.test(el.textContent.trim()));
+            const heroPosterNodes = takeByHeading('Hero Poster').filter((el) => !/^\s*hero poster\s*$/i.test(el.textContent.trim()));
+            const warrantyNodes = takeByHeading('Warranty').filter((el) => !/^\s*warranty\s*$/i.test(el.textContent.trim()));
+            const badgesNodes = takeByHeading('Badges').filter((el) => !/^\s*badges\s*$/i.test(el.textContent.trim()));
+            const shippingNodes = takeByHeading('Shipping').filter((el) => !/shipping/i.test(el.textContent.trim()));
+            const seoNodes = takeByHeading('SEO').filter((el) => !/^\s*seo/i.test(el.textContent.trim()));
+            const audioDetail = takeDetailByHeading('Audio Specs');
+            const buildDetail = takeDetailByHeading('Build & Materials');
+            const smartDetail = takeDetailByHeading('Smart Features');
+            const compatDetail = takeDetailByHeading('Compatibility');
+            const packageDetail = takeDetailByHeading('Package Contents');
+
+            const layout = document.createElement('div');
+            layout.className = 'admin-layout';
+            const main = document.createElement('div');
+            main.className = 'admin-main';
+            const side = document.createElement('div');
+            side.className = 'admin-side';
+            layout.append(main, side);
+
+            const makeCard = (title) => {
+                const card = document.createElement('section');
+                card.className = 'admin-card';
+                const h = document.createElement('h3');
+                h.textContent = title;
+                const body = document.createElement('div');
+                card.append(h, body);
+                return { card, body };
+            };
+
+            const basic = makeCard('1. Basic Info');
+            const basicGrid = document.createElement('div');
+            basicGrid.className = 'admin-grid-2';
+            basicNodes.forEach((n) => basicGrid.appendChild(n));
+            basic.body.appendChild(basicGrid);
+            main.appendChild(basic.card);
+
+            const commerce = makeCard('2. Pricing & Inventory');
+            const commerceGrid = document.createElement('div');
+            commerceGrid.className = 'admin-grid-2';
+            [...pricingNodes, ...inventoryNodes].forEach((n) => commerceGrid.appendChild(n));
+            commerce.body.appendChild(commerceGrid);
+            main.appendChild(commerce.card);
+
+            const variants = makeCard('3. Variants');
+            variantsNodes.forEach((n) => variants.body.appendChild(n));
+            main.appendChild(variants.card);
+
+            const heroPoster = makeCard('Hero Poster');
+            heroPosterNodes.forEach((n) => heroPoster.body.appendChild(n));
+            main.appendChild(heroPoster.card);
+
+            const audio = makeCard('4. Audio Specs');
+            if (audioDetail) {
+                const audioContent = audioDetail.querySelector('.mt-4') || audioDetail;
+                audioContent.classList.add('space-y-4');
+                const wiredSpecs = document.getElementById('wiredSpecs');
+                const wirelessSpecs = document.getElementById('wirelessSpecs');
+                if (wiredSpecs && !audioContent.contains(wiredSpecs)) audioContent.appendChild(wiredSpecs);
+                if (wirelessSpecs && !audioContent.contains(wirelessSpecs)) audioContent.appendChild(wirelessSpecs);
+                audio.body.appendChild(audioContent);
+                audioDetail.remove();
+            }
+            main.appendChild(audio.card);
+
+            const features = makeCard('5. Feature Sections');
+            const tabs = document.createElement('div');
+            tabs.className = 'feature-tabs';
+            const panesWrap = document.createElement('div');
+            const sourceDetails = [
+                { key: 'build', label: 'Build & Materials', node: buildDetail },
+                { key: 'smart', label: 'Smart Features', node: smartDetail },
+                { key: 'compat', label: 'Compatibility', node: compatDetail },
+                { key: 'package', label: 'Package Contents', node: packageDetail }
+            ];
+            sourceDetails.forEach((item, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `feature-tab-btn ${idx === 0 ? 'active' : ''}`;
+                btn.dataset.target = item.key;
+                btn.textContent = item.label;
+                tabs.appendChild(btn);
+
+                const pane = document.createElement('div');
+                pane.className = `feature-pane ${idx === 0 ? '' : 'hidden'}`;
+                pane.dataset.pane = item.key;
+                if (item.node) {
+                    const content = item.node.querySelector('.mt-4') || item.node;
+                    pane.appendChild(content);
+                    item.node.remove();
+                }
+                panesWrap.appendChild(pane);
+            });
+            tabs.querySelectorAll('.feature-tab-btn').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    tabs.querySelectorAll('.feature-tab-btn').forEach((b) => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    panesWrap.querySelectorAll('.feature-pane').forEach((pane) => {
+                        pane.classList.toggle('hidden', pane.dataset.pane !== btn.dataset.target);
+                    });
+                });
+            });
+            features.body.append(tabs, panesWrap);
+            main.appendChild(features.card);
+
+            const shipping = makeCard('6. Shipping & Dimensions');
+            const shippingGrid = document.createElement('div');
+            shippingGrid.className = 'admin-grid-2';
+            shippingNodes.forEach((n) => shippingGrid.appendChild(n));
+            shipping.body.appendChild(shippingGrid);
+            main.appendChild(shipping.card);
+
+            const statusCard = makeCard('Product Status');
+            statusCard.body.innerHTML = '<p class="text-sm text-[#685BCB] font-medium">New Product</p>';
+            side.appendChild(statusCard.card);
+
+            const badgesCard = makeCard('Badges');
+            badgesNodes.forEach((n) => badgesCard.body.appendChild(n));
+            side.appendChild(badgesCard.card);
+
+            const warrantyCard = makeCard('Warranty');
+            warrantyNodes.forEach((n) => warrantyCard.body.appendChild(n));
+            side.appendChild(warrantyCard.card);
+
+            const seoCard = makeCard('SEO Meta');
+            seoNodes.forEach((n) => seoCard.body.appendChild(n));
+            side.appendChild(seoCard.card);
+
+            const actionsCard = makeCard('Actions');
+            actionsCard.body.appendChild(actionRow);
+            side.appendChild(actionsCard.card);
+
+            Array.from(form.children).forEach((child) => child.remove());
+            form.appendChild(layout);
+        })();
+        });
+
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
         // ========== Variant Management ==========
         const hasVariantsToggle = document.getElementById('hasVariantsToggle');
         const variantBuilder = document.getElementById('variantBuilder');
@@ -668,6 +959,130 @@
         const variantError = document.getElementById('variantError');
         const addVariantBtn = document.getElementById('addVariantBtn');
         let variants = [];
+        let variantCropper = null;
+        let variantCropState = { variantIndex: null, imageId: null };
+        const heroPosterEnabledToggle = document.getElementById('heroPosterEnabledToggle');
+        const heroPosterPanel = document.getElementById('heroPosterPanel');
+        const heroPosterEnabledInput = document.getElementById('heroPosterEnabledInput');
+        const heroPosterCropMetaInput = document.getElementById('heroPosterCropMetaInput');
+        const heroPosterImageInput = document.getElementById('heroPosterImageInput');
+        const heroPosterPreviewWrap = document.getElementById('heroPosterPreviewWrap');
+        const heroPosterPreview = document.getElementById('heroPosterPreview');
+        const heroPosterRecropBtn = document.getElementById('heroPosterRecropBtn');
+        const heroPosterError = document.getElementById('heroPosterError');
+        let heroPosterPreviewUrl = '';
+        let heroPosterCurrentCrop = null;
+
+        function showVariantError(message) {
+            if (!variantError) return;
+            variantError.textContent = message;
+            variantError.classList.add('visible');
+        }
+
+        function clearVariantError() {
+            if (!variantError) return;
+            variantError.classList.remove('visible');
+        }
+
+        function setHeroPosterEnabled(enabled) {
+            if (!heroPosterPanel || !heroPosterEnabledInput || !heroPosterCropMetaInput) return;
+            heroPosterPanel.classList.toggle('hidden', !enabled);
+            heroPosterEnabledInput.disabled = !enabled;
+            heroPosterCropMetaInput.disabled = !enabled;
+            heroPosterEnabledInput.value = enabled ? 'true' : 'false';
+            if (!enabled) {
+                if (heroPosterImageInput) heroPosterImageInput.value = '';
+                heroPosterPreviewUrl = '';
+                heroPosterCurrentCrop = null;
+                heroPosterCropMetaInput.value = '';
+                if (heroPosterPreviewWrap) heroPosterPreviewWrap.classList.add('hidden');
+                if (heroPosterError) heroPosterError.classList.remove('visible');
+            }
+        }
+
+        // Register submit listener early so later script issues do not block submission wiring.
+        const addProductFormEl = document.getElementById('addProductForm');
+        if (addProductFormEl) {
+            addProductFormEl.addEventListener('submit', function (e) {
+                const formError = document.getElementById('formSubmitError');
+                if (formError) {
+                    formError.textContent = '';
+                    formError.classList.remove('visible');
+                }
+                const submitBtn = document.getElementById('createProductBtn');
+                const submitLabel = submitBtn ? submitBtn.querySelector('span') : null;
+
+                try {
+                    const valid = validateStrictForm();
+
+                    if (!valid) {
+                        e.preventDefault();
+                        if (formError) {
+                            formError.textContent = 'Please fix the highlighted fields and try again.';
+                            formError.classList.add('visible');
+                        }
+                        const firstError = document.querySelector('.field-error.visible');
+                        if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return;
+                    }
+
+                    // Ensure payload exists for native multipart submission.
+                    this.querySelectorAll('.js-generated-submit').forEach((el) => el.remove());
+
+                    const hasVariantsInput = document.createElement('input');
+                    hasVariantsInput.type = 'hidden';
+                    hasVariantsInput.name = 'hasVariants';
+                    hasVariantsInput.value = 'true';
+                    hasVariantsInput.className = 'js-generated-submit';
+                    this.appendChild(hasVariantsInput);
+
+                    const variantPayloadInput = document.createElement('input');
+                    variantPayloadInput.type = 'hidden';
+                    variantPayloadInput.name = 'variantPayload';
+                    variantPayloadInput.className = 'js-generated-submit';
+                    ensureGlobalHeroSelection();
+                    const variantPayload = variants.map((variant) => {
+                        const heroNewIndex = (variant.newImages || []).findIndex((img) => img && img.isHero === true);
+                        return {
+                            colorName: variant.colorName || '',
+                            colorCode: variant.colorCode || '',
+                            existingImages: [],
+                            newImageCrops: (variant.newImages || []).map((img) => img.crop || null),
+                            newImageIsHero: (variant.newImages || []).map((img) => img && img.isHero === true),
+                            heroImage: heroNewIndex >= 0 ? { source: 'new', index: heroNewIndex } : null
+                        };
+                    });
+                    variantPayloadInput.value = JSON.stringify(variantPayload);
+                    this.appendChild(variantPayloadInput);
+
+                    variants.forEach((variant, index) => {
+                        (variant.newImages || []).forEach((imageObj) => {
+                            if (!imageObj || !imageObj.file) return;
+                            const fileInput = document.createElement('input');
+                            fileInput.type = 'file';
+                            fileInput.name = `variantImages_${index}`;
+                            fileInput.className = 'js-generated-submit';
+                            const dt = new DataTransfer();
+                            dt.items.add(imageObj.file);
+                            fileInput.files = dt.files;
+                            this.appendChild(fileInput);
+                        });
+                    });
+
+                    if (submitBtn) submitBtn.disabled = true;
+                    if (submitLabel) submitLabel.textContent = 'Creating...';
+                } catch (err) {
+                    e.preventDefault();
+                    const message = 'Error creating product. Please try again.';
+                    if (formError) {
+                        formError.textContent = message;
+                        formError.classList.add('visible');
+                    } else {
+                        alert(message);
+                    }
+                }
+            });
+        }
 
         function normalizeHex(value) {
             const raw = String(value || '').trim();
@@ -705,8 +1120,45 @@
             return null;
         }
 
+        function clearAllHeroFlags() {
+            variants.forEach((variant) => {
+                (variant.newImages || []).forEach((img) => {
+                    if (img) img.isHero = false;
+                });
+            });
+        }
+
+        function ensureGlobalHeroSelection() {
+            let heroFound = false;
+            variants.forEach((variant) => {
+                (variant.newImages || []).forEach((img) => {
+                    if (!img || img.isHero !== true) return;
+                    if (!heroFound) {
+                        heroFound = true;
+                    } else {
+                        img.isHero = false;
+                    }
+                });
+            });
+            if (heroFound) return;
+            for (const variant of variants) {
+                const firstImage = (variant.newImages || [])[0];
+                if (firstImage) {
+                    firstImage.isHero = true;
+                    return;
+                }
+            }
+        }
+
+        function setGlobalHeroByImageId(variantIndex, imageId) {
+            clearAllHeroFlags();
+            const target = (variants[variantIndex] && variants[variantIndex].newImages || []).find((img) => img && img.id === imageId);
+            if (target) target.isHero = true;
+            ensureGlobalHeroSelection();
+        }
+
         function addVariant() {
-            variants.push({ colorInput: '', colorCode: '', colorName: '', files: [] });
+            variants.push({ colorInput: '', colorCode: '', colorName: '', newImages: [] });
             renderVariants();
         }
 
@@ -716,6 +1168,7 @@
         }
 
         function renderVariants() {
+            ensureGlobalHeroSelection();
             variantList.innerHTML = '';
             variants.forEach((variant, index) => {
                 const wrapper = document.createElement('div');
@@ -733,7 +1186,20 @@
                     <div class="mt-3">
                         <input type="file" data-role="variant-files" data-index="${index}" multiple accept="image/jpeg,image/png,image/webp"
                             class="block w-full text-sm text-[#1F1F1F]">
-                        <p class="text-xs text-[#685BCB] mt-1">Selected: ${variant.files.length} image(s)</p>
+                        <p class="text-xs text-[#685BCB] mt-1">${(variant.newImages || []).length} images selected</p>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        ${(variant.newImages || []).map((img) => `
+                            <div class="relative w-16 h-16 rounded-lg overflow-hidden border border-[#BCA6DB]">
+                                <img src="${img.previewUrl}" class="w-full h-full object-cover" />
+                                <button type="button" data-role="remove-new-image" data-index="${index}" data-image-id="${img.id}" class="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-1">x</button>
+                                <button type="button" data-role="crop-new-image" data-index="${index}" data-image-id="${img.id}" class="absolute bottom-0 left-0 bg-[#685BCB] text-white text-[9px] px-1 py-[1px]">Crop</button>
+                                <label class="absolute bottom-0 right-0 bg-white/90 text-[9px] px-1 py-[1px] rounded-tl">
+                                    <input type="radio" data-role="set-hero-new-image" data-index="${index}" data-image-id="${img.id}" name="heroImagePicker" ${img.isHero ? 'checked' : ''}>
+                                    Hero
+                                </label>
+                            </div>
+                        `).join('')}
                     </div>
                 `;
                 variantList.appendChild(wrapper);
@@ -746,17 +1212,17 @@
                     const resolved = resolveColor(this.value);
                     variants[idx].colorCode = resolved ? resolved.colorCode : '';
                     variants[idx].colorName = resolved ? resolved.colorName : '';
-                    renderVariants();
-                });
-            });
 
-            variantList.querySelectorAll('[data-role="variant-files"]').forEach((input) => {
-                input.addEventListener('change', function () {
-                    const idx = Number(this.dataset.index);
-                    variants[idx].files = Array.from(this.files || []).filter((f) =>
-                        ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
-                    );
-                    renderVariants();
+                    const card = this.closest('.border');
+                    if (!card) return;
+                    const preview = card.querySelector('[data-role="color-preview"]');
+                    const meta = card.querySelector('[data-role="color-meta"]');
+                    if (preview) {
+                        preview.style.background = variants[idx].colorCode || '#FFFFFF';
+                    }
+                    if (meta) {
+                        meta.textContent = variants[idx].colorCode ? `Normalized: ${variants[idx].colorCode}` : '';
+                    }
                 });
             });
 
@@ -765,50 +1231,336 @@
             });
         }
 
+        const cropModal = document.createElement('div');
+        cropModal.id = 'variantCropModal';
+        cropModal.className = 'fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4';
+        cropModal.innerHTML = `
+            <div class="bg-white rounded-xl p-4 w-full max-w-2xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-bold text-[#1F1F1F]">Crop Variant Image (1:1)</h2>
+                    <button type="button" id="closeVariantCropModal" class="text-sm font-semibold text-[#685BCB]">Close</button>
+                </div>
+                <div class="bg-gray-100 rounded-lg overflow-hidden max-h-[70vh]">
+                    <img id="variantCropperImage" src="" alt="Crop preview" class="max-w-full" />
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button type="button" id="saveVariantCropBtn" class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Save Crop</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(cropModal);
+        const variantCropperImage = cropModal.querySelector('#variantCropperImage');
+        const closeVariantCropModal = cropModal.querySelector('#closeVariantCropModal');
+        const saveVariantCropBtn = cropModal.querySelector('#saveVariantCropBtn');
+
+        function openVariantCropModal(variantIndex, imageId) {
+            const image = (variants[variantIndex].newImages || []).find((img) => img.id === imageId);
+            if (!image) return;
+            variantCropState = { variantIndex, imageId };
+            cropModal.classList.remove('hidden');
+            cropModal.classList.add('flex');
+            variantCropperImage.src = image.originalPreviewUrl || image.previewUrl;
+            variantCropperImage.onload = function () {
+                if (variantCropper) variantCropper.destroy();
+                variantCropper = new Cropper(variantCropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    movable: true,
+                    zoomable: true,
+                    scalable: false,
+                    cropBoxResizable: true,
+                    autoCropArea: 0.9,
+                    ready() {
+                        if (image.crop && image.crop.width && image.crop.height) {
+                            variantCropper.setData(image.crop);
+                        }
+                    }
+                });
+            };
+        }
+
+        function closeVariantCropperModal() {
+            if (variantCropper) {
+                variantCropper.destroy();
+                variantCropper = null;
+            }
+            variantCropState = { variantIndex: null, imageId: null };
+            cropModal.classList.add('hidden');
+            cropModal.classList.remove('flex');
+        }
+
+        if (closeVariantCropModal) {
+            closeVariantCropModal.addEventListener('click', closeVariantCropperModal);
+        }
+        if (cropModal) {
+            cropModal.addEventListener('click', (e) => {
+                if (e.target === cropModal) closeVariantCropperModal();
+            });
+        }
+        if (saveVariantCropBtn) {
+            saveVariantCropBtn.addEventListener('click', () => {
+            if (!variantCropper || variantCropState.variantIndex === null || variantCropState.imageId === null) return;
+            const data = variantCropper.getData(true);
+            const crop = {
+                x: Math.round(data.x),
+                y: Math.round(data.y),
+                width: Math.round(data.width),
+                height: Math.round(data.height)
+            };
+            const list = variants[variantCropState.variantIndex].newImages || [];
+            const idx = list.findIndex((img) => img.id === variantCropState.imageId);
+            if (idx >= 0) list[idx].crop = crop;
+            closeVariantCropperModal();
+            renderVariants();
+            });
+        }
+
+        const heroPosterCropModal = document.createElement('div');
+        heroPosterCropModal.id = 'heroPosterCropModal';
+        heroPosterCropModal.className = 'fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4';
+        heroPosterCropModal.innerHTML = `
+            <div class="bg-white rounded-xl p-4 w-full max-w-4xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-bold text-[#1F1F1F]">Hero Poster Crop (21:9)</h2>
+                    <button type="button" id="closeHeroPosterCropModal" class="text-sm font-semibold text-[#685BCB]">Close</button>
+                </div>
+                <div class="bg-gray-100 rounded-lg overflow-hidden max-h-[70vh]">
+                    <img id="heroPosterCropperImage" src="" alt="Hero poster crop" class="max-w-full" />
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button type="button" id="saveHeroPosterCropBtn"
+                        class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Save Crop</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(heroPosterCropModal);
+        const heroPosterCropperImage = heroPosterCropModal.querySelector('#heroPosterCropperImage');
+        const closeHeroPosterCropModal = heroPosterCropModal.querySelector('#closeHeroPosterCropModal');
+        const saveHeroPosterCropBtn = heroPosterCropModal.querySelector('#saveHeroPosterCropBtn');
+        let heroPosterCropper = null;
+
+        function openHeroPosterCropModal(src) {
+            if (!src) return;
+            heroPosterCropModal.classList.remove('hidden');
+            heroPosterCropModal.classList.add('flex');
+            heroPosterCropperImage.src = src;
+            heroPosterCropperImage.onload = function () {
+                if (heroPosterCropper) heroPosterCropper.destroy();
+                heroPosterCropper = new Cropper(heroPosterCropperImage, {
+                    aspectRatio: 21 / 9,
+                    viewMode: 1,
+                    movable: true,
+                    zoomable: true,
+                    scalable: false,
+                    cropBoxResizable: true,
+                    autoCropArea: 0.95,
+                    ready() {
+                        if (heroPosterCurrentCrop && heroPosterCurrentCrop.width && heroPosterCurrentCrop.height) {
+                            heroPosterCropper.setData(heroPosterCurrentCrop);
+                        }
+                    }
+                });
+            };
+        }
+
+        function closeHeroPosterModal() {
+            if (heroPosterCropper) {
+                heroPosterCropper.destroy();
+                heroPosterCropper = null;
+            }
+            heroPosterCropModal.classList.add('hidden');
+            heroPosterCropModal.classList.remove('flex');
+        }
+
+        if (heroPosterEnabledToggle) {
+            heroPosterEnabledToggle.addEventListener('change', function () {
+                setHeroPosterEnabled(this.checked);
+                if (this.checked && heroPosterImageInput) {
+                    heroPosterImageInput.click();
+                }
+            });
+        }
+        if (heroPosterImageInput) {
+            heroPosterImageInput.addEventListener('change', function () {
+                const file = this.files && this.files[0];
+                if (!file) return;
+                heroPosterPreviewUrl = URL.createObjectURL(file);
+                if (heroPosterPreview) heroPosterPreview.src = heroPosterPreviewUrl;
+                if (heroPosterPreviewWrap) heroPosterPreviewWrap.classList.remove('hidden');
+                openHeroPosterCropModal(heroPosterPreviewUrl);
+            });
+        }
+        if (heroPosterRecropBtn) {
+            heroPosterRecropBtn.addEventListener('click', function () {
+                if (heroPosterPreviewUrl) openHeroPosterCropModal(heroPosterPreviewUrl);
+            });
+        }
+        if (saveHeroPosterCropBtn) {
+            saveHeroPosterCropBtn.addEventListener('click', function () {
+                if (!heroPosterCropper) return;
+                const data = heroPosterCropper.getData(true);
+                heroPosterCurrentCrop = {
+                    x: Math.round(data.x),
+                    y: Math.round(data.y),
+                    width: Math.round(data.width),
+                    height: Math.round(data.height)
+                };
+                if (heroPosterCropMetaInput) {
+                    heroPosterCropMetaInput.value = JSON.stringify(heroPosterCurrentCrop);
+                }
+                closeHeroPosterModal();
+            });
+        }
+        if (closeHeroPosterCropModal) {
+            closeHeroPosterCropModal.addEventListener('click', closeHeroPosterModal);
+        }
+        heroPosterCropModal.addEventListener('click', function (e) {
+            if (e.target === heroPosterCropModal) closeHeroPosterModal();
+        });
+
+        // delegated handlers - dynamic variants
+        if (variantList) {
+            variantList.addEventListener('change', (event) => {
+                const input = event.target;
+                if (!input) return;
+                if (input.dataset.role === 'set-hero-new-image') {
+                    setGlobalHeroByImageId(Number(input.dataset.index), input.dataset.imageId);
+                    renderVariants();
+                    return;
+                }
+                if (input.dataset.role !== 'variant-files') return;
+                const idx = Number(input.dataset.index);
+                const selected = Array.from(input.files || []).filter((f) => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type));
+                const mapped = selected.map((file) => {
+                    const previewUrl = URL.createObjectURL(file);
+                    return {
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        file,
+                        previewUrl,
+                        originalPreviewUrl: previewUrl,
+                        crop: null,
+                        isHero: false
+                    };
+                });
+                variants[idx].newImages = [...(variants[idx].newImages || []), ...mapped];
+                ensureGlobalHeroSelection();
+                renderVariants();
+            });
+            variantList.addEventListener('click', (event) => {
+                const btn = event.target;
+                if (!btn || !btn.dataset || !btn.dataset.role) return;
+                if (btn.dataset.role === 'remove-new-image') {
+                    const variantIndex = Number(btn.dataset.index);
+                    const imageId = btn.dataset.imageId;
+                    variants[variantIndex].newImages = (variants[variantIndex].newImages || []).filter((img) => img.id !== imageId);
+                    ensureGlobalHeroSelection();
+                    renderVariants();
+                    return;
+                }
+                if (btn.dataset.role === 'crop-new-image') {
+                    openVariantCropModal(Number(btn.dataset.index), btn.dataset.imageId);
+                    return;
+                }
+            });
+        }
+
         function validateVariants() {
             if (!variants.length) {
-                variantError.textContent = 'Add at least one colour variant.';
-                variantError.classList.add('visible');
+                showVariantError('Add at least one colour variant.');
                 return false;
             }
 
             for (const variant of variants) {
                 if (!variant.colorCode) {
-                    variantError.textContent = 'Each variant needs a valid HEX or CSS colour name.';
-                    variantError.classList.add('visible');
+                    showVariantError('Each variant needs a valid HEX or CSS colour name.');
                     return false;
                 }
-                if (variant.files.length < 3 || variant.files.length > 10) {
-                    variantError.textContent = 'Each variant must contain 3 to 10 images.';
-                    variantError.classList.add('visible');
+                const newCount = (variant.newImages || []).length;
+                if (newCount < 3 || newCount > 10) {
+                    showVariantError('Each variant must contain 3 to 10 images.');
                     return false;
                 }
             }
 
-            variantError.classList.remove('visible');
+            clearVariantError();
             return true;
         }
 
-        hasVariantsToggle.checked = true;
-        hasVariantsToggle.disabled = true;
-        variantBuilder.classList.remove('hidden');
+        if (hasVariantsToggle) {
+            hasVariantsToggle.checked = true;
+            hasVariantsToggle.disabled = true;
+        }
+        setHeroPosterEnabled(false);
+        if (variantBuilder) {
+            variantBuilder.classList.remove('hidden');
+        }
         if (variants.length === 0) addVariant();
-        addVariantBtn.addEventListener('click', addVariant);
+        if (addVariantBtn) {
+            addVariantBtn.addEventListener('click', addVariant);
+        }
+
+        const CONNECTOR_TYPE_OPTIONS = [
+            '3.5mm Jack (Mini-jack)',
+            'USB-C',
+            'Lightning',
+            '6.35mm (1/4-inch) Jack',
+            '2.5mm Jack',
+            '4.4mm Pentaconn',
+            'XLR (3-pin or 4-pin)',
+            'Other'
+        ];
+
+        function renderBatteryChargingField(value) {
+            const host = document.getElementById('batteryChargingTimeHost');
+            if (!host) return;
+            host.innerHTML = `
+                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Charging Time (hours)</p>
+                <input id="batteryChargingTime" name="batteryChargingTime" placeholder="e.g., 2" type="number"
+                    step="0.1" min="0"
+                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
+                    value="${value || ''}" />
+                <p class="field-error" id="batteryChargingTimeError">Enter valid charging time in hours</p>
+            `;
+        }
+
+        function removeBatteryChargingField() {
+            const host = document.getElementById('batteryChargingTimeHost');
+            if (host) host.innerHTML = '';
+        }
 
         // ========== Connection Type Toggle ==========
-        document.getElementById('connectionType').addEventListener('change', function () {
-            const wiredSpecs = document.getElementById('wiredSpecs');
-            const wirelessSpecs = document.getElementById('wirelessSpecs');
-            wiredSpecs.classList.add('hidden');
-            wirelessSpecs.classList.add('hidden');
-            if (this.value === 'Wired') {
-                wiredSpecs.classList.remove('hidden');
-            } else if (this.value === 'Wireless') {
-                wirelessSpecs.classList.remove('hidden');
-            }
-        });
+        const connectionTypeEl = document.getElementById('connectionType');
+        if (connectionTypeEl) {
+            const syncConnectionUI = function () {
+                const wiredSpecs = document.getElementById('wiredSpecs');
+                const wirelessSpecs = document.getElementById('wirelessSpecs');
+                if (!wiredSpecs || !wirelessSpecs) return;
+                wiredSpecs.classList.add('hidden');
+                wirelessSpecs.classList.add('hidden');
+                if (this.value === 'Wired') {
+                    wiredSpecs.classList.remove('hidden');
+                    removeBatteryChargingField();
+                    clearFieldError('batteryChargingTime');
+                } else if (this.value === 'Wireless') {
+                    wirelessSpecs.classList.remove('hidden');
+                    renderBatteryChargingField();
+                } else {
+                    removeBatteryChargingField();
+                }
+            };
+            connectionTypeEl.addEventListener('change', syncConnectionUI);
+            syncConnectionUI.call(connectionTypeEl);
+        }
 
         // ========== Validation Helpers ==========
+        ['productTitle', 'productSku', 'brandSelect', 'connectionType', 'categorySelect', 'shortDescription', 'productPrice',
+            'originalPrice', 'discountPercentage', 'stockCount', 'reservedCount', 'reorderThreshold',
+            'warrantyDuration', 'warrantyProvider', 'shippingLength', 'shippingWidth', 'shippingHeight', 'shippingWeight'
+        ].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.setAttribute('required', 'required');
+        });
+
         function showError(inputEl, errorEl) {
             inputEl.classList.add('input-error');
             errorEl.classList.add('visible');
@@ -880,8 +1632,158 @@
             return true;
         }
 
+        function setFieldError(id, message) {
+            const input = document.getElementById(id);
+            const error = document.getElementById(id + 'Error');
+            if (!input || !error) return false;
+            error.textContent = message;
+            showError(input, error);
+            return false;
+        }
+
+        function clearFieldError(id) {
+            const input = document.getElementById(id);
+            const error = document.getElementById(id + 'Error');
+            if (!input || !error) return;
+            clearError(input, error);
+        }
+
+        function getValue(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function updateShortDescriptionCounter() {
+            const desc = document.getElementById('shortDescription');
+            const counter = document.getElementById('shortDescriptionCounter');
+            if (!desc || !counter) return;
+            counter.textContent = `${desc.value.length}/1500`;
+        }
+
+        const shortDescriptionEl = document.getElementById('shortDescription');
+        if (shortDescriptionEl) {
+            shortDescriptionEl.addEventListener('input', updateShortDescriptionCounter);
+            updateShortDescriptionCounter();
+        }
+
+        function setupAutoPriceCalculation() {
+            const originalPriceEl = document.getElementById('originalPrice');
+            const discountEl = document.getElementById('discountPercentage');
+            const priceEl = document.getElementById('productPrice');
+            if (!originalPriceEl || !discountEl || !priceEl) return;
+
+            const recalcPrice = () => {
+                const originalPrice = Number(originalPriceEl.value);
+                const discount = Number(discountEl.value);
+                if (!Number.isFinite(originalPrice) || !Number.isFinite(discount)) return;
+                if (originalPrice <= 0 || discount < 0 || discount > 90) return;
+                const computed = originalPrice - ((originalPrice * discount) / 100);
+                if (computed < 0) return;
+                priceEl.value = computed.toFixed(2);
+            };
+
+            originalPriceEl.addEventListener('input', recalcPrice);
+            discountEl.addEventListener('input', recalcPrice);
+            originalPriceEl.addEventListener('change', recalcPrice);
+            discountEl.addEventListener('change', recalcPrice);
+        }
+        setupAutoPriceCalculation();
+
+        function validateStrictForm() {
+            let valid = true;
+            const sku = getValue('productSku');
+            if (sku && !/^[A-Za-z0-9-]{2,60}$/.test(sku)) {
+                valid = setFieldError('productSku', 'SKU must be 2-60 chars (letters/numbers/hyphen).') && valid;
+            } else clearFieldError('productSku');
+
+            const title = getValue('productTitle');
+            if (!/^[A-Za-z0-9 -]{3,150}$/.test(title) || /\s{2,}/.test(title)) {
+                valid = setFieldError('productTitle', 'Title must be 3-150 chars (letters, numbers, spaces, hyphen).') && valid;
+            } else clearFieldError('productTitle');
+
+            if (!validateSelect('brandSelect', 'brandSelectError')) valid = false;
+            if (!validateSelect('connectionType', 'connectionTypeError')) valid = false;
+            if (!validateSelect('categorySelect', 'categorySelectError')) valid = false;
+
+            const shortDescription = getValue('shortDescription');
+            if (shortDescription.length < 10 || shortDescription.length > 1500 || /<[^>]+>/.test(shortDescription) || /\s{2,}/.test(shortDescription)) {
+                valid = setFieldError('shortDescription', 'Description must be 10-1500 chars and cannot contain HTML.') && valid;
+            } else clearFieldError('shortDescription');
+
+            const price = getValue('productPrice');
+            const originalPrice = getValue('originalPrice');
+            const discount = getValue('discountPercentage');
+            if (!/^\d+(\.\d{1,2})?$/.test(price) || Number(price) <= 0) valid = setFieldError('productPrice', 'Price must be > 0 with up to 2 decimals.') && valid; else clearFieldError('productPrice');
+            if (!/^\d+(\.\d{1,2})?$/.test(originalPrice) || Number(originalPrice) <= 0) valid = setFieldError('originalPrice', 'Original price is required and must be positive.') && valid; else clearFieldError('originalPrice');
+            if (!/^\d+(\.\d{1,2})?$/.test(discount) || Number(discount) < 0 || Number(discount) > 90) valid = setFieldError('discountPercentage', 'Discount must be between 0 and 90.') && valid; else clearFieldError('discountPercentage');
+            if (/^\d+(\.\d{1,2})?$/.test(price) && /^\d+(\.\d{1,2})?$/.test(originalPrice) && Number(originalPrice) < Number(price)) {
+                valid = setFieldError('originalPrice', 'Original price must be greater than or equal to price.') && valid;
+            }
+
+            const stock = getValue('stockCount');
+            const reserved = getValue('reservedCount');
+            const reorder = getValue('reorderThreshold');
+            if (!/^\d+$/.test(stock)) valid = setFieldError('stockCount', 'Stock count must be an integer >= 0.') && valid; else clearFieldError('stockCount');
+            if (!/^\d+$/.test(reserved)) valid = setFieldError('reservedCount', 'Reserved count is required and must be an integer >= 0.') && valid; else clearFieldError('reservedCount');
+            if (!/^\d+$/.test(reorder)) valid = setFieldError('reorderThreshold', 'Reorder threshold is required and must be an integer >= 0.') && valid; else clearFieldError('reorderThreshold');
+            if (/^\d+$/.test(stock) && /^\d+$/.test(reserved) && Number(reserved) > Number(stock)) {
+                valid = setFieldError('reservedCount', 'Reserved count cannot exceed stock count.') && valid;
+            }
+
+            const connType = getValue('connectionType');
+            if (connType === 'Wired') {
+                if (!/^\d+(\.\d{1,2})?$/.test(getValue('cableLength')) || Number(getValue('cableLength')) <= 0) valid = setFieldError('cableLength', 'Cable length is required and must be positive.') && valid; else clearFieldError('cableLength');
+                if (!CONNECTOR_TYPE_OPTIONS.includes(getValue('connectorType'))) valid = setFieldError('connectorType', 'Please select a valid connector type.') && valid; else clearFieldError('connectorType');
+                if (!/^\d+$/.test(getValue('impedance')) || Number(getValue('impedance')) <= 0) valid = setFieldError('impedance', 'Impedance must be a positive integer.') && valid; else clearFieldError('impedance');
+                if (!/^\d+(\.\d{1,2})?$/.test(getValue('driverSize')) || Number(getValue('driverSize')) <= 0) valid = setFieldError('driverSize', 'Driver size must be positive.') && valid; else clearFieldError('driverSize');
+            } else if (connType === 'Wireless') {
+                const bt = getValue('bluetoothVersion');
+                if (!/^([1-9]\d?)(\.\d)?$/.test(bt)) valid = setFieldError('bluetoothVersion', 'Bluetooth version must look like 5.0 or 5.3.') && valid; else clearFieldError('bluetoothVersion');
+                if (!/^\d+(\.\d{1,2})?$/.test(getValue('batteryLife')) || Number(getValue('batteryLife')) <= 0) valid = setFieldError('batteryLife', 'Battery life must be positive.') && valid; else clearFieldError('batteryLife');
+                const chargingTime = getValue('batteryChargingTime');
+                if (!chargingTime || !/^\d+(\.\d{1,2})?$/.test(chargingTime) || Number(chargingTime) <= 0) {
+                    valid = setFieldError('batteryChargingTime', 'Enter valid charging time in hours') && valid;
+                } else {
+                    clearFieldError('batteryChargingTime');
+                }
+                if (!/^\d+(\.\d{1,2})?$/.test(getValue('wirelessRange')) || Number(getValue('wirelessRange')) <= 0) valid = setFieldError('wirelessRange', 'Wireless range must be positive.') && valid; else clearFieldError('wirelessRange');
+                const nc = String(getValue('noiseCancellation')).trim().toLowerCase();
+                if (!['active', 'passive', 'none'].includes(nc)) valid = setFieldError('noiseCancellation', 'Select valid noise cancellation option.') && valid;
+            }
+
+            if (!validateSelect('warrantyDuration', 'warrantyDurationError')) valid = false;
+            if (!validateSelect('warrantyProvider', 'warrantyProviderError')) valid = false;
+
+            const dims = [
+                ['shippingLength', /^\d+(\.\d{1,2})?$/, 'Length must be positive with up to 2 decimals.'],
+                ['shippingWidth', /^\d+(\.\d{1,2})?$/, 'Width must be positive with up to 2 decimals.'],
+                ['shippingHeight', /^\d+(\.\d{1,2})?$/, 'Height must be positive with up to 2 decimals.']
+            ];
+            dims.forEach(([id, regex, message]) => {
+                const v = getValue(id);
+                if (!regex.test(v) || Number(v) <= 0) valid = setFieldError(id, message) && valid; else clearFieldError(id);
+            });
+            const weight = getValue('shippingWeight');
+            if (!/^\d+(\.\d{1,3})?$/.test(weight) || Number(weight) <= 0) valid = setFieldError('shippingWeight', 'Weight must be positive with up to 3 decimals.') && valid; else clearFieldError('shippingWeight');
+
+            if (!validateVariants()) valid = false;
+
+            if (heroPosterEnabledToggle && heroPosterEnabledToggle.checked) {
+                const hasPosterFile = heroPosterImageInput && heroPosterImageInput.files && heroPosterImageInput.files[0];
+                if (!hasPosterFile) {
+                    if (heroPosterError) heroPosterError.classList.add('visible');
+                    valid = false;
+                } else if (heroPosterError) {
+                    heroPosterError.classList.remove('visible');
+                }
+            } else if (heroPosterError) {
+                heroPosterError.classList.remove('visible');
+            }
+            return valid;
+        }
+
         // Real-time validation on blur
-        document.querySelectorAll('#addProductForm input, #addProductForm select').forEach(function (el) {
+        document.querySelectorAll('#addProductForm input, #addProductForm select, #addProductForm textarea').forEach(function (el) {
             el.addEventListener('blur', function () {
                 const errorEl = document.getElementById(el.id + 'Error');
                 if (!errorEl) return;
@@ -896,116 +1798,15 @@
         });
 
         // ========== Form Submission ==========
-        document.getElementById('addProductForm').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            let valid = true;
-
-            // Required fields
-            if (!validatePattern('productTitle', 'productTitleError')) valid = false;
-            if (!validatePattern('productSku', 'productSkuError')) valid = false;
-            if (!validateSelect('brandSelect', 'brandSelectError')) valid = false;
-            if (!validateSelect('connectionType', 'connectionTypeError')) valid = false;
-            if (!validateSelect('categorySelect', 'categorySelectError')) valid = false;
-            if (!validateNumber('productPrice', 'productPriceError', true)) valid = false;
-            if (!validateNumber('stockCount', 'stockCountError', true)) valid = false;
-
-            // Optional numeric fields
-            if (!validateNumber('originalPrice', 'originalPriceError', false)) valid = false;
-            if (!validateNumber('discountPercentage', 'discountPercentageError', false)) valid = false;
-            if (!validateNumber('reservedCount', 'reservedCountError', false)) valid = false;
-            if (!validateNumber('reorderThreshold', 'reorderThresholdError', false)) valid = false;
-            if (!validateNumber('shippingLength', 'shippingLengthError', false)) valid = false;
-            if (!validateNumber('shippingWidth', 'shippingWidthError', false)) valid = false;
-            if (!validateNumber('shippingHeight', 'shippingHeightError', false)) valid = false;
-            if (!validateNumber('shippingWeight', 'shippingWeightError', false)) valid = false;
-
-            // Conditional specs
-            const connType = document.getElementById('connectionType').value;
-            if (connType === 'Wired') {
-                if (!validateNumber('cableLength', 'cableLengthError', false)) valid = false;
-                if (!validatePattern('connectorType', 'connectorTypeError')) valid = false;
-                if (!validateNumber('impedance', 'impedanceError', false)) valid = false;
-                if (!validateNumber('driverSize', 'driverSizeError', false)) valid = false;
-            } else if (connType === 'Wireless') {
-                if (!validateNumber('bluetoothVersion', 'bluetoothVersionError', false)) valid = false;
-                if (!validateNumber('batteryLife', 'batteryLifeError', false)) valid = false;
-                if (!validateNumber('chargingTime', 'chargingTimeError', false)) valid = false;
-                if (!validateNumber('wirelessRange', 'wirelessRangeError', false)) valid = false;
-            }
-
-            if (!validateVariants()) valid = false;
-
-            if (!valid) {
-                const firstError = document.querySelector('.field-error.visible');
-                if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return;
-            }
-
-            // Build FormData
-            const formData = new FormData();
-            const form = this;
-
-            // Text/select fields
-            const fieldNames = ['title', 'sku', 'brand', 'connectionType', 'category', 'shortDescription',
-                'price', 'originalPrice', 'discountPercentage', 'stockCount', 'reservedCount', 'reorderThreshold',
-                'cableLength', 'connectorType', 'impedance', 'driverSize',
-                'bluetoothVersion', 'batteryLife', 'chargingTime', 'wirelessRange', 'noiseCancellation',
-                'warrantyDuration', 'warrantyProvider',
-                'length', 'width', 'height', 'weight', 'metaTitle', 'metaDescription',
-                'formFactor', 'earpieceShape', 'impedanceRange', 'sensitivityRange', 'hasMicrophone', 'batteryChargingTime'];
-
-            fieldNames.forEach(function (name) {
-                const el = form.querySelector('[name="' + name + '"]');
-                if (el) formData.append(name, el.value);
-            });
-
-            // Badges (multiple checkboxes)
-            document.querySelectorAll('[name="badges"]:checked').forEach(function (cb) {
-                formData.append('badges', cb.value);
-            });
-            ['noiseControlTypes', 'controlMethods', 'cableFeatures', 'smartFeatures', 'compatibleDevices', 'materials', 'includedComponents', 'audioDriverTypes']
-                .forEach((name) => {
-                    document.querySelectorAll(`[name="${name}"]:checked`).forEach((cb) => {
-                        formData.append(name, cb.value);
-                    });
-                });
-
-            formData.append('hasVariants', 'true');
-            const variantPayload = variants.map((variant) => ({
-                colorName: variant.colorName || '',
-                colorCode: variant.colorCode || '',
-                existingImages: []
-            }));
-            formData.append('variantPayload', JSON.stringify(variantPayload));
-            variants.forEach((variant, index) => {
-                variant.files.forEach((file) => {
-                    formData.append(`variantImages_${index}`, file);
-                });
-            });
-
-            // Submit
+        // Registered earlier for reliability.
+        });
+    </script>
+    <script>
+        document.addEventListener('pageshow', function () {
             const submitBtn = document.getElementById('createProductBtn');
-            submitBtn.disabled = true;
-            submitBtn.querySelector('span').textContent = 'Creating...';
-
-            try {
-                const res = await fetch('/admin/products', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                if (data.success) {
-                    window.location.href = '/admin/products/' + data.productId;
-                } else {
-                    alert(data.message || 'Failed to create product');
-                    submitBtn.disabled = false;
-                    submitBtn.querySelector('span').textContent = 'Create Product';
-                }
-            } catch (err) {
-                alert('Error creating product. Please try again.');
-                submitBtn.disabled = false;
-                submitBtn.querySelector('span').textContent = 'Create Product';
-            }
+            const submitLabel = submitBtn ? submitBtn.querySelector('span') : null;
+            if (submitBtn) submitBtn.disabled = false;
+            if (submitLabel) submitLabel.textContent = 'Create Product';
         });
     </script>
 </body>
