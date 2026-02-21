@@ -53,7 +53,7 @@
 
                     <h1 class="text-2xl font-bold text-primary mb-6">Edit Address</h1>
 
-                    <form action="/account/addresses/<%= address._id %>/update" method="POST" class="max-w-2xl">
+                    <form action="/account/addresses/<%= address._id %>/update?_method=PATCH" method="POST" class="max-w-2xl">
                         <!-- Two Column Grid -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <!-- Full Name -->
