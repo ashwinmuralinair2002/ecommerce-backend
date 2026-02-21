@@ -197,6 +197,28 @@ const logout = (req, res) => {
     });
 };
 
+const handleGoogleAuthCallback = (req, res) => {
+    // Successful authentication, data is in req.user (from passport strategy)
+    req.session.regenerate((err) => {
+        if (err) {
+            console.error('Google Auth Session Error:', err);
+            return res.redirect('/login');
+        }
+
+        // Standardize Session
+        req.session.userId = req.user._id.toString();
+        req.session.role = req.user.role || 'user';
+
+        req.session.save((err) => {
+            if (err) {
+                console.error('Google Auth Session Save Error:', err);
+                return res.redirect('/login');
+            }
+            res.redirect('/home');
+        });
+    });
+};
+
 module.exports = {
     signup,
     login,
@@ -204,5 +226,6 @@ module.exports = {
     resendOtp,
     forgotPassword,
     resetPassword,
-    logout
+    logout,
+    handleGoogleAuthCallback
 };

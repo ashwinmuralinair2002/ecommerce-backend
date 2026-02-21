@@ -13,9 +13,14 @@ const { getHomePage, getPostLoginHomePage } = require('./controllers/home.contro
 const productController = require('./controllers/admin.product.controller');
 const userProductController = require('./controllers/user.product.controller');
 const userRoutes = require('./routes/user.routes');
-const productUpload = require('./config/multerUpload');
+const productUpload = require('./middleware/upload.middleware');
 const categoryUpload = require('./middleware/category-upload.middleware');
 const nocache = require('./middleware/nocache.middleware');
+const requestLogger = require('./middleware/request-logger.middleware');
+const attachSessionUser = require('./middleware/session-user.middleware');
+const injectDevOtp = require('./middleware/dev-otp-inject.middleware');
+const redirectAdminHome = require('./middleware/admin-home-redirect.middleware');
+const globalErrorHandler = require('./middleware/error-handler.middleware');
 require('dotenv').config();
 
 const app = express();
@@ -26,10 +31,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request Logger
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-    next();
-});
+app.use(requestLogger);
 
 
 
@@ -53,56 +55,7 @@ app.use(passport.initialize());
 // Passport Session removed - using manual session management
 
 // Global User Middleware (Available in all views)
-const User = require('./models/user.model');
-app.use(async (req, res, next) => {
-    try {
-        if (req.session && req.session.userId) {
-            // Fetch user to populate res.locals.user for Navbar
-            const user = await User.findById(req.session.userId).select('name email role profileImage isBlocked');
-
-            if (user) {
-                // Check if user is blocked - OPTIONAL: Force logout here if strictly required, 
-                // but let's stick to just exposing data for now to avoid side-effects in GET requests unless critical.
-                // However, for security, if they are blocked, we should probably kill the session.
-                if (user.isBlocked) {
-                    req.session.destroy((err) => {
-                        if (err) console.error('Session destroy error during block check:', err);
-                        res.locals.user = null;
-                        res.locals.role = null;
-                        res.clearCookie('connect.sid');
-                        // We can't easily redirect inside a global middleware without potentially disrupting non-html requests
-                        // So we just nullify. The auth-check middleware will catch them on protected routes.
-                        next();
-                    });
-                    return; // Stop processing this middleware instance
-                }
-
-                res.locals.user = user;
-                res.locals.role = user.role;
-                req.user = user; // Attach for legacy compatibility/passport-like access
-            } else {
-                // Ghost Session: Session has ID but User not in DB (deleted?)
-                console.warn(`Ghost session detected for userId: ${req.session.userId}. Destroying.`);
-                req.session.destroy((err) => {
-                    if (err) console.error('Session destroy error:', err);
-                    res.locals.user = null;
-                    res.locals.role = null;
-                    res.clearCookie('connect.sid');
-                    next();
-                });
-                return;
-            }
-        } else {
-            res.locals.user = null;
-            res.locals.role = null;
-        }
-    } catch (err) {
-        console.error('Session User Fetch Error:', err);
-        res.locals.user = null;
-        res.locals.role = null;
-    }
-    next();
-});
+app.use(attachSessionUser);
 
 // View Engine Setup
 app.set('view engine', 'ejs');
@@ -112,44 +65,7 @@ app.use(express.static(path.join(__dirname, 'public'))); // For uploads
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // DEV MODE OVERRIDE: Intercept responses to inject OTP
-// User model already required above
-app.use((req, res, next) => {
-    const originalJson = res.json;
-    res.json = function (body) {
-        if (process.env.NODE_ENV !== 'production' && body) {
-            const isAuthSignup = req.url.includes('/signup') && body.user && body.user.email;
-            const isAuthResend = req.url.includes('/resend-otp') && req.body.email; // Body parsed by now
-
-            // Note: req.url for app.use('/api/auth') might be just '/signup' or full path depending on mounting.
-            // But we are at app level middleware before mounting?
-            // Actually app.use middleware sees full url if mounted at root?
-            // Let's assume req.originalUrl is safer.
-
-            const target = req.originalUrl;
-            const isTarget = target.includes('/api/auth/signup') || target.includes('/api/auth/resend-otp');
-
-            if (isTarget) {
-                const targetEmail = (body.user && body.user.email) || (req.body && req.body.email);
-                if (targetEmail) {
-                    console.error('--- INTERCEPTING RESPONSE FOR:', targetEmail, '---');
-                    User.findOne({ email: targetEmail }).then(user => {
-                        if (user && user.otp) {
-                            body.devOtp = user.otp;
-                            console.error('--- INJECTED OTP:', user.otp, '---');
-                        }
-                        originalJson.call(this, body);
-                    }).catch(err => {
-                        console.error('--- OTP INJECTION FAILED:', err);
-                        originalJson.call(this, body);
-                    });
-                    return;
-                }
-            }
-        }
-        return originalJson.call(this, body);
-    };
-    next();
-});
+app.use(injectDevOtp);
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -161,12 +77,7 @@ app.use(addressRoutes);
 const { ensureAuthenticated, ensureOtpVerified, ensureGuest } = require('./middleware/auth-check.middleware');
 
 app.get('/', getHomePage);
-app.get('/home', ensureAuthenticated, ensureOtpVerified, (req, res, next) => {
-    if (req.session.role === 'admin') {
-        return res.redirect('/admin/dashboard');
-    }
-    next();
-}, getPostLoginHomePage);
+app.get('/home', ensureAuthenticated, ensureOtpVerified, redirectAdminHome, getPostLoginHomePage);
 
 // User Product Routes
 app.use('/', userRoutes);
@@ -278,9 +189,6 @@ app.get('/password-success', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 // Global Error Handler
-app.use((err, req, res, next) => {
-    console.error('Unhandled Error:', err);
-    res.status(500).json({ error: err.message || 'Server Error' });
-});
+app.use(globalErrorHandler);
 
 module.exports = app;
