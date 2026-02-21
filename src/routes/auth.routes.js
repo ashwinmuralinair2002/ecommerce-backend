@@ -28,7 +28,7 @@ router.post('/verify-otp', verifyOtp);
 router.post('/resend-otp', resendOtp);
 router.post('/forgot-password', forgotPasswordValidation, forgotPassword);
 router.post('/reset-password', resetPassword);
-router.get('/logout', require('../controllers/auth.controller').logout);
+router.post('/logout', require('../controllers/auth.controller').logout);
 
 // Google Auth Routes
 const passport = require('passport');
