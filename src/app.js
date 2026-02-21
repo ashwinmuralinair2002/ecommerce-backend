@@ -1,6 +1,7 @@
 // Main application setup and middleware configuration
 const express = require('express');
 const session = require('express-session');
+const methodOverride = require('method-override');
 const path = require('path');
 const passport = require('passport');
 const configurePassport = require('./config/passport');
@@ -28,6 +29,7 @@ app.use(nocache);
 // cookie-parser removed
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride('_method'));
 
 // Request Logger
 app.use(requestLogger);
