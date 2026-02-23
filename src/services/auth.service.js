@@ -145,7 +145,7 @@ const loginUser = async (email, password) => {
     // Check for Admin (by email)
     if (email === process.env.ADMIN_EMAIL) {
         // First check if admin has a DB record with updated password
-        const dbAdmin = await User.findOne({ email: email, role: 'admin' });
+        let dbAdmin = await User.findOne({ email: email, role: 'admin' });
 
         let passwordValid = false;
 
@@ -160,11 +160,24 @@ const loginUser = async (email, password) => {
         }
 
         if (passwordValid) {
+            // Ensure admin session always uses a real MongoDB ObjectId
+            if (!dbAdmin) {
+                const salt = await bcrypt.genSalt(10);
+                const hashedPassword = await bcrypt.hash(password, salt);
+                dbAdmin = await User.create({
+                    name: process.env.ADMIN_NAME || 'Admin',
+                    email: email,
+                    password: hashedPassword,
+                    role: 'admin',
+                    isVerified: true
+                });
+            }
+
             // Token generation removed
             return {
                 user: {
-                    id: dbAdmin ? dbAdmin._id : 'admin',
-                    name: dbAdmin ? dbAdmin.name : (process.env.ADMIN_NAME || 'Admin'),
+                    id: dbAdmin._id,
+                    name: dbAdmin.name,
                     email: email,
                     role: 'admin'
                 },

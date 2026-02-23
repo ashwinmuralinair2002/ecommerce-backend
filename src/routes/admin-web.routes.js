@@ -28,7 +28,7 @@ router.post('/customers/:id/notes', adminController.updateAdminNotes);
 router.post('/customers/:id/toggle-block', adminController.toggleBlockUser);
 router.delete('/customers/:id/delete', adminController.softDeleteUser);
 router.post('/customers/:id/delete', adminController.softDeleteUser);
-router.post('/profile/update', adminController.updateAdminProfile);
+router.patch('/profile/update', adminController.updateAdminProfile);
 router.get('/change-password', adminController.getChangePasswordPage);
 router.post('/change-password', adminController.changeAdminPassword);
 
