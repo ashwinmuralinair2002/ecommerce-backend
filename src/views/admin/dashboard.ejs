@@ -170,7 +170,12 @@
                                 body: JSON.stringify({ name, email, phone })
                             });
 
-                            const result = await response.json();
+                            const data = await response.json();
+
+                            if (data.requiresOtp) {
+                                window.location.href = '/verify-otp?mode=email_change';
+                                return;
+                            }
 
                             if (response.ok) {
                                 showMessage('Profile updated successfully!', 'success');
@@ -188,7 +193,7 @@
                                     location.reload(); // Refresh to ensure session/server sync is perfect
                                 }, 1000);
                             } else {
-                                showMessage(result.error || 'Failed to update profile', 'error');
+                                showMessage(data.error || 'Failed to update profile', 'error');
                                 saveBtn.disabled = false;
                                 saveBtn.innerText = 'Save Changes';
                             }

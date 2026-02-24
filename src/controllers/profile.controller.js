@@ -1,5 +1,6 @@
 // User profile controller for account management
 const profileService = require('../services/profile.service');
+const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 
 // @desc    Get User Profile
@@ -74,10 +75,14 @@ const verifyEmailChange = async (req, res) => {
 
     try {
         const result = await profileService.verifyEmailChange(req.user.id, otp);
+        const user = await User.findById(req.user.id).select('role');
         if (req.session.otpEmail) {
             req.session.otpEmail = null;
         }
-        res.json(result);
+        res.json({
+            ...result,
+            role: user ? user.role : undefined
+        });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

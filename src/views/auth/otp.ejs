@@ -238,8 +238,14 @@
 
                                 if (!response.ok) throw new Error(data.error || 'Verification failed');
 
-                                showMessage('Email updated successfully!', 'success');
-                                setTimeout(() => window.location.href = '/account', 1500);
+                                if (data.success) {
+                                    if (data.role === 'admin') {
+                                        window.location.href = '/admin/dashboard';
+                                    } else {
+                                        window.location.href = '/account';
+                                    }
+                                    return;
+                                }
                                 return;
                             } catch (error) {
                                 showMessage(error.message, 'error');

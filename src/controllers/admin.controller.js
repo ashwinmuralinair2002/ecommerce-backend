@@ -1,6 +1,7 @@
 // Admin management controller for customer and system operations
 const User = require('../models/user.model');
 const Order = require('../models/order.model');
+const profileService = require('../services/profile.service');
 const { Parser } = require('json2csv');
 const bcrypt = require('bcryptjs');
 
@@ -297,8 +298,22 @@ const updateAdminProfile = async (req, res) => {
                 return res.status(404).json({ success: false, message: 'User not found' });
             }
 
+            if (email && email !== dbUser.email) {
+                await profileService.requestEmailChange(req.session.userId, email);
+                req.session.otpEmail = email;
+
+                if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
+                    return res.redirect('/verify-otp?mode=email_change');
+                }
+
+                return res.json({
+                    success: true,
+                    requiresOtp: true,
+                    message: 'OTP sent to new email. Please verify to complete email change.'
+                });
+            }
+
             dbUser.name = name || dbUser.name;
-            dbUser.email = email || dbUser.email;
             dbUser.phone = phone !== undefined ? phone : dbUser.phone;
 
             await dbUser.save();
