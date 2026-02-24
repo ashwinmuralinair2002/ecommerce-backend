@@ -4,7 +4,7 @@ const attachSessionUser = async (req, res, next) => {
     try {
         if (req.session && req.session.userId) {
             // Fetch user to populate res.locals.user for Navbar
-            const user = await User.findById(req.session.userId).select('name email role profileImage isBlocked');
+            const user = await User.findById(req.session.userId).select('name email role profileImage isBlocked phone');
             console.log("MIDDLEWARE → DB user fetched:", user?.name, user?.phone);
 
             if (user) {

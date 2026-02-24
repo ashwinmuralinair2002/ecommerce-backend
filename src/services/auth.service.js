@@ -146,18 +146,17 @@ const loginUser = async (email, password) => {
     if (email === process.env.ADMIN_EMAIL) {
         // First check if admin has a DB record with updated password
         let dbAdmin = await User.findOne({ email: email, role: 'admin' });
+        console.log("LOGIN TRACE → dbAdmin found:", dbAdmin?.email);
 
         let passwordValid = false;
 
         if (dbAdmin && dbAdmin.password) {
             // Check DB password first (supports password changes)
             passwordValid = await bcrypt.compare(password, dbAdmin.password);
+            console.log("LOGIN TRACE → dbAdmin found:", dbAdmin?.email);
         }
 
-        // Fallback to env password if no DB record or DB password doesn't match
-        if (!passwordValid && (password === process.env.ADMIN_PASSWORD)) {
-            passwordValid = true;
-        }
+       
 
         if (passwordValid) {
             // Ensure admin session always uses a real MongoDB ObjectId
