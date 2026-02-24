@@ -396,23 +396,11 @@ const createProduct = async (req, res) => {
         // Auto-generate SKU if not provided
         const productSku = sku || `SKU-${Date.now()}`;
 
-        // Find Category ID
-        let categoryId = null;
-        if (category) {
-            // Try explicit lookup first (e.g. "In-Ear")
-            let categoryDoc = await Category.findOne({ name: category, isDeleted: { $ne: true }, isBlocked: { $ne: true } });
-
-            // If not found, try varying case just in case inputs are messy
-            if (!categoryDoc) {
-                categoryDoc = await Category.findOne({ name: { $regex: new RegExp(`^${category}$`, 'i') }, isDeleted: { $ne: true }, isBlocked: { $ne: true } });
-            }
-
-            if (categoryDoc) categoryId = categoryDoc._id;
-        }
-
-        if (!categoryId) {
+        if (!category) {
             return res.status(400).json({ success: false, message: 'Invalid Category' });
         }
+
+        const categoryId = category;
 
 
         const product = new Product({
