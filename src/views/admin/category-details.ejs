@@ -86,7 +86,7 @@
                             class="h-10 px-4 rounded-lg bg-[#ffecec] text-red-600 font-medium hover:bg-[#ffdddd] transition-colors">
                             Delete
                         </button>
-                        <form id="block-form-<%= category._id %>" method="POST" action="/admin/categories/<%= category._id %>/block-toggle" style="display:none;"></form>
+                        <form id="block-form-<%= category._id %>" method="POST" action="/admin/categories/<%= category._id %>/block-toggle?_method=PATCH" style="display:none;"></form>
                         <form id="delete-form-<%= category._id %>" method="POST" action="/admin/categories/<%= category._id %>/delete" style="display:none;"></form>
                     </div>
                 </div>

@@ -34,7 +34,7 @@
                 confirmButtonColor: currentStatus ? '#685BCB' : '#d33'
             }, async () => {
                 try {
-                    const response = await fetch(`/admin/customers/${userId}/toggle-block`, { method: 'POST' });
+                    const response = await fetch(`/admin/customers/${userId}/toggle-block`, { method: 'PATCH' });
                     if (response.ok) {
                         Swal.fire({ icon: 'success', title: 'Success', timer: 1500, showConfirmButton: false });
                         setTimeout(() => window.location.reload(), 1000);
@@ -72,7 +72,7 @@
             const adminNotes = document.getElementById('adminNotes').value;
             try {
                 const response = await fetch(`/admin/customers/${userId}/notes`, {
-                    method: 'POST',
+                    method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ adminNotes })
                 });

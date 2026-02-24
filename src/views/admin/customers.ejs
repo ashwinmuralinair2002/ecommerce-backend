@@ -38,7 +38,7 @@
                 confirmButtonColor: currentStatus ? '#685BCB' : '#d33'
             }, async () => {
                 try {
-                    const response = await fetch(`/admin/customers/${userId}/toggle-block`, { method: 'POST' });
+                    const response = await fetch(`/admin/customers/${userId}/toggle-block`, { method: 'PATCH' });
                     const data = await response.json();
 
                     if (response.ok && data.success) {

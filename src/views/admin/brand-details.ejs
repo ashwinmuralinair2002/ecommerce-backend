@@ -86,7 +86,7 @@
                             Edit Brand
                         </a>
 
-                        <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
+                        <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status?_method=PATCH">
                             <button
                                 class="h-10 px-4 rounded-lg font-medium transition-colors
                                 <%= brand.isActive ? 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]' : 'bg-[#e8f4e6] hover:bg-[#d8e4d6]' %>">

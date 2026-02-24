@@ -23,9 +23,9 @@ router.get('/customers/export', adminController.exportCustomers);
 router.get('/customers/:id', adminController.getCustomerDetails);
 router.get('/customers/:id/orders', adminController.getCustomerOrders);
 router.get('/customers/:id/edit', adminController.renderEditCustomerPage);
-router.post('/customers/:id/update', adminController.updateCustomer);
-router.post('/customers/:id/notes', adminController.updateAdminNotes);
-router.post('/customers/:id/toggle-block', adminController.toggleBlockUser);
+router.patch('/customers/:id/update', adminController.updateCustomer);
+router.patch('/customers/:id/notes', adminController.updateAdminNotes);
+router.patch('/customers/:id/toggle-block', adminController.toggleBlockUser);
 router.delete('/customers/:id/delete', adminController.softDeleteUser);
 router.post('/customers/:id/delete', adminController.softDeleteUser);
 router.patch('/profile/update', adminController.updateAdminProfile);
@@ -37,8 +37,8 @@ router.get('/brands/add', brandController.renderAddBrand);
 router.post('/brands', brandUpload.single('logo'), brandController.addBrand);
 router.get('/brands/:id', brandController.getBrandDetails);
 router.get('/brands/:id/edit', brandController.renderEditBrand);
-router.post('/brands/:id/edit', brandUpload.single('logo'), brandController.editBrand);
-router.post('/brands/:id/toggle-status', brandController.toggleBrandStatus);
+router.patch('/brands/:id/edit', brandUpload.single('logo'), brandController.editBrand);
+router.patch('/brands/:id/toggle-status', brandController.toggleBrandStatus);
 router.post('/brands/:id/delete', brandController.deleteBrand);
 
 router.get('/categories', categoryController.getCategoriesPage);
@@ -49,11 +49,11 @@ router.post('/categories', categoryUpload.fields([
 ]), categoryController.addCategory);
 router.get('/categories/:id', categoryController.getCategoryDetails);
 router.get('/categories/:id/edit', categoryController.renderEditCategory);
-router.post('/categories/:id/edit', categoryUpload.fields([
+router.patch('/categories/:id/edit', categoryUpload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'heroImage', maxCount: 1 }
 ]), categoryController.editCategory);
-router.post('/categories/:id/block-toggle', categoryController.toggleCategoryBlock);
+router.patch('/categories/:id/block-toggle', categoryController.toggleCategoryBlock);
 router.post('/categories/:id/delete', categoryController.deleteCategory);
 
 router.get('/products', productController.getProductsPage);

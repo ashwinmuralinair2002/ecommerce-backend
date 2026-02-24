@@ -48,7 +48,7 @@
                     </div>
                     <% } %>
 
-                        <form action="/admin/customers/<%= customer._id %>/update" method="POST"
+                        <form action="/admin/customers/<%= customer._id %>/update?_method=PATCH" method="POST"
                             class="max-w-md space-y-4" id="editCustomerForm" novalidate>
 
                             <!-- Name -->

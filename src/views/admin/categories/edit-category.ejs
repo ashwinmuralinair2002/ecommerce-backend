@@ -34,7 +34,7 @@
                     <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800"><%= error %></div>
                 <% } %>
 
-                <form action="/admin/categories/<%= category._id %>/edit" method="POST" enctype="multipart/form-data" class="max-w-lg space-y-5">
+                <form action="/admin/categories/<%= category._id %>/edit?_method=PATCH" method="POST" enctype="multipart/form-data" class="max-w-lg space-y-5">
                     <div>
                         <label class="block text-sm text-[#685BCB] mb-1">Category Name <span class="text-red-500">*</span></label>
                         <input type="text" name="name" value="<%= oldInput && oldInput.name ? oldInput.name : category.name %>"

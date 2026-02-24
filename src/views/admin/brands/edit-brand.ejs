@@ -46,7 +46,7 @@
                     </div>
                     <% } %>
 
-                        <form action="/admin/brands/<%= brand._id %>/edit" method="POST" enctype="multipart/form-data"
+                        <form action="/admin/brands/<%= brand._id %>/edit?_method=PATCH" method="POST" enctype="multipart/form-data"
                             class="max-w-lg space-y-5" id="editBrandForm" novalidate>
 
                             <!-- Brand Name -->

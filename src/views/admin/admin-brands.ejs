@@ -137,7 +137,7 @@
                                     </td>
 
                                     <td class="p-3">
-                                        <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status">
+                                        <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status?_method=PATCH">
                                             <button class="px-4 py-1 rounded-lg text-sm font-medium
                                                 <%= brand.isActive ? 'bg-[#FFFFFF]' : 'bg-[#ffecec] text-red-600' %>">
                                                 <%= brand.isActive ? 'Active' : 'Inactive' %>
