@@ -10,6 +10,8 @@
 
     <title>Admin · Edit Product</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
     <style>
         :root {
             --checkbox-tick-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(18,24,16)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3cpath d=%27M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e');
@@ -722,10 +724,14 @@
             colorCode: variant.colorCode || '',
             existingImages: Array.isArray(variant.images) ? variant.images.map((img) => ({
                 url: img.url,
-                public_id: img.public_id
+                public_id: img.public_id,
+                crop: null,
+                isHero: false
             })) : [],
-            files: []
+            newImages: []
         }));
+        let variantCropper = null;
+        let variantCropState = { variantIndex: null, imageId: null };
 
         function normalizeHex(value) {
             const raw = String(value || '').trim();
@@ -761,8 +767,70 @@
             return null;
         }
 
+        function clearAllHeroFlags() {
+            variants.forEach((variant) => {
+                (variant.existingImages || []).forEach((img) => {
+                    if (img) img.isHero = false;
+                });
+                (variant.newImages || []).forEach((img) => {
+                    if (img) img.isHero = false;
+                });
+            });
+        }
+
+        function ensureGlobalHeroSelection() {
+            let heroFound = false;
+            variants.forEach((variant) => {
+                (variant.existingImages || []).forEach((img) => {
+                    if (!img || img.isHero !== true) return;
+                    if (!heroFound) {
+                        heroFound = true;
+                    } else {
+                        img.isHero = false;
+                    }
+                });
+                (variant.newImages || []).forEach((img) => {
+                    if (!img || img.isHero !== true) return;
+                    if (!heroFound) {
+                        heroFound = true;
+                    } else {
+                        img.isHero = false;
+                    }
+                });
+            });
+            if (heroFound) return;
+            for (const variant of variants) {
+                const firstExistingImage = (variant.existingImages || [])[0];
+                if (firstExistingImage) {
+                    firstExistingImage.isHero = true;
+                    return;
+                }
+                const firstImage = (variant.newImages || [])[0];
+                if (firstImage) {
+                    firstImage.isHero = true;
+                    return;
+                }
+            }
+        }
+
+        function setGlobalHeroByImageId(variantIndex, imageId) {
+            clearAllHeroFlags();
+            const target = (variants[variantIndex] && variants[variantIndex].newImages || []).find((img) => img && img.id === imageId);
+            if (target) target.isHero = true;
+            ensureGlobalHeroSelection();
+        }
+
+        function setGlobalHeroByExistingImageIndex(variantIndex, imageIndex) {
+            clearAllHeroFlags();
+            const target = variants[variantIndex] && variants[variantIndex].existingImages
+                ? variants[variantIndex].existingImages[imageIndex]
+                : null;
+            if (target) target.isHero = true;
+            ensureGlobalHeroSelection();
+        }
+
         function addVariant() {
-            variants.push({ colorInput: '', colorName: '', colorCode: '', existingImages: [], files: [] });
+            variants.push({ colorInput: '', colorName: '', colorCode: '', existingImages: [], newImages: [] });
             renderVariants();
         }
 
@@ -777,10 +845,11 @@
         }
 
         function renderVariants() {
+            ensureGlobalHeroSelection();
             variantList.innerHTML = '';
             variants.forEach((variant, index) => {
                 const existingCount = variant.existingImages.length;
-                const newCount = variant.files.length;
+                const newCount = (variant.newImages || []).length;
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'border border-[#BCA6DB] rounded-xl p-4 bg-white';
@@ -789,17 +858,30 @@
                         <input type="text" data-role="color-input" data-index="${index}" value="${variant.colorInput || ''}"
                             placeholder="HEX or colour name (e.g., #000000 / royalblue)"
                             class="h-11 flex-1 min-w-[240px] rounded-xl border border-[#BCA6DB] px-3 text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]">
-                        <span class="inline-block w-8 h-8 rounded-full border border-[#BCA6DB]" style="background:${variant.colorCode || '#FFFFFF'}"></span>
+                        <span data-role="color-preview" class="inline-block w-8 h-8 rounded-full border border-[#BCA6DB]" style="background:${variant.colorCode || '#FFFFFF'}"></span>
                         <button type="button" data-role="remove-variant" data-index="${index}"
                             class="h-10 px-3 rounded-lg bg-[#ffecec] text-red-600 text-sm font-bold hover:bg-[#ffdddd]">Remove</button>
                     </div>
-                    <p class="text-xs text-[#685BCB] mt-2">${variant.colorCode ? `Normalized: ${variant.colorCode}` : ''}</p>
+                    <p data-role="normalized-color" class="text-xs text-[#685BCB] mt-2">${variant.colorCode ? `Normalized: ${variant.colorCode}` : ''}</p>
                     <div class="mt-3">
                         <input type="file" data-role="variant-files" data-index="${index}" multiple accept="image/jpeg,image/png,image/webp"
                             class="block w-full text-sm text-[#1F1F1F]">
                         <p class="text-xs text-[#685BCB] mt-1">Existing: ${existingCount}, New: ${newCount}</p>
                     </div>
                     <div data-role="variant-existing-list" data-index="${index}" class="mt-2 flex flex-wrap gap-2"></div>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        ${(variant.newImages || []).map((img) => `
+                            <div class="relative w-16 h-16 rounded-lg overflow-hidden border border-[#BCA6DB]">
+                                <img src="${img.previewUrl}" class="w-full h-full object-cover" />
+                                <button type="button" data-role="remove-new-image" data-index="${index}" data-image-id="${img.id}" class="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-1">x</button>
+                                <button type="button" data-role="crop-new-image" data-index="${index}" data-image-id="${img.id}" class="absolute bottom-0 left-0 bg-[#685BCB] text-white text-[9px] px-1 py-[1px]">Crop</button>
+                                <label class="absolute bottom-0 right-0 bg-white/90 text-[9px] px-1 py-[1px] rounded-tl">
+                                    <input type="radio" data-role="set-hero-new-image" data-index="${index}" data-image-id="${img.id}" name="heroImagePicker" ${img.isHero ? 'checked' : ''}>
+                                    Hero
+                                </label>
+                            </div>
+                        `).join('')}
+                    </div>
                 `;
                 variantList.appendChild(wrapper);
 
@@ -807,7 +889,13 @@
                 variant.existingImages.forEach((img, imageIndex) => {
                     const chip = document.createElement('div');
                     chip.className = 'relative w-16 h-16 rounded-lg overflow-hidden border border-[#BCA6DB]';
-                    chip.innerHTML = `<img src="${img.url}" class="w-full h-full object-cover"><button type="button" data-role="remove-existing-variant-image" data-variant-index="${index}" data-image-index="${imageIndex}" class="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-1">x</button>`;
+                    chip.innerHTML = `<img src="${img.url}" class="w-full h-full object-cover">
+                        <button type="button" data-role="remove-existing-variant-image" data-variant-index="${index}" data-image-index="${imageIndex}" class="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-1">x</button>
+                        <button type="button" data-role="crop-existing-image" data-index="${index}" data-image-index="${imageIndex}" class="absolute bottom-0 left-0 bg-[#685BCB] text-white text-[9px] px-1 py-[1px]">Crop</button>
+                        <label class="absolute bottom-0 right-0 bg-white/90 text-[9px] px-1 py-[1px] rounded-tl">
+                            <input type="radio" data-role="set-hero-existing-image" data-index="${index}" data-image-index="${imageIndex}" name="heroImagePicker" ${img.isHero ? 'checked' : ''}>
+                            Hero
+                        </label>`;
                     existingList.appendChild(chip);
                 });
             });
@@ -819,28 +907,176 @@
                     const resolved = resolveColor(this.value);
                     variants[idx].colorCode = resolved ? resolved.colorCode : '';
                     variants[idx].colorName = resolved ? resolved.colorName : '';
-                    renderVariants();
-                });
-            });
-
-            variantList.querySelectorAll('[data-role="variant-files"]').forEach((input) => {
-                input.addEventListener('change', function () {
-                    const idx = Number(this.dataset.index);
-                    variants[idx].files = Array.from(this.files || []).filter((f) =>
-                        ['image/jpeg', 'image/png', 'image/webp'].includes(f.type)
-                    );
-                    renderVariants();
+                    const wrapper = this.closest('.border');
+                    if (!wrapper) return;
+                    const preview = wrapper.querySelector('[data-role="color-preview"]');
+                    const normalized = wrapper.querySelector('[data-role="normalized-color"]');
+                    if (preview) {
+                        preview.style.background = variants[idx].colorCode || '#FFFFFF';
+                    }
+                    if (normalized) {
+                        normalized.textContent = variants[idx].colorCode
+                            ? `Normalized: ${variants[idx].colorCode}`
+                            : '';
+                    }
                 });
             });
 
             variantList.querySelectorAll('[data-role="remove-variant"]').forEach((btn) => {
                 btn.addEventListener('click', () => removeVariant(Number(btn.dataset.index)));
             });
+        }
 
-            variantList.querySelectorAll('[data-role="remove-existing-variant-image"]').forEach((btn) => {
-                btn.addEventListener('click', () => {
-                    removeExistingVariantImage(Number(btn.dataset.variantIndex), Number(btn.dataset.imageIndex));
+        const cropModal = document.createElement('div');
+        cropModal.id = 'variantCropModal';
+        cropModal.className = 'fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4';
+        cropModal.innerHTML = `
+            <div class="bg-white rounded-xl p-4 w-full max-w-2xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-bold text-[#1F1F1F]">Crop Variant Image (1:1)</h2>
+                    <button type="button" id="closeVariantCropModal" class="text-sm font-semibold text-[#685BCB]">Close</button>
+                </div>
+                <div class="bg-gray-100 rounded-lg overflow-hidden max-h-[70vh]">
+                    <img id="variantCropperImage" src="" alt="Crop preview" class="max-w-full" />
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button type="button" id="saveVariantCropBtn" class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Save Crop</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(cropModal);
+        const variantCropperImage = cropModal.querySelector('#variantCropperImage');
+        const closeVariantCropModal = cropModal.querySelector('#closeVariantCropModal');
+        const saveVariantCropBtn = cropModal.querySelector('#saveVariantCropBtn');
+
+        function openVariantCropModal(variantIndex, imageKey, sourceType) {
+            const image = sourceType === 'existing'
+                ? ((variants[variantIndex].existingImages || [])[Number(imageKey)] || null)
+                : (variants[variantIndex].newImages || []).find((img) => img.id === imageKey);
+            if (!image) return;
+            variantCropState = { variantIndex, imageId: imageKey, sourceType: sourceType || 'new' };
+            cropModal.classList.remove('hidden');
+            cropModal.classList.add('flex');
+            const cropSource = image.originalPreviewUrl || image.previewUrl || image.url || '';
+            if (!cropSource) return;
+            variantCropperImage.src = cropSource;
+            variantCropperImage.onload = function () {
+                if (variantCropper) variantCropper.destroy();
+                variantCropper = new Cropper(variantCropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    movable: true,
+                    zoomable: true,
+                    scalable: false,
+                    cropBoxResizable: true,
+                    autoCropArea: 0.9,
+                    ready() {
+                        if (image.crop && image.crop.width && image.crop.height) {
+                            variantCropper.setData(image.crop);
+                        }
+                    }
                 });
+            };
+        }
+
+        function closeVariantCropperModal() {
+            if (variantCropper) {
+                variantCropper.destroy();
+                variantCropper = null;
+            }
+            variantCropState = { variantIndex: null, imageId: null };
+            cropModal.classList.add('hidden');
+            cropModal.classList.remove('flex');
+        }
+
+        if (closeVariantCropModal) {
+            closeVariantCropModal.addEventListener('click', closeVariantCropperModal);
+        }
+        if (cropModal) {
+            cropModal.addEventListener('click', (e) => {
+                if (e.target === cropModal) closeVariantCropperModal();
+            });
+        }
+        if (saveVariantCropBtn) {
+            saveVariantCropBtn.addEventListener('click', () => {
+                if (!variantCropper || variantCropState.variantIndex === null || variantCropState.imageId === null) return;
+                const data = variantCropper.getData(true);
+                const crop = {
+                    x: Math.round(data.x),
+                    y: Math.round(data.y),
+                    width: Math.round(data.width),
+                    height: Math.round(data.height)
+                };
+                if (variantCropState.sourceType === 'existing') {
+                    const existingList = variants[variantCropState.variantIndex].existingImages || [];
+                    const existingIdx = Number(variantCropState.imageId);
+                    if (existingList[existingIdx]) existingList[existingIdx].crop = crop;
+                } else {
+                    const list = variants[variantCropState.variantIndex].newImages || [];
+                    const idx = list.findIndex((img) => img.id === variantCropState.imageId);
+                    if (idx >= 0) list[idx].crop = crop;
+                }
+                closeVariantCropperModal();
+                renderVariants();
+            });
+        }
+
+        // delegated handlers - dynamic variants
+        if (variantList) {
+            variantList.addEventListener('change', (event) => {
+                const input = event.target;
+                if (!input) return;
+                if (input.dataset.role === 'set-hero-new-image') {
+                    setGlobalHeroByImageId(Number(input.dataset.index), input.dataset.imageId);
+                    renderVariants();
+                    return;
+                }
+                if (input.dataset.role === 'set-hero-existing-image') {
+                    setGlobalHeroByExistingImageIndex(Number(input.dataset.index), Number(input.dataset.imageIndex));
+                    renderVariants();
+                    return;
+                }
+                if (input.dataset.role !== 'variant-files') return;
+                const idx = Number(input.dataset.index);
+                const selected = Array.from(input.files || []).filter((f) => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type));
+                const mapped = selected.map((file) => {
+                    const previewUrl = URL.createObjectURL(file);
+                    return {
+                        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                        file,
+                        previewUrl,
+                        originalPreviewUrl: previewUrl,
+                        crop: null,
+                        isHero: false
+                    };
+                });
+                variants[idx].newImages = [...(variants[idx].newImages || []), ...mapped];
+                ensureGlobalHeroSelection();
+                renderVariants();
+            });
+            variantList.addEventListener('click', (event) => {
+                const btn = event.target;
+                if (!btn || !btn.dataset || !btn.dataset.role) return;
+                if (btn.dataset.role === 'remove-new-image') {
+                    const variantIndex = Number(btn.dataset.index);
+                    const imageId = btn.dataset.imageId;
+                    variants[variantIndex].newImages = (variants[variantIndex].newImages || []).filter((img) => img.id !== imageId);
+                    ensureGlobalHeroSelection();
+                    renderVariants();
+                    return;
+                }
+                if (btn.dataset.role === 'crop-new-image') {
+                    openVariantCropModal(Number(btn.dataset.index), btn.dataset.imageId, 'new');
+                    return;
+                }
+                if (btn.dataset.role === 'crop-existing-image') {
+                    openVariantCropModal(Number(btn.dataset.index), btn.dataset.imageIndex, 'existing');
+                    return;
+                }
+                if (btn.dataset.role === 'remove-existing-variant-image') {
+                    removeExistingVariantImage(Number(btn.dataset.variantIndex), Number(btn.dataset.imageIndex));
+                    return;
+                }
             });
         }
 
@@ -857,7 +1093,7 @@
                     variantError.classList.add('visible');
                     return false;
                 }
-                const total = variant.existingImages.length + variant.files.length;
+                const total = variant.existingImages.length + (variant.newImages || []).length;
                 if (total < 3 || total > 10) {
                     variantError.textContent = 'Each variant must contain 3 to 10 images.';
                     variantError.classList.add('visible');
@@ -1150,15 +1386,28 @@
                 });
 
             formData.append('hasVariants', 'true');
-            const variantPayload = variants.map((variant) => ({
-                colorName: variant.colorName || '',
-                colorCode: variant.colorCode || '',
-                existingImages: variant.existingImages || []
-            }));
+            ensureGlobalHeroSelection();
+            const variantPayload = variants.map((variant) => {
+                const heroExistingIndex = (variant.existingImages || []).findIndex((img) => img && img.isHero === true);
+                const heroNewIndex = (variant.newImages || []).findIndex((img) => img && img.isHero === true);
+                return {
+                    colorName: variant.colorName || '',
+                    colorCode: variant.colorCode || '',
+                    existingImages: variant.existingImages || [],
+                    existingImageCrops: (variant.existingImages || []).map((img) => img.crop || null),
+                    existingImageIsHero: (variant.existingImages || []).map((img) => img && img.isHero === true),
+                    newImageCrops: (variant.newImages || []).map((img) => img.crop || null),
+                    newImageIsHero: (variant.newImages || []).map((img) => img && img.isHero === true),
+                    heroImage: heroExistingIndex >= 0
+                        ? { source: 'existing', index: heroExistingIndex }
+                        : (heroNewIndex >= 0 ? { source: 'new', index: heroNewIndex } : null)
+                };
+            });
             formData.append('variantPayload', JSON.stringify(variantPayload));
             variants.forEach((variant, index) => {
-                variant.files.forEach((file) => {
-                    formData.append(`variantImages_${index}`, file);
+                (variant.newImages || []).forEach((imageObj) => {
+                    if (!imageObj || !imageObj.file) return;
+                    formData.append(`variantImages_${index}`, imageObj.file);
                 });
             });
 

@@ -449,7 +449,7 @@ const createProduct = async (req, res) => {
             materials: normalizeArrayEnum(materials, ENUM_MAP.materials),
             includedComponents: normalizeArrayEnum(includedComponents, ENUM_MAP.includedComponents),
             audioDriverTypes: normalizeArrayEnum(audioDriverTypes, ENUM_MAP.audioDriverTypes),
-            formFactor: normalizeSingleEnum(formFactor, ENUM_MAP.formFactor),
+            formFactor: formFactor || null,
             earpieceShape: normalizeSingleEnum(earpieceShape, ENUM_MAP.earpieceShape),
             impedanceRange: normalizeSingleEnum(impedanceRange, ENUM_MAP.impedanceRange),
             sensitivityRange: normalizeSingleEnum(sensitivityRange, ENUM_MAP.sensitivityRange),
@@ -556,7 +556,7 @@ const updateProduct = async (req, res) => {
         product.materials = normalizeArrayEnum(materials, ENUM_MAP.materials);
         product.includedComponents = normalizeArrayEnum(includedComponents, ENUM_MAP.includedComponents);
         product.audioDriverTypes = normalizeArrayEnum(audioDriverTypes, ENUM_MAP.audioDriverTypes);
-        product.formFactor = normalizeSingleEnum(formFactor, ENUM_MAP.formFactor);
+        product.formFactor = formFactor || null;
         product.earpieceShape = normalizeSingleEnum(earpieceShape, ENUM_MAP.earpieceShape);
         product.impedanceRange = normalizeSingleEnum(impedanceRange, ENUM_MAP.impedanceRange);
         product.sensitivityRange = normalizeSingleEnum(sensitivityRange, ENUM_MAP.sensitivityRange);

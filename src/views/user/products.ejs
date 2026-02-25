@@ -18,14 +18,9 @@
             const minPriceInput = document.querySelector('input[name="minPrice"]');
             const maxPriceInput = document.querySelector('input[name="maxPrice"]');
 
-            // Validate minimum price
-            if (minPriceInput && minPriceInput.value && parseInt(minPriceInput.value) < 100) {
-                minPriceInput.value = 100;
-            }
-
-            // Validate range (Max > Min)
+            // Validate range (Max >= Min)
             if (minPriceInput && maxPriceInput && minPriceInput.value && maxPriceInput.value) {
-                if (parseInt(maxPriceInput.value) <= parseInt(minPriceInput.value)) {
+                if (parseInt(maxPriceInput.value, 10) < parseInt(minPriceInput.value, 10)) {
                     // Create inline error or use alert for now
                     const container = minPriceInput.closest('.space-y-3');
                     let errorMsg = container.querySelector('.price-error');
@@ -34,7 +29,7 @@
                         errorMsg.className = 'price-error text-red-500 text-xs mt-1';
                         container.appendChild(errorMsg);
                     }
-                    errorMsg.textContent = 'Max price must be greater than Min price';
+                    errorMsg.textContent = 'Max price must be greater than or equal to Min price';
                     return; // Stop submission
                 } else {
                     // Clear error
@@ -44,7 +39,27 @@
                 }
             }
 
-            document.getElementById('filter-form').submit();
+            const mainFilterForm = document.getElementById('filter-form');
+            const advancedFiltersForm = document.getElementById('advancedFiltersForm');
+            if (!mainFilterForm) return;
+
+            if (advancedFiltersForm) {
+                const queryParams = new URLSearchParams();
+                const appendFormData = (formElement) => {
+                    const formData = new FormData(formElement);
+                    for (const [key, value] of formData.entries()) {
+                        if (value !== null && String(value).trim() !== '') {
+                            queryParams.append(key, value);
+                        }
+                    }
+                };
+                appendFormData(mainFilterForm);
+                appendFormData(advancedFiltersForm);
+                window.location.href = `/products?${queryParams.toString()}`;
+                return;
+            }
+
+            mainFilterForm.submit();
         }
     </script>
 </head>
@@ -62,9 +77,9 @@
                 <aside
                     class="w-60 flex-shrink-0 space-y-7 sticky top-24 hidden lg:block bg-primary-light p-4 rounded-xl border border-primary-light/45">
 
-                    <!-- Sort By (Moved to Top) -->
+                    <!-- Sort -->
                     <div>
-                        <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Sort By</h3>
+                        <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Sort</h3>
                         <select name="sort" onchange="submitForm()"
                             class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary">
                             <option value="newest" <%=query.sort==='newest' ? 'selected' : '' %>>Newest</option>
@@ -79,6 +94,22 @@
                         </select>
                     </div>
 
+                    <!-- Price Range -->
+                    <div>
+                        <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Price Range</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2">
+                                <input type="number" name="minPrice" placeholder="Min"
+                                    value="<%= query.minPrice || '' %>" min="0" onchange="submitForm()"
+                                    class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary px-3 py-2" />
+                                <span class="text-gray-400">-</span>
+                                <input type="number" name="maxPrice" placeholder="Max"
+                                    value="<%= query.maxPrice || '' %>" min="0" onchange="submitForm()"
+                                    class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary px-3 py-2" />
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Category Filter -->
                     <div>
                         <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Category</h3>
@@ -89,7 +120,7 @@
                                         onchange="submitForm()" <%=(Array.isArray(query.category) ?
                                         query.category.includes(String(cat._id)) : query.category===String(cat._id))
                                         ? 'checked' : '' %>
-                                    class="rounded border-gray-300 text-primary focus:ring-primary" />
+                                        class="rounded border-gray-300 text-primary focus:ring-primary" />
                                     <span class="text-sm text-gray-600 group-hover:text-primary">
                                         <%= cat.name %>
                                     </span>
@@ -99,20 +130,25 @@
                     </div>
 
                     <!-- Connection Filter -->
+                    <% const selectedConnection = Array.isArray(query.connection) ? query.connection[0] : query.connection; %>
                     <div>
                         <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Connection</h3>
                         <div class="space-y-2">
                             <label class="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" name="connection" value="Wired" onchange="submitForm()"
-                                    <%=(Array.isArray(query.connection) ? query.connection.includes('Wired') :
-                                    query.connection==='Wired' ) ? 'checked' : '' %>
+                                <input type="radio" name="connection" value="" onchange="submitForm()"
+                                    <%= !selectedConnection ? 'checked' : '' %>
+                                class="border-gray-300 text-primary focus:ring-primary" />
+                                <span class="text-sm text-gray-600 group-hover:text-primary">All</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="radio" name="connection" value="Wired" onchange="submitForm()"
+                                    <%= selectedConnection==='Wired' ? 'checked' : '' %>
                                 class="rounded border-gray-300 text-primary focus:ring-primary" />
                                 <span class="text-sm text-gray-600 group-hover:text-primary">Wired</span>
                             </label>
                             <label class="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" name="connection" value="Wireless" onchange="submitForm()"
-                                    <%=(Array.isArray(query.connection) ? query.connection.includes('Wireless') :
-                                    query.connection==='Wireless' ) ? 'checked' : '' %>
+                                <input type="radio" name="connection" value="Wireless" onchange="submitForm()"
+                                    <%= selectedConnection==='Wireless' ? 'checked' : '' %>
                                 class="rounded border-gray-300 text-primary focus:ring-primary" />
                                 <span class="text-sm text-gray-600 group-hover:text-primary">Wireless</span>
                             </label>
@@ -121,7 +157,7 @@
 
                     <!-- Brand Filter (Dynamic) -->
                     <div>
-                        <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Brands</h3>
+                        <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Brand</h3>
                         <div class="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                             <% if (brands && brands.length> 0) { %>
                                 <% brands.forEach(brand=> { %>
@@ -142,109 +178,10 @@
                         </div>
                     </div>
 
-                    <!-- Price Range -->
-                    <div>
-                        <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Price Range</h3>
-                        <div class="space-y-3">
-                            <div class="flex items-center gap-2">
-                                <input type="number" name="minPrice" placeholder="Min"
-                                    value="<%= query.minPrice || '' %>" min="100" onchange="submitForm()"
-                                    class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary px-3 py-2" />
-                                <span class="text-gray-400">-</span>
-                                <input type="number" name="maxPrice" placeholder="Max"
-                                    value="<%= query.maxPrice || '' %>" min="100" onchange="submitForm()"
-                                    class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary px-3 py-2" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <% if (filterOptions && filterOptions.discountRanges && filterOptions.discountRanges.length) { %>
-                        <div>
-                            <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Discount</h3>
-                            <div class="space-y-2">
-                                <% filterOptions.discountRanges.forEach(function(val) { %>
-                                    <label class="flex items-center gap-2 cursor-pointer group">
-                                        <input type="checkbox" name="discountRange" value="<%= val %>" onchange="submitForm()"
-                                            <%= (Array.isArray(query.discountRange) ? query.discountRange.includes(String(val)) : query.discountRange===String(val)) ? 'checked' : '' %>
-                                        class="rounded border-gray-300 text-primary focus:ring-primary" />
-                                        <span class="text-sm text-gray-600 group-hover:text-primary">Up to <%= val %>%</span>
-                                    </label>
-                                <% }) %>
-                            </div>
-                        </div>
-                    <% } %>
-
-                    <% if (filterOptions && filterOptions.newArrivals && filterOptions.newArrivals.length) { %>
-                        <div>
-                            <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">New Arrivals</h3>
-                            <div class="space-y-2">
-                                <% filterOptions.newArrivals.forEach(function(days) { %>
-                                    <label class="flex items-center gap-2 cursor-pointer group">
-                                        <input type="checkbox" name="newArrivals" value="<%= days %>" onchange="submitForm()"
-                                            <%= (Array.isArray(query.newArrivals) ? query.newArrivals.includes(String(days)) : query.newArrivals===String(days)) ? 'checked' : '' %>
-                                        class="rounded border-gray-300 text-primary focus:ring-primary" />
-                                        <span class="text-sm text-gray-600 group-hover:text-primary">Last <%= days %> days</span>
-                                    </label>
-                                <% }) %>
-                            </div>
-                        </div>
-                    <% } %>
-
-                    <% if (filterOptions && filterOptions.hasMicrophone) { %>
-                        <div>
-                            <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Microphone</h3>
-                            <label class="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" name="hasMicrophone" value="true" onchange="submitForm()"
-                                    <%= (Array.isArray(query.hasMicrophone) ? query.hasMicrophone.includes('true') : query.hasMicrophone==='true') ? 'checked' : '' %>
-                                class="rounded border-gray-300 text-primary focus:ring-primary" />
-                                <span class="text-sm text-gray-600 group-hover:text-primary">With Microphone</span>
-                            </label>
-                        </div>
-                    <% } %>
-
-                    <% if (filterOptions && filterOptions.hasAmbientMode) { %>
-                        <div>
-                            <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Ambient Mode</h3>
-                            <label class="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" name="ambientModeAvailable" value="true" onchange="submitForm()"
-                                    <%= (Array.isArray(query.ambientModeAvailable) ? query.ambientModeAvailable.includes('true') : query.ambientModeAvailable==='true') ? 'checked' : '' %>
-                                class="rounded border-gray-300 text-primary focus:ring-primary" />
-                                <span class="text-sm text-gray-600 group-hover:text-primary">Ambient Mode Available</span>
-                            </label>
-                        </div>
-                    <% } %>
-
-                    <% const multiGroups = [
-                        { key: 'noiseControlTypes', label: 'Noise Cancellation Types', options: filterOptions && filterOptions.noiseControlTypes ? filterOptions.noiseControlTypes : [] },
-                        { key: 'controlMethods', label: 'Control Method', options: filterOptions && filterOptions.controlMethods ? filterOptions.controlMethods : [] },
-                        { key: 'formFactor', label: 'Form Factor', options: filterOptions && filterOptions.formFactor ? filterOptions.formFactor : [] },
-                        { key: 'cableFeatures', label: 'Cable Features', options: filterOptions && filterOptions.cableFeatures ? filterOptions.cableFeatures : [] },
-                        { key: 'earpieceShape', label: 'Earpiece Shape', options: filterOptions && filterOptions.earpieceShape ? filterOptions.earpieceShape : [] },
-                        { key: 'smartFeatures', label: 'Smart Features', options: filterOptions && filterOptions.smartFeatures ? filterOptions.smartFeatures : [] },
-                        { key: 'sensitivityRange', label: 'Sensitivity', options: filterOptions && filterOptions.sensitivityRange ? filterOptions.sensitivityRange : [] },
-                        { key: 'compatibleDevices', label: 'Compatible Devices', options: filterOptions && filterOptions.compatibleDevices ? filterOptions.compatibleDevices : [] },
-                        { key: 'materials', label: 'Material', options: filterOptions && filterOptions.materials ? filterOptions.materials : [] },
-                        { key: 'impedanceRange', label: 'Impedance', options: filterOptions && filterOptions.impedanceRange ? filterOptions.impedanceRange : [] },
-                        { key: 'audioDriverTypes', label: 'Audio Driver Type', options: filterOptions && filterOptions.audioDriverTypes ? filterOptions.audioDriverTypes : [] }
-                    ]; %>
-
-                    <% multiGroups.forEach(function(group) { %>
-                        <% if (group.options && group.options.length) { %>
-                            <div>
-                                <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide"><%= group.label %></h3>
-                                <div class="space-y-2">
-                                    <% group.options.forEach(function(opt) { %>
-                                        <label class="flex items-center gap-2 cursor-pointer group">
-                                            <input type="checkbox" name="<%= group.key %>" value="<%= opt %>" onchange="submitForm()"
-                                                <%= (Array.isArray(query[group.key]) ? query[group.key].includes(String(opt)) : query[group.key]===String(opt)) ? 'checked' : '' %>
-                                            class="rounded border-gray-300 text-primary focus:ring-primary" />
-                                            <span class="text-sm text-gray-600 group-hover:text-primary"><%= opt %></span>
-                                        </label>
-                                    <% }) %>
-                                </div>
-                            </div>
-                        <% } %>
-                    <% }) %>
+                    <hr class="my-4">
+                    <button id="openAdvancedFilters" type="button" class="w-full bg-black text-white py-2 rounded">
+                        Show All Filters
+                    </button>
 
                     <!-- Clear Filters Button -->
                     <a href="/products"
@@ -409,6 +346,303 @@
                 </footer>
             </div>
         </footer>
+        <div id="advancedFiltersModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+            <div class="bg-white w-[90%] max-w-4xl mx-auto mt-20 p-6 rounded-lg overflow-y-auto max-h-[80vh]">
+
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Advanced Filters</h2>
+                    <button id="closeAdvancedFilters">✕</button>
+                </div>
+
+                <div id="advancedFiltersContent">
+                    <% const selectedDiscountRangeModal = Array.isArray(query.discountRange) ? query.discountRange[0] : query.discountRange; %>
+                    <% const selectedNewArrivalsModal = Array.isArray(query.newArrivals) ? query.newArrivals[0] : query.newArrivals; %>
+                    <% const selectedFormFactorModal = Array.isArray(query.formFactor) ? query.formFactor[0] : query.formFactor; %>
+                    <% const selectedEarpieceShapeModal = Array.isArray(query.earpieceShape) ? query.earpieceShape[0] : query.earpieceShape; %>
+                    <% const selectedImpedanceRangeModal = Array.isArray(query.impedanceRange) ? query.impedanceRange[0] : query.impedanceRange; %>
+                    <% const selectedSensitivityRangeModal = Array.isArray(query.sensitivityRange) ? query.sensitivityRange[0] : query.sensitivityRange; %>
+                    <% const selectedConnectionModal = Array.isArray(query.connection) ? query.connection[0] : query.connection; %>
+                    <% const selectedNoiseTypes = Array.isArray(query.noiseControlTypes) ? query.noiseControlTypes : (query.noiseControlTypes ? [query.noiseControlTypes] : []); %>
+                    <% const selectedControlMethods = Array.isArray(query.controlMethods) ? query.controlMethods : (query.controlMethods ? [query.controlMethods] : []); %>
+                    <% const selectedSmartFeatures = Array.isArray(query.smartFeatures) ? query.smartFeatures : (query.smartFeatures ? [query.smartFeatures] : []); %>
+                    <% const selectedCableFeatures = Array.isArray(query.cableFeatures) ? query.cableFeatures : (query.cableFeatures ? [query.cableFeatures] : []); %>
+                    <% const selectedCompatibleDevices = Array.isArray(query.compatibleDevices) ? query.compatibleDevices : (query.compatibleDevices ? [query.compatibleDevices] : []); %>
+                    <% const selectedMaterials = Array.isArray(query.materials) ? query.materials : (query.materials ? [query.materials] : []); %>
+                    <% const selectedDriverTypes = Array.isArray(query.audioDriverTypes) ? query.audioDriverTypes : (query.audioDriverTypes ? [query.audioDriverTypes] : []); %>
+                    <% const selectedColors = Array.isArray(query.colors) ? query.colors : (query.colors ? [query.colors] : []); %>
+                    <% const selectedMic = Array.isArray(query.hasMicrophone) ? query.hasMicrophone.includes('true') : query.hasMicrophone === 'true'; %>
+                    <% const selectedAmbient = Array.isArray(query.ambientModeAvailable) ? query.ambientModeAvailable.includes('true') : query.ambientModeAvailable === 'true'; %>
+                    <% const allFormFactors = filterOptions && filterOptions.formFactor ? filterOptions.formFactor : []; %>
+                    <% const formFactorOptions = filterOptions && filterOptions.formFactorsByConnection && selectedConnectionModal && filterOptions.formFactorsByConnection[selectedConnectionModal]
+                        ? filterOptions.formFactorsByConnection[selectedConnectionModal].filter(function(opt) { return allFormFactors.includes(opt); })
+                        : allFormFactors; %>
+
+                    <form id="advancedFiltersForm" class="columns-1 md:columns-2 gap-6">
+                        <% if (filterOptions && filterOptions.discountRanges && filterOptions.discountRanges.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Discount Range</h3>
+                                <% filterOptions.discountRanges.forEach(function(range) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="discount-range-checkbox rounded border-gray-300 text-primary focus:ring-primary" name="discountRange" value="<%= range.value %>"
+                                            <%= selectedDiscountRangeModal===String(range.value) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= range.label %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.newArrivals && filterOptions.newArrivals.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">New Arrivals</h3>
+                                <% filterOptions.newArrivals.forEach(function(days) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="newArrivals" value="<%= days %>"
+                                            <%= selectedNewArrivalsModal===String(days) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700">Last <%= days %> Days</span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.noiseControlTypes && filterOptions.noiseControlTypes.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Noise Cancellation Types</h3>
+                                <% filterOptions.noiseControlTypes.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="noiseControlTypes" value="<%= opt %>"
+                                            <%= selectedNoiseTypes.includes(String(opt)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Device Capabilities</h3>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="ambientModeAvailable" value="true"
+                                    <%= selectedAmbient ? 'checked' : '' %> />
+                                <span class="text-sm text-gray-700">Ambient Mode</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="hasMicrophone" value="true"
+                                    <%= selectedMic ? 'checked' : '' %> />
+                                <span class="text-sm text-gray-700">Microphone</span>
+                            </label>
+                        </div>
+
+                        <% if (formFactorOptions && formFactorOptions.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Form Factor</h3>
+                                <% formFactorOptions.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="formFactor" value="<%= opt %>"
+                                            <%= selectedFormFactorModal===String(opt) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.controlMethods && filterOptions.controlMethods.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Control Methods</h3>
+                                <% filterOptions.controlMethods.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="controlMethods" value="<%= opt %>"
+                                            <%= selectedControlMethods.includes(String(opt)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.smartFeatures && filterOptions.smartFeatures.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Smart Features</h3>
+                                <% filterOptions.smartFeatures.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="smartFeatures" value="<%= opt %>"
+                                            <%= selectedSmartFeatures.includes(String(opt)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.cableFeatures && filterOptions.cableFeatures.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Cable Features</h3>
+                                <% filterOptions.cableFeatures.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="cableFeatures" value="<%= opt %>"
+                                            <%= selectedCableFeatures.includes(String(opt)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.compatibleDevices && filterOptions.compatibleDevices.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Compatible Devices</h3>
+                                <% filterOptions.compatibleDevices.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="compatibleDevices" value="<%= opt %>"
+                                            <%= selectedCompatibleDevices.includes(String(opt)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.materials && filterOptions.materials.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Materials</h3>
+                                <% filterOptions.materials.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="materials" value="<%= opt %>"
+                                            <%= selectedMaterials.includes(String(opt)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.audioDriverTypes && filterOptions.audioDriverTypes.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Audio Driver Type</h3>
+                                <% filterOptions.audioDriverTypes.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="audioDriverTypes" value="<%= opt %>"
+                                            <%= selectedDriverTypes.includes(String(opt)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.earpieceShape && filterOptions.earpieceShape.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Earpiece Shape</h3>
+                                <% filterOptions.earpieceShape.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="earpieceShape" value="<%= opt %>"
+                                            <%= selectedEarpieceShapeModal===String(opt) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.impedanceRange && filterOptions.impedanceRange.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Impedance Range</h3>
+                                <% filterOptions.impedanceRange.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="impedanceRange" value="<%= opt %>"
+                                            <%= selectedImpedanceRangeModal===String(opt) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.sensitivityRange && filterOptions.sensitivityRange.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Sensitivity Range</h3>
+                                <% filterOptions.sensitivityRange.forEach(function(opt) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="sensitivityRange" value="<%= opt %>"
+                                            <%= selectedSensitivityRangeModal===String(opt) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= opt %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+
+                        <% if (filterOptions && filterOptions.variantColors && filterOptions.variantColors.length) { %>
+                            <div class="break-inside-avoid mb-6 space-y-2">
+                                <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Colors</h3>
+                                <% filterOptions.variantColors.forEach(function(color) { %>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="colors" value="<%= color %>"
+                                            <%= selectedColors.includes(String(color)) ? 'checked' : '' %> />
+                                        <span class="text-sm text-gray-700"><%= color %></span>
+                                    </label>
+                                <% }) %>
+                            </div>
+                        <% } %>
+                    </form>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-6">
+                    <button id="resetAdvancedFilters" type="button" class="border px-4 py-2 rounded">Reset</button>
+                    <button id="applyAdvancedFilters" type="button" class="bg-black text-white px-4 py-2 rounded">Show Products</button>
+                </div>
+
+            </div>
+        </div>
+        <script>
+            const openAdvancedFiltersBtn = document.getElementById('openAdvancedFilters');
+            const closeAdvancedFiltersBtn = document.getElementById('closeAdvancedFilters');
+            const advancedFiltersModal = document.getElementById('advancedFiltersModal');
+            const resetAdvancedFiltersBtn = document.getElementById('resetAdvancedFilters');
+            const applyAdvancedFiltersBtn = document.getElementById('applyAdvancedFilters');
+            const advancedFiltersForm = document.getElementById('advancedFiltersForm');
+            const mainFilterForm = document.getElementById('filter-form');
+
+            if (openAdvancedFiltersBtn && advancedFiltersModal) {
+                openAdvancedFiltersBtn.addEventListener('click', () => {
+                    advancedFiltersModal.classList.remove('hidden');
+                });
+            }
+
+            if (closeAdvancedFiltersBtn && advancedFiltersModal) {
+                closeAdvancedFiltersBtn.addEventListener('click', () => {
+                    advancedFiltersModal.classList.add('hidden');
+                });
+            }
+
+            if (advancedFiltersForm) {
+                const discountCheckboxes = advancedFiltersForm.querySelectorAll('.discount-range-checkbox');
+                discountCheckboxes.forEach((checkbox) => {
+                    checkbox.addEventListener('change', () => {
+                        if (!checkbox.checked) return;
+                        discountCheckboxes.forEach((otherCheckbox) => {
+                            if (otherCheckbox !== checkbox) otherCheckbox.checked = false;
+                        });
+                    });
+                });
+            }
+
+            if (resetAdvancedFiltersBtn && advancedFiltersForm) {
+                resetAdvancedFiltersBtn.addEventListener('click', () => {
+                    advancedFiltersForm.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach((input) => {
+                        input.checked = false;
+                    });
+                });
+            }
+
+            if (applyAdvancedFiltersBtn && mainFilterForm) {
+                applyAdvancedFiltersBtn.addEventListener('click', () => {
+                    const queryParams = new URLSearchParams();
+                    const appendFormData = (formElement) => {
+                        if (!formElement) return;
+                        const formData = new FormData(formElement);
+                        for (const [key, value] of formData.entries()) {
+                            if (value !== null && String(value).trim() !== '') {
+                                queryParams.append(key, value);
+                            }
+                        }
+                    };
+
+                    appendFormData(mainFilterForm);
+                    appendFormData(advancedFiltersForm);
+                    window.location.href = `/products?${queryParams.toString()}`;
+                });
+            }
+        </script>
 </body>
 
 </html>
