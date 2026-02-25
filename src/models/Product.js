@@ -1,7 +1,18 @@
 // Product schema definition and model
 const mongoose = require('mongoose');
 
-const NOISE_CONTROL_TYPES = ['Active Noise Cancellation', 'Passive Noise Isolation', 'None'];
+const NOISE_CANCELLATION_TYPES = [
+    'Active Noise Cancellation',
+    'Passive Noise Cancellation',
+    'Feedforward ANC',
+    'Feedback ANC',
+    'Hybrid ANC',
+    'Adaptive Noise Cancellation',
+    'Environmental Noise Cancellation',
+    'None',
+    // Backward compatibility for already-migrated products
+    'Passive Noise Isolation'
+];
 const CONTROL_METHODS = ['Touch', 'Button', 'Voice', 'App'];
 const CABLE_FEATURES = ['Detachable Cable', 'Braided Cable', 'Tangle Free', 'Inline Remote'];
 const SMART_FEATURES = ['Voice Assistant', 'Multipoint', 'Companion App', 'Adaptive Audio'];
@@ -9,7 +20,17 @@ const COMPATIBLE_DEVICES = ['Android', 'iOS', 'Windows', 'Mac', 'PlayStation', '
 const MATERIALS = ['Plastic', 'Aluminium', 'Steel', 'Leather', 'Fabric', 'Silicone'];
 const INCLUDED_COMPONENTS = ['Carrying Case', 'Charging Cable', 'Audio Cable', 'Ear Tips', 'User Manual'];
 const AUDIO_DRIVER_TYPES = ['Dynamic', 'Planar Magnetic', 'Balanced Armature', 'Hybrid'];
-const FORM_FACTORS = ['In-Ear', 'On-Ear', 'Over-Ear'];
+const FORM_FACTORS = [
+    'In-Ear',
+    'In-Ear (Earbuds/IEMs)',
+    'Over-Ear',
+    'On-Ear',
+    'Clip-On',
+    'Ear Hooks',
+    'True Wireless (TWS)',
+    'Neckband',
+    'Bone Conduction'
+];
 const EARPIECE_SHAPES = ['Round', 'Oval', 'Ergonomic'];
 const IMPEDANCE_RANGES = ['Up to 32 Ohm', '33-80 Ohm', '81-250 Ohm', '250+ Ohm'];
 const SENSITIVITY_RANGES = ['Up to 95 dB', '96-105 dB', '106-115 dB', '115+ dB'];
@@ -106,6 +127,10 @@ const productSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    isDeleted: {
+        type: Boolean,
+        default: false
+    },
     // Wired specs
     cableLength: { type: String, default: '' },
     connectorType: { type: String, default: '' },
@@ -144,8 +169,12 @@ const productSchema = new mongoose.Schema({
     },
     noiseControlTypes: [{
         type: String,
-        enum: NOISE_CONTROL_TYPES
+        enum: NOISE_CANCELLATION_TYPES
     }],
+    ambientModeAvailable: {
+        type: Boolean,
+        default: false
+    },
     controlMethods: [{
         type: String,
         enum: CONTROL_METHODS

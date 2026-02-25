@@ -31,7 +31,8 @@
                         const warrantyProvider = product.warranty && product.warranty.provider ? product.warranty.provider : 'Brand';
                         const hasWarranty = warrantyDuration && warrantyDuration !== 'No Warranty';
                         const nonEmpty = (arr) => Array.isArray(arr) ? arr.filter(Boolean) : [];
-                        const advancedAudio = nonEmpty(product.noiseControlTypes).concat(nonEmpty(product.audioDriverTypes));
+                        const noiseCancellationTypes = nonEmpty(product.noiseControlTypes);
+                        const advancedAudio = nonEmpty(product.audioDriverTypes);
                         const buildMeta = nonEmpty(product.materials).concat(nonEmpty(product.cableFeatures));
                         const smartMeta = nonEmpty(product.controlMethods).concat(nonEmpty(product.smartFeatures));
                         const compatibilityMeta = nonEmpty(product.compatibleDevices).concat(nonEmpty(product.includedComponents));
@@ -116,6 +117,12 @@
                                                         </div>
                                                     </div>
                                         </div>
+                                        <div class="mt-4 bg-white border border-primary-light/40 rounded-lg p-4">
+                                            <h3 class="text-primary text-lg font-bold leading-tight mb-2">Description</h3>
+                                            <p class="text-primary text-sm leading-6 whitespace-pre-line">
+                                                <%= product.description || product.shortDescription %>
+                                            </p>
+                                        </div>
                                     </div>
                                 </section>
 
@@ -137,13 +144,6 @@
                                     </p>
 
                                     <div class="bg-white border border-primary-light/40 rounded-lg p-4">
-                                        <h3 class="text-primary text-lg font-bold leading-tight mb-2">Description</h3>
-                                        <p class="text-primary text-sm leading-6 whitespace-pre-line">
-                                            <%= product.description || product.shortDescription %>
-                                        </p>
-                                    </div>
-
-                                    <div class="bg-white border border-primary-light/40 rounded-lg p-4">
                                         <h3 class="text-primary text-lg font-bold leading-tight mb-2">Specifications
                                         </h3>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
@@ -158,14 +158,7 @@
                                                 class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
                                                 <p class="text-primary text-sm font-normal leading-normal">Category</p>
                                                 <p class="text-primary text-sm font-normal leading-normal">
-                                                    <%= product.category %>
-                                                </p>
-                                            </div>
-                                            <div
-                                                class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
-                                                <p class="text-primary text-sm font-normal leading-normal">SKU</p>
-                                                <p class="text-primary text-sm font-normal leading-normal">
-                                                    <%= product.sku %>
+                                                    <%= product.category && product.category.name ? product.category.name : (product.category || 'N/A') %>
                                                 </p>
                                             </div>
                                             <div
@@ -175,6 +168,13 @@
                                                 </p>
                                                 <p class="text-primary text-sm font-normal leading-normal">
                                                     <%= product.connectionType %>
+                                                </p>
+                                            </div>
+                                            <div
+                                                class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                                <p class="text-primary text-sm font-normal leading-normal">Form Factor</p>
+                                                <p class="text-primary text-sm font-normal leading-normal">
+                                                    <%= product.formFactor || '—' %>
                                                 </p>
                                             </div>
                                             <% if (product.driverSize) { %>
@@ -227,48 +227,85 @@
                                         </div>
                                     </div>
 
-                                    <% if (advancedAudio.length || buildMeta.length || smartMeta.length || compatibilityMeta.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange || product.hasMicrophone || product.batteryChargingTime) { %>
+                                    <% if (noiseCancellationTypes.length || advancedAudio.length || buildMeta.length || smartMeta.length || compatibilityMeta.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange || typeof product.ambientModeAvailable === 'boolean' || product.hasMicrophone || product.batteryChargingTime) { %>
                                         <div class="bg-white border border-primary-light/40 rounded-lg p-4 space-y-4">
                                             <h3 class="text-primary text-lg font-bold leading-tight">Technical Highlights</h3>
-                                            <% if (advancedAudio.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange) { %>
+                                            <% if (noiseCancellationTypes.length || advancedAudio.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange || typeof product.ambientModeAvailable === 'boolean') { %>
                                                 <div>
                                                     <p class="text-sm font-semibold text-primary mb-1">Audio</p>
-                                                    <p class="text-sm text-gray-700">
-                                                        <%= [product.formFactor, product.earpieceShape, product.impedanceRange, product.sensitivityRange].filter(Boolean).join(' • ') %>
-                                                        <%= [advancedAudio.length ? advancedAudio.join(', ') : ''].filter(Boolean).join(' • ') %>
-                                                    </p>
+                                                    <div class="space-y-1 text-sm text-gray-700">
+                                                        <% if (product.formFactor) { %>
+                                                            <p><span class="font-semibold text-primary">Form Factor:</span> <%= product.formFactor %></p>
+                                                        <% } %>
+                                                        <% if (product.earpieceShape) { %>
+                                                            <p><span class="font-semibold text-primary">Earpiece Shape:</span> <%= product.earpieceShape %></p>
+                                                        <% } %>
+                                                        <% if (product.impedanceRange) { %>
+                                                            <p><span class="font-semibold text-primary">Impedance Range:</span> <%= product.impedanceRange %></p>
+                                                        <% } %>
+                                                        <% if (product.sensitivityRange) { %>
+                                                            <p><span class="font-semibold text-primary">Sensitivity Range:</span> <%= product.sensitivityRange %></p>
+                                                        <% } %>
+                                                        <% if (noiseCancellationTypes.length) { %>
+                                                            <p><span class="font-semibold text-primary">Noise Cancellation Types:</span> <%= noiseCancellationTypes.join(', ') %></p>
+                                                        <% } %>
+                                                        <% if (advancedAudio.length) { %>
+                                                            <p><span class="font-semibold text-primary">Audio Driver Types:</span> <%= advancedAudio.join(', ') %></p>
+                                                        <% } %>
+                                                        <% if (typeof product.ambientModeAvailable === 'boolean') { %>
+                                                            <p><span class="font-semibold text-primary">Ambient Mode:</span> <%= product.ambientModeAvailable ? 'Yes' : 'No' %></p>
+                                                        <% } %>
+                                                    </div>
                                                 </div>
                                             <% } %>
                                             <% if (buildMeta.length) { %>
                                                 <div>
                                                     <p class="text-sm font-semibold text-primary mb-1">Build & Materials</p>
-                                                    <p class="text-sm text-gray-700"><%= buildMeta.join(', ') %></p>
+                                                    <div class="space-y-1 text-sm text-gray-700">
+                                                        <% if (Array.isArray(product.materials) && product.materials.length) { %>
+                                                            <p><span class="font-semibold text-primary">Materials:</span> <%= product.materials.join(', ') %></p>
+                                                        <% } %>
+                                                        <% if (Array.isArray(product.cableFeatures) && product.cableFeatures.length) { %>
+                                                            <p><span class="font-semibold text-primary">Cable Features:</span> <%= product.cableFeatures.join(', ') %></p>
+                                                        <% } %>
+                                                    </div>
                                                 </div>
                                             <% } %>
                                             <% if (smartMeta.length || typeof product.hasMicrophone === 'boolean' || product.batteryChargingTime) { %>
                                                 <div>
                                                     <p class="text-sm font-semibold text-primary mb-1">Controls & Smart</p>
-                                                    <p class="text-sm text-gray-700">
-                                                        <%= smartMeta.join(', ') %>
-                                                        <%= product.hasMicrophone ? (smartMeta.length ? ' • ' : '') + 'Microphone' : '' %>
-                                                        <%= product.batteryChargingTime ? ((smartMeta.length || product.hasMicrophone) ? ' • ' : '') + ('Charging: ' + product.batteryChargingTime + 'h') : '' %>
-                                                    </p>
+                                                    <div class="space-y-1 text-sm text-gray-700">
+                                                        <% if (Array.isArray(product.controlMethods) && product.controlMethods.length) { %>
+                                                            <p><span class="font-semibold text-primary">Control Methods:</span> <%= product.controlMethods.join(', ') %></p>
+                                                        <% } %>
+                                                        <% if (Array.isArray(product.smartFeatures) && product.smartFeatures.length) { %>
+                                                            <p><span class="font-semibold text-primary">Smart Features:</span> <%= product.smartFeatures.join(', ') %></p>
+                                                        <% } %>
+                                                        <% if (typeof product.hasMicrophone === 'boolean') { %>
+                                                            <p><span class="font-semibold text-primary">Microphone:</span> <%= product.hasMicrophone ? 'Yes' : 'No' %></p>
+                                                        <% } %>
+                                                        <% if (product.batteryChargingTime) { %>
+                                                            <p><span class="font-semibold text-primary">Battery Charging Time:</span> <%= product.batteryChargingTime %>h</p>
+                                                        <% } %>
+                                                    </div>
                                                 </div>
                                             <% } %>
                                             <% if (compatibilityMeta.length) { %>
                                                 <div>
                                                     <p class="text-sm font-semibold text-primary mb-1">Compatibility & Box Contents</p>
-                                                    <p class="text-sm text-gray-700"><%= compatibilityMeta.join(', ') %></p>
+                                                    <div class="space-y-1 text-sm text-gray-700">
+                                                        <% if (Array.isArray(product.compatibleDevices) && product.compatibleDevices.length) { %>
+                                                            <p><span class="font-semibold text-primary">Compatible Devices:</span> <%= product.compatibleDevices.join(', ') %></p>
+                                                        <% } %>
+                                                        <% if (Array.isArray(product.includedComponents) && product.includedComponents.length) { %>
+                                                            <p><span class="font-semibold text-primary">Included Components:</span> <%= product.includedComponents.join(', ') %></p>
+                                                        <% } %>
+                                                    </div>
                                                 </div>
                                             <% } %>
                                         </div>
                                     <% } %>
 
-                                    <div class="bg-white border border-primary-light/40 rounded-lg p-4">
-                                        <h3 class="text-primary text-lg font-bold leading-tight mb-2">Customer Reviews
-                                        </h3>
-                                        <p class="text-primary text-base font-normal leading-normal">No reviews yet.</p>
-                                    </div>
                                 </section>
 
                                 <!-- Right Column -->
@@ -353,6 +390,11 @@
                                             <p class="text-gray-600">Secure transaction. Your data is protected.</p>
                                         </div>
                                     </div>
+                                    <div class="mt-4 bg-white border border-primary-light/40 rounded-lg p-4">
+                                        <h3 class="text-primary text-lg font-bold leading-tight mb-2">Customer Reviews
+                                        </h3>
+                                        <p class="text-primary text-base font-normal leading-normal">No reviews yet.</p>
+                                    </div>
                                 </aside>
                             </div>
 
@@ -367,20 +409,22 @@
                                                 const relVariant = Array.isArray(relProduct.variants) && relProduct.variants.length > 0 && Array.isArray(relProduct.variants[0].images) ? relProduct.variants[0].images : [];
                                                 const relImg = relVariant.length > 0 ? relVariant[0].url : '/images/placeholder.png';
                                                 %>
-                                                <div
-                                                    class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white">
-                                                    <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
-                                                        style='background-image: url("<%= relImg %>");'></div>
-                                                    <div>
-                                                        <a href="/product/<%= relProduct._id %>"
-                                                            class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
-                                                            <%= relProduct.title %>
-                                                        </a>
-                                                        <p class="text-primary text-sm font-normal leading-normal">₹
-                                                            <%= relProduct.price.toLocaleString('en-IN') %>
-                                                        </p>
+                                                <a href="/product/<%= relProduct._id %>" class="block">
+                                                    <div
+                                                        class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white cursor-pointer transition hover:shadow-lg hover:scale-[1.02]">
+                                                        <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
+                                                            style='background-image: url("<%= relImg %>");'></div>
+                                                        <div>
+                                                            <p
+                                                                class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
+                                                                <%= relProduct.title %>
+                                                            </p>
+                                                            <p class="text-primary text-sm font-normal leading-normal">₹
+                                                                <%= relProduct.price.toLocaleString('en-IN') %>
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                </a>
                                                 <% }); %>
                                             <% } else { %>
                                                 <div class="col-span-full py-2">
@@ -400,20 +444,22 @@
                                                 const abVariant = Array.isArray(abProduct.variants) && abProduct.variants.length > 0 && Array.isArray(abProduct.variants[0].images) ? abProduct.variants[0].images : [];
                                                 const abImg = abVariant.length > 0 ? abVariant[0].url : '/images/placeholder.png';
                                                 %>
-                                                <div
-                                                    class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white">
-                                                    <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
-                                                        style='background-image: url("<%= abImg %>");'></div>
-                                                    <div>
-                                                        <a href="/product/<%= abProduct._id %>"
-                                                            class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
-                                                            <%= abProduct.title %>
-                                                        </a>
-                                                        <p class="text-primary text-sm font-normal leading-normal">₹
-                                                            <%= abProduct.price.toLocaleString('en-IN') %>
-                                                        </p>
+                                                <a href="/product/<%= abProduct._id %>" class="block">
+                                                    <div
+                                                        class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white cursor-pointer transition hover:shadow-lg hover:scale-[1.02]">
+                                                        <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
+                                                            style='background-image: url("<%= abImg %>");'></div>
+                                                        <div>
+                                                            <p
+                                                                class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
+                                                                <%= abProduct.title %>
+                                                            </p>
+                                                            <p class="text-primary text-sm font-normal leading-normal">₹
+                                                                <%= abProduct.price.toLocaleString('en-IN') %>
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                </a>
                                                 <% }); %>
                                                     <% } else { %>
                                                         <div class="col-span-full py-2">

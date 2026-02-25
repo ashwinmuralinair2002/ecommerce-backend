@@ -202,8 +202,20 @@
                         </div>
                     <% } %>
 
+                    <% if (filterOptions && filterOptions.hasAmbientMode) { %>
+                        <div>
+                            <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Ambient Mode</h3>
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" name="ambientModeAvailable" value="true" onchange="submitForm()"
+                                    <%= (Array.isArray(query.ambientModeAvailable) ? query.ambientModeAvailable.includes('true') : query.ambientModeAvailable==='true') ? 'checked' : '' %>
+                                class="rounded border-gray-300 text-primary focus:ring-primary" />
+                                <span class="text-sm text-gray-600 group-hover:text-primary">Ambient Mode Available</span>
+                            </label>
+                        </div>
+                    <% } %>
+
                     <% const multiGroups = [
-                        { key: 'noiseControlTypes', label: 'Noise Control', options: filterOptions && filterOptions.noiseControlTypes ? filterOptions.noiseControlTypes : [] },
+                        { key: 'noiseControlTypes', label: 'Noise Cancellation Types', options: filterOptions && filterOptions.noiseControlTypes ? filterOptions.noiseControlTypes : [] },
                         { key: 'controlMethods', label: 'Control Method', options: filterOptions && filterOptions.controlMethods ? filterOptions.controlMethods : [] },
                         { key: 'formFactor', label: 'Form Factor', options: filterOptions && filterOptions.formFactor ? filterOptions.formFactor : [] },
                         { key: 'cableFeatures', label: 'Cable Features', options: filterOptions && filterOptions.cableFeatures ? filterOptions.cableFeatures : [] },

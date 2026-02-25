@@ -38,12 +38,12 @@ exports.getAllProducts = async (req, res) => {
             category, brand, connection, minPrice, maxPrice, sort,
             noiseControlTypes, discountRange, hasMicrophone, controlMethods, formFactor,
             cableFeatures, earpieceShape, smartFeatures, newArrivals, sensitivityRange,
-            compatibleDevices, materials, impedanceRange, audioDriverTypes
+            compatibleDevices, materials, impedanceRange, audioDriverTypes, ambientModeAvailable
         } = req.query;
         const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).lean();
         const allowedCategoryIds = activeCategories.map(c => c._id);
 
-        let filter = { isListed: true, category: { $in: allowedCategoryIds } };
+        let filter = { isListed: true, isDeleted: { $ne: true }, category: { $in: allowedCategoryIds } };
 
         if (category) {
             const categoryIds = asQueryArray(category)
@@ -87,7 +87,7 @@ exports.getAllProducts = async (req, res) => {
             const [, brands, allFilterProducts] = await Promise.all([
                 Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).lean(),
                 Brand.find({ isActive: true, isDeleted: false }).lean(),
-                Product.find({ isListed: true, category: { $in: allowedCategoryIds } }).select('noiseControlTypes controlMethods cableFeatures smartFeatures compatibleDevices materials includedComponents audioDriverTypes formFactor earpieceShape impedanceRange sensitivityRange hasMicrophone discountPercentage createdAt').lean()
+                Product.find({ isListed: true, isDeleted: { $ne: true }, category: { $in: allowedCategoryIds } }).select('noiseControlTypes controlMethods cableFeatures smartFeatures compatibleDevices materials includedComponents audioDriverTypes formFactor earpieceShape impedanceRange sensitivityRange hasMicrophone ambientModeAvailable discountPercentage createdAt').lean()
             ]);
 
             const collect = (key) => [...new Set(allFilterProducts.flatMap((p) => Array.isArray(p[key]) ? p[key] : []).filter(Boolean))];
@@ -105,7 +105,8 @@ exports.getAllProducts = async (req, res) => {
                 earpieceShape: collectSingle('earpieceShape'),
                 impedanceRange: collectSingle('impedanceRange'),
                 sensitivityRange: collectSingle('sensitivityRange'),
-                hasMicrophone: allFilterProducts.some((p) => p.hasMicrophone === true)
+                hasMicrophone: allFilterProducts.some((p) => p.hasMicrophone === true),
+                hasAmbientMode: allFilterProducts.some((p) => p.ambientModeAvailable === true)
             };
 
             return res.render('user/products', {
@@ -192,6 +193,12 @@ exports.getAllProducts = async (req, res) => {
             filter.hasMicrophone = micBool;
         }
 
+        const ambientValues = asQueryArray(ambientModeAvailable);
+        if (ambientValues.length > 0) {
+            const ambientBool = ambientValues.map((v) => String(v).toLowerCase()).includes('true');
+            filter.ambientModeAvailable = ambientBool;
+        }
+
         const discountValues = asQueryArray(discountRange)
             .map((v) => parseInt(v, 10))
             .filter((v) => [25, 50, 75].includes(v));
@@ -215,8 +222,8 @@ exports.getAllProducts = async (req, res) => {
 
         const [brands, allFilterProducts] = await Promise.all([
             Brand.find({ isActive: true, isDeleted: false }).lean(),
-            Product.find({ isListed: true, category: { $in: allowedCategoryIds } })
-                .select('noiseControlTypes controlMethods cableFeatures smartFeatures compatibleDevices materials includedComponents audioDriverTypes formFactor earpieceShape impedanceRange sensitivityRange hasMicrophone discountPercentage createdAt')
+            Product.find({ isListed: true, isDeleted: { $ne: true }, category: { $in: allowedCategoryIds } })
+                .select('noiseControlTypes controlMethods cableFeatures smartFeatures compatibleDevices materials includedComponents audioDriverTypes formFactor earpieceShape impedanceRange sensitivityRange hasMicrophone ambientModeAvailable discountPercentage createdAt')
                 .lean()
         ]);
         const collect = (key) => [...new Set(allFilterProducts.flatMap((p) => Array.isArray(p[key]) ? p[key] : []).filter(Boolean))];
@@ -246,6 +253,7 @@ exports.getAllProducts = async (req, res) => {
             impedanceRange: collectSingle('impedanceRange'),
             sensitivityRange: collectSingle('sensitivityRange'),
             hasMicrophone: allFilterProducts.some((p) => p.hasMicrophone === true),
+            hasAmbientMode: allFilterProducts.some((p) => p.ambientModeAvailable === true),
             discountRanges: hasDiscount ? [25, 50, 75] : [],
             newArrivals: [has30Day ? 30 : null, has90Day ? 90 : null].filter(Boolean)
         };
@@ -292,31 +300,34 @@ exports.getProductDetails = async (req, res) => {
             .populate('brand', 'name')
             .populate('category', 'name isBlocked isDeleted');
 
-        if (!product || product.isListed === false || !product.category || !allowedCategorySet.has(String(product.category._id || product.category))) {
+        if (!product || product.isListed === false || product.isDeleted === true || !product.category || !allowedCategorySet.has(String(product.category._id || product.category))) {
             return res.status(404).render('user/product-unavailable', { homeUrl });
         }
 
         await migrateLegacyProductImages(product);
 
-        // Get Related Products (Same Category, excluding current)
+        // Get Similar Products (Same connection type, excluding current)
         const relatedDocs = await Product.find({
             _id: { $ne: product._id },
-            isListed: true,
-            category: product.category._id || product.category
+            connectionType: product.connectionType,
+            isDeleted: { $ne: true },
+            isListed: true
         })
-            .limit(4);
+            .sort({ createdAt: -1 })
+            .limit(6);
         for (const rel of relatedDocs) {
             await migrateLegacyProductImages(rel);
         }
         const relatedProducts = relatedDocs.map((doc) => doc.toObject());
 
-        // Get "Customers Also Bought" (Random for now)
-        const alsoBoughtIds = await Product.aggregate([
-            { $match: { isListed: true, _id: { $ne: product._id }, category: { $in: allowedCategoryIds } } },
-            { $project: { _id: 1 } },
-            { $sample: { size: 3 } }
-        ]);
-        const alsoBoughtDocs = await Product.find({ _id: { $in: alsoBoughtIds.map((p) => p._id) } });
+        // Get "Customers Also Bought" (Latest products, excluding current)
+        const alsoBoughtDocs = await Product.find({
+            _id: { $ne: product._id },
+            isDeleted: { $ne: true },
+            isListed: true
+        })
+            .sort({ createdAt: -1 })
+            .limit(6);
         for (const ab of alsoBoughtDocs) {
             await migrateLegacyProductImages(ab);
         }

@@ -289,6 +289,16 @@
                                                                             <p class="field-error" id="categorySelectError">Please select a category</p>
                                                                         </label>
                                                                     </div>
+
+                                                                    <!-- Form Factor -->
+                                                                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                                                                        <label class="flex flex-col min-w-40 flex-1">
+                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Form Factor</p>
+                                                                            <div id="formFactorOptions" class="flex flex-wrap gap-4">
+                                                                                <p id="formFactorHint" class="text-[#685BCB] text-sm">Select connection type first</p>
+                                                                            </div>
+                                                                        </label>
+                                                                    </div>
                             
                                                                     <!-- Short Description -->
                                                                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
@@ -433,20 +443,6 @@
                                                                                 <p class="field-error" id="wirelessRangeError">Must be a positive number</p>
                                                                             </label>
                                                                         </div>
-                                                                        <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                                                            <label class="flex flex-col min-w-40 flex-1">
-                                                                                <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Noise Cancellation
-                                                                                </p>
-                                                                                <select id="noiseCancellation" name="noiseCancellation"
-                                                                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
-                                                                                    <option value="">Select</option>
-                                                                                    <option value="Active">Active</option>
-                                                                                    <option value="Passive">Passive</option>
-                                                                                    <option value="None">None</option>
-                                                                                </select>
-                                                                                <p class="field-error" id="noiseCancellationError">Please select noise cancellation</p>
-                                                                            </label>
-                                                                        </div>
                                                                     </div>
                                                                         </div>
                                                                     </details>
@@ -510,17 +506,6 @@
                                                                         <div class="mt-4">
                                                                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                                                                         <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Price (₹) <span
-                                                                                    class="text-red-500">*</span></p>
-                                                                            <input id="productPrice" name="price" placeholder="e.g., 1299" type="number" step="0.01"
-                                                                                min="0" required
-                                                                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                                                                value="" />
-                                                                            <p class="field-error" id="productPriceError">Price must be a positive number</p>
-                                                                        </label>
-                                                                    </div>
-                                                                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                                                        <label class="flex flex-col min-w-40 flex-1">
                                                                             <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Original Price (₹)
                                                                                 (Optional)</p>
                                                                             <input id="originalPrice" name="originalPrice" placeholder="e.g., 1499" type="number"
@@ -539,6 +524,17 @@
                                                                                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                                                                 value="" />
                                                                             <p class="field-error" id="discountPercentageError">Must be between 0 and 100</p>
+                                                                        </label>
+                                                                    </div>
+                                                                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+                                                                        <label class="flex flex-col min-w-40 flex-1">
+                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Discounted Price (₹) <span
+                                                                                    class="text-red-500">*</span></p>
+                                                                            <input id="productPrice" name="price" placeholder="e.g., 1299" type="number" step="0.01"
+                                                                                min="0" required
+                                                                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
+                                                                                value="" />
+                                                                            <p class="field-error" id="productPriceError">Price must be a positive number</p>
                                                                         </label>
                                                                     </div>
                                                                         </div>
@@ -588,20 +584,29 @@
                                                                                 </label>
                                                                             </div>
                                                                             <div class="space-y-2">
-                                                                                <p class="text-sm font-semibold text-[#1F1F1F]">Noise Control Types</p>
+                                                                                <p class="text-sm font-semibold text-[#1F1F1F]">Noise Cancellation Types</p>
                                                                                 <div class="flex flex-wrap gap-4">
-                                                                                    <label><input type="checkbox" name="noiseControlTypes" value="Active Noise Cancellation"> Active Noise Cancellation</label>
-                                                                                    <label><input type="checkbox" name="noiseControlTypes" value="Passive Noise Isolation"> Passive Noise Isolation</label>
-                                                                                    <label><input type="checkbox" name="noiseControlTypes" value="None"> None</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="Active Noise Cancellation"> Active Noise Cancellation</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="Passive Noise Cancellation"> Passive Noise Cancellation</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="Feedforward ANC"> Feedforward ANC</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="Feedback ANC"> Feedback ANC</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="Hybrid ANC"> Hybrid ANC</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="Adaptive Noise Cancellation"> Adaptive Noise Cancellation</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="Environmental Noise Cancellation"> Environmental Noise Cancellation</label>
+                                                                                    <label><input type="radio" name="noiseControlTypes" value="None"> None</label>
                                                                                 </div>
+                                                                            </div>
+                                                                            <div class="space-y-2">
+                                                                                <p class="text-sm font-semibold text-[#1F1F1F]">Ambient Mode Available</p>
+                                                                                <label><input type="checkbox" name="ambientModeAvailable" value="true"> Yes</label>
                                                                             </div>
                                                                             <div class="space-y-2">
                                                                                 <p class="text-sm font-semibold text-[#1F1F1F]">Audio Driver Types</p>
                                                                                 <div class="flex flex-wrap gap-4">
-                                                                                    <label><input type="checkbox" name="audioDriverTypes" value="Dynamic"> Dynamic</label>
-                                                                                    <label><input type="checkbox" name="audioDriverTypes" value="Planar Magnetic"> Planar Magnetic</label>
-                                                                                    <label><input type="checkbox" name="audioDriverTypes" value="Balanced Armature"> Balanced Armature</label>
-                                                                                    <label><input type="checkbox" name="audioDriverTypes" value="Hybrid"> Hybrid</label>
+                                                                                    <label><input type="radio" name="audioDriverTypes" value="Dynamic"> Dynamic</label>
+                                                                                    <label><input type="radio" name="audioDriverTypes" value="Planar Magnetic"> Planar Magnetic</label>
+                                                                                    <label><input type="radio" name="audioDriverTypes" value="Balanced Armature"> Balanced Armature</label>
+                                                                                    <label><input type="radio" name="audioDriverTypes" value="Hybrid"> Hybrid</label>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -745,7 +750,7 @@
                                                                             <p class="field-error" id="shippingHeightError">Must be a positive number</p>
                                                                         </label>
                                                                         <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Weight (kg)</p>
+                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Weight (g)</p>
                                                                             <input id="shippingWeight" name="weight" placeholder="Weight" type="number" step="0.01"
                                                                                 min="0"
                                                                                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
@@ -1557,6 +1562,8 @@
             'XLR (3-pin or 4-pin)',
             'Other'
         ];
+        const WIRED_FORM_FACTORS = ['In-Ear (Earbuds/IEMs)', 'Over-Ear', 'On-Ear', 'Clip-On', 'Ear Hooks'];
+        const WIRELESS_FORM_FACTORS = ['True Wireless (TWS)', 'Neckband', 'Over-Ear', 'On-Ear', 'Bone Conduction', 'Ear Hooks'];
 
         function renderBatteryChargingField(value) {
             const host = document.getElementById('batteryChargingTimeHost');
@@ -1576,12 +1583,41 @@
             if (host) host.innerHTML = '';
         }
 
+        function renderFormFactorOptions(connectionType, selectedValue) {
+            const host = document.getElementById('formFactorOptions');
+            if (!host) return;
+
+            const options = connectionType === 'Wired'
+                ? WIRED_FORM_FACTORS
+                : connectionType === 'Wireless'
+                    ? WIRELESS_FORM_FACTORS
+                    : [];
+
+            if (!options.length) {
+                host.innerHTML = '<p id="formFactorHint" class="text-[#685BCB] text-sm">Select connection type first</p>';
+                return;
+            }
+
+            const labels = options.map((option, index) => {
+                const id = `formFactor_${connectionType}_${index}`.replace(/\s+/g, '_').replace(/[()]/g, '');
+                const checked = selectedValue === option ? 'checked' : '';
+                return `<label class="inline-flex items-center gap-2 text-[#1F1F1F] text-sm">
+                    <input id="${id}" type="radio" name="formFactor" value="${option}" ${checked}
+                        class="h-4 w-4 border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]">
+                    <span>${option}</span>
+                </label>`;
+            }).join('');
+
+            host.innerHTML = labels;
+        }
+
         // ========== Connection Type Toggle ==========
         const connectionTypeEl = document.getElementById('connectionType');
         if (connectionTypeEl) {
             const syncConnectionUI = function () {
                 const wiredSpecs = document.getElementById('wiredSpecs');
                 const wirelessSpecs = document.getElementById('wirelessSpecs');
+                const selectedFormFactor = (document.querySelector('[name="formFactor"]:checked') || {}).value || '';
                 if (!wiredSpecs || !wirelessSpecs) return;
                 wiredSpecs.classList.add('hidden');
                 wirelessSpecs.classList.add('hidden');
@@ -1589,11 +1625,14 @@
                     wiredSpecs.classList.remove('hidden');
                     removeBatteryChargingField();
                     clearFieldError('batteryChargingTime');
+                    renderFormFactorOptions('Wired', selectedFormFactor);
                 } else if (this.value === 'Wireless') {
                     wirelessSpecs.classList.remove('hidden');
                     renderBatteryChargingField();
+                    renderFormFactorOptions('Wireless', selectedFormFactor);
                 } else {
                     removeBatteryChargingField();
+                    renderFormFactorOptions('');
                 }
             };
             connectionTypeEl.addEventListener('change', syncConnectionUI);
@@ -1719,23 +1758,36 @@
             const discountEl = document.getElementById('discountPercentage');
             const priceEl = document.getElementById('productPrice');
             if (!originalPriceEl || !discountEl || !priceEl) return;
+            if (originalPriceEl.dataset.priceCalcBound === 'true') return;
 
             const recalcPrice = () => {
-                const originalPrice = Number(originalPriceEl.value);
-                const discount = Number(discountEl.value);
+                const originalRaw = originalPriceEl.value.trim();
+                const discountRaw = discountEl.value.trim();
+                if (!originalRaw || !discountRaw) return;
+
+                const originalPrice = Number(originalRaw);
+                const discount = Number(discountRaw);
                 if (!Number.isFinite(originalPrice) || !Number.isFinite(discount)) return;
-                if (originalPrice <= 0 || discount < 0 || discount > 90) return;
+                if (originalPrice < 0 || discount < 0 || discount > 90) return;
+
                 const computed = originalPrice - ((originalPrice * discount) / 100);
-                if (computed < 0) return;
-                priceEl.value = computed.toFixed(2);
+                priceEl.value = Math.max(0, computed).toFixed(2);
             };
 
             originalPriceEl.addEventListener('input', recalcPrice);
             discountEl.addEventListener('input', recalcPrice);
             originalPriceEl.addEventListener('change', recalcPrice);
             discountEl.addEventListener('change', recalcPrice);
+            originalPriceEl.dataset.priceCalcBound = 'true';
+
+            recalcPrice();
         }
-        setupAutoPriceCalculation();
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupAutoPriceCalculation);
+        } else {
+            setupAutoPriceCalculation();
+        }
 
         function validateStrictForm() {
             let valid = true;
@@ -1795,8 +1847,6 @@
                     clearFieldError('batteryChargingTime');
                 }
                 if (!/^\d+(\.\d{1,2})?$/.test(getValue('wirelessRange')) || Number(getValue('wirelessRange')) <= 0) valid = setFieldError('wirelessRange', 'Wireless range must be positive.') && valid; else clearFieldError('wirelessRange');
-                const nc = String(getValue('noiseCancellation')).trim().toLowerCase();
-                if (!['active', 'passive', 'none'].includes(nc)) valid = setFieldError('noiseCancellation', 'Select valid noise cancellation option.') && valid;
             }
 
             if (!validateSelect('warrantyDuration', 'warrantyDurationError')) valid = false;

@@ -5,7 +5,18 @@ const Category = require('../models/Category'); // Added Category import
 const cloudinary = require('../config/cloudinary');
 
 const ENUM_MAP = {
-    noiseControlTypes: ['Active Noise Cancellation', 'Passive Noise Isolation', 'None'],
+    noiseControlTypes: [
+        'Active Noise Cancellation',
+        'Passive Noise Cancellation',
+        'Feedforward ANC',
+        'Feedback ANC',
+        'Hybrid ANC',
+        'Adaptive Noise Cancellation',
+        'Environmental Noise Cancellation',
+        'None',
+        // Backward compatibility for existing products
+        'Passive Noise Isolation'
+    ],
     controlMethods: ['Touch', 'Button', 'Voice', 'App'],
     cableFeatures: ['Detachable Cable', 'Braided Cable', 'Tangle Free', 'Inline Remote'],
     smartFeatures: ['Voice Assistant', 'Multipoint', 'Companion App', 'Adaptive Audio'],
@@ -142,8 +153,8 @@ const getProductsPage = async (req, res) => {
         const limit = 10;
         const currentPage = parseInt(page) || 1;
 
-        // Base query: show only listed (not soft-deleted) products in admin table
-        let query = { isListed: { $ne: false } };
+        // Base query for admin table: hide only soft-deleted products.
+        let query = { isDeleted: { $ne: true } };
 
         // Search by title or SKU
         if (search) {
@@ -263,7 +274,7 @@ const getProductsPage = async (req, res) => {
     }
 };
 
-// @desc    Soft delete products (set isListed = false)
+// @desc    Soft delete products (set isDeleted = true)
 // @route   POST /admin/products/soft-delete
 const softDeleteProducts = async (req, res) => {
     try {
@@ -271,15 +282,15 @@ const softDeleteProducts = async (req, res) => {
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({ success: false, message: 'No products selected' });
         }
-        await Product.updateMany({ _id: { $in: ids } }, { isListed: false });
-        return res.json({ success: true, message: `${ids.length} product(s) unlisted successfully` });
+        await Product.updateMany({ _id: { $in: ids } }, { isDeleted: true });
+        return res.json({ success: true, message: `${ids.length} product(s) deleted successfully` });
     } catch (error) {
         console.error('Error soft deleting products:', error);
         return res.status(500).json({ success: false, message: 'Failed to delete products' });
     }
 };
 
-// @desc    Soft delete a single product (set isListed = false)
+// @desc    Soft delete a single product (set isDeleted = true)
 // @route   DELETE /admin/products/:id
 const softDeleteProduct = async (req, res) => {
     try {
@@ -287,9 +298,9 @@ const softDeleteProduct = async (req, res) => {
         if (!product) {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
-        product.isListed = false;
+        product.isDeleted = true;
         await product.save();
-        return res.json({ success: true, message: 'Product unlisted successfully' });
+        return res.json({ success: true, message: 'Product deleted successfully' });
     } catch (error) {
         console.error('Error soft deleting product:', error);
         return res.status(500).json({ success: false, message: 'Failed to delete product' });
@@ -375,14 +386,14 @@ const createProduct = async (req, res) => {
             price, originalPrice, discountPercentage,
             stockCount, reservedCount, reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
-            bluetoothVersion, batteryLife, chargingTime, wirelessRange, noiseCancellation,
+            bluetoothVersion, batteryLife, chargingTime, wirelessRange,
             warrantyDuration, warrantyProvider,
             length, width, height, weight,
             metaTitle, metaDescription, badges,
             noiseControlTypes, controlMethods, cableFeatures, smartFeatures,
             compatibleDevices, materials, includedComponents, audioDriverTypes,
             formFactor, earpieceShape, impedanceRange, sensitivityRange,
-            hasMicrophone, batteryChargingTime
+            hasMicrophone, batteryChargingTime, ambientModeAvailable
         } = req.body;
 
         const variants = await buildVariantsFromRequest(req);
@@ -426,7 +437,6 @@ const createProduct = async (req, res) => {
             batteryLife: batteryLife || '',
             chargingTime: chargingTime || '',
             wirelessRange: wirelessRange || '',
-            noiseCancellation: noiseCancellation || '',
             warranty: {
                 duration: warrantyDuration || 'No Warranty',
                 provider: warrantyProvider || 'Brand'
@@ -444,6 +454,7 @@ const createProduct = async (req, res) => {
             impedanceRange: normalizeSingleEnum(impedanceRange, ENUM_MAP.impedanceRange),
             sensitivityRange: normalizeSingleEnum(sensitivityRange, ENUM_MAP.sensitivityRange),
             hasMicrophone: parseBooleanLike(hasMicrophone),
+            ambientModeAvailable: parseBooleanLike(ambientModeAvailable),
             batteryChargingTime: batteryChargingTime ? parseFloat(batteryChargingTime) : null,
             length: length ? parseFloat(length) : null,
             width: width ? parseFloat(width) : null,
@@ -482,7 +493,7 @@ const updateProduct = async (req, res) => {
             price, originalPrice, discountPercentage,
             stockCount, reservedCount, reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
-            bluetoothVersion, batteryLife, chargingTime, wirelessRange, noiseCancellation,
+            bluetoothVersion, batteryLife, chargingTime, wirelessRange,
             warrantyDuration, warrantyProvider,
             length, width, height, weight,
             metaTitle, metaDescription, badges,
@@ -490,7 +501,7 @@ const updateProduct = async (req, res) => {
             noiseControlTypes, controlMethods, cableFeatures, smartFeatures,
             compatibleDevices, materials, includedComponents, audioDriverTypes,
             formFactor, earpieceShape, impedanceRange, sensitivityRange,
-            hasMicrophone, batteryChargingTime
+            hasMicrophone, batteryChargingTime, ambientModeAvailable
         } = req.body;
 
         await migrateLegacyProductImages(product);
@@ -533,7 +544,6 @@ const updateProduct = async (req, res) => {
         product.batteryLife = batteryLife || '';
         product.chargingTime = chargingTime || '';
         product.wirelessRange = wirelessRange || '';
-        product.noiseCancellation = noiseCancellation || '';
         product.warranty = {
             duration: warrantyDuration || 'No Warranty',
             provider: warrantyProvider || 'Brand'
@@ -551,6 +561,7 @@ const updateProduct = async (req, res) => {
         product.impedanceRange = normalizeSingleEnum(impedanceRange, ENUM_MAP.impedanceRange);
         product.sensitivityRange = normalizeSingleEnum(sensitivityRange, ENUM_MAP.sensitivityRange);
         product.hasMicrophone = parseBooleanLike(hasMicrophone);
+        product.ambientModeAvailable = parseBooleanLike(ambientModeAvailable);
         product.batteryChargingTime = batteryChargingTime ? parseFloat(batteryChargingTime) : null;
         product.length = length ? parseFloat(length) : null;
         product.width = width ? parseFloat(width) : null;
