@@ -1,465 +1,502 @@
-<!-- Admin product detail page — renders dynamic data from database -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
     <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
-        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
-
-    <title>Admin · <%= product.title %>
-    </title>
+        href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
+    <title>Admin · <%= product.title %></title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.svg" />
+    <%- include('../partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        .gallery-scroll::-webkit-scrollbar {
-            display: none;
-        }
-
-        .gallery-scroll {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-    </style>
 </head>
 
-<body>
-    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+<body class="bg-background-soft" style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+    <div class="min-h-screen flex flex-col">
         <%- include("../partials/admin/navbar") %>
 
-        <main class="flex flex-1 bg-white">
+        <main class="flex flex-1">
             <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'products' }) %>
             </aside>
 
-            <section class="flex-1 p-6 md:p-8">
-                <!-- Breadcrumb -->
-                <div class="flex flex-wrap gap-2 pb-4">
-                    <a class="text-[#685BCB] text-base font-medium leading-normal" href="/admin/products">Products</a>
-                    <span class="text-[#685BCB] text-base font-medium leading-normal">/</span>
-                    <span class="text-[#1F1F1F] text-base font-medium leading-normal">
-                        <%= product.title %>
-                    </span>
-                </div>
+            <section class="flex-1 px-4 md:px-6 lg:px-8 xl:px-10 py-5 overflow-x-hidden">
+                <% const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+                    const selectedVariant = hasVariants ? product.variants[0] : null;
+                    const variantImages = selectedVariant && Array.isArray(selectedVariant.images) ? selectedVariant.images : [];
+                    const allImages = variantImages;
+                    const heroImage = allImages.find(img => img.isHero) || allImages[0];
+                    const heroUrl = heroImage ? heroImage.url : '/images/placeholder.png';
+                    const warrantyDuration = product.warranty && product.warranty.duration ? product.warranty.duration : '';
+                    const warrantyProvider = product.warranty && product.warranty.provider ? product.warranty.provider : 'Brand';
+                    const hasWarranty = warrantyDuration && warrantyDuration !== 'No Warranty';
+                    const nonEmpty = (arr) => Array.isArray(arr) ? arr.filter(Boolean) : [];
+                    const noiseCancellationTypes = nonEmpty(product.noiseControlTypes);
+                    const advancedAudio = nonEmpty(product.audioDriverTypes);
+                    const buildMeta = nonEmpty(product.materials).concat(nonEmpty(product.cableFeatures));
+                    const smartMeta = nonEmpty(product.controlMethods).concat(nonEmpty(product.smartFeatures));
+                    const compatibilityMeta = nonEmpty(product.compatibleDevices).concat(nonEmpty(product.includedComponents));
+                    const isCategoryObj = product.category && typeof product.category === 'object' && product.category.name;
+                %>
 
-                <!-- Page Header -->
-                <div class="flex flex-wrap justify-between gap-3 pb-4">
-                    <div class="flex min-w-72 flex-col gap-3">
-                        <p class="text-[#1F1F1F] tracking-light text-[32px] font-bold leading-tight">
-                            <%= product.title %>
-                        </p>
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">SKU: <%= product.sku %>
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Action Buttons: Edit + Delete only -->
-                <div class="flex justify-stretch">
-                    <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
-                        <a href="/admin/products/edit/<%= product._id %>"
-                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-[#685BCB] text-white text-sm font-bold leading-normal tracking-[0.015em]">
-                            <span class="truncate">Edit</span>
-                        </a>
-                        <button id="deleteBtn"
-                            class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-xl h-10 px-4 bg-transparent text-[#1F1F1F] text-sm font-bold leading-normal tracking-[0.015em]">
-                            <span class="truncate">Delete</span>
-                        </button>
-                    </div>
-                </div>
-
-                <p class="text-[#685BCB] text-sm font-normal leading-normal pb-3 pt-1 px-4">
-                    Status: <%= product.status %> | Created: <%= product.createdAt ?
-                            product.createdAt.toLocaleDateString('en-IN', { year: 'numeric' , month: 'short' ,
-                            day: 'numeric' }) : 'N/A' %>
-                </p>
-
-                <!-- Product Details -->
-                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                    Product Details</h2>
-                <div class="p-4 @container">
-                    <div class="flex flex-col items-stretch justify-start rounded-xl @xl:flex-row @xl:items-start">
-                        <!-- Image Gallery -->
-                        <div class="w-full @xl:w-1/2">
-                            <div class="max-w-xl mx-auto">
-                                <% if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) { %>
-                                    <% var sortedImages = product.variants[0].images.slice(); %>
-                                        <div class="relative aspect-square rounded-xl overflow-hidden bg-gray-100">
-                                            <% const mainImage=sortedImages[0]; %>
-                                                <img id="galleryMainImg"
-                                                    src="<%= mainImage && mainImage.url ? mainImage.url : '/images/placeholder.png' %>"
-                                                    alt="<%= product.title %>"
-                                                    class="w-full h-full object-contain transition-opacity duration-300"
-                                                    onerror="this.src='/images/placeholder.png'">
-
-                                                <% if (sortedImages.length> 1) { %>
-                                                    <!-- Left Arrow -->
-                                                    <button type="button" id="galleryPrev"
-                                                        class="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm z-10">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                            fill="currentColor" viewBox="0 0 256 256">
-                                                            <path
-                                                                d="M165.66,202.34a8,8,0,0,1-11.32,11.32l-80-80a8,8,0,0,1,0-11.32l80-80a8,8,0,0,1,11.32,11.32L91.31,128Z" />
-                                                        </svg>
-                                                    </button>
-                                                    <!-- Right Arrow -->
-                                                    <button type="button" id="galleryNext"
-                                                        class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center transition-colors backdrop-blur-sm z-10">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                            fill="currentColor" viewBox="0 0 256 256">
-                                                            <path
-                                                                d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z" />
-                                                        </svg>
-                                                    </button>
-                                                    <% } %>
-                                        </div>
-
-                                        <!-- Thumbnail Strip -->
-                                        <% if (sortedImages.length> 1) { %>
-                                            <div class="flex gap-2 mt-3 overflow-x-auto pb-1" id="galleryThumbs"
-                                                style="scrollbar-width: thin; scrollbar-color: #BCA6DB transparent;">
-                                                <% sortedImages.forEach(function(img, idx) { %>
-                                                    <button type="button"
-                                                        class="gallery-thumb relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all cursor-pointer <%= idx === 0 ? 'border-[#685BCB] opacity-100' : 'border-transparent opacity-60 hover:opacity-90' %>"
-                                                        data-index="<%= idx %>" data-url="<%= img.url %>">
-                                                        <img src="<%= img.url || '/images/placeholder.png' %>"
-                                                            alt="Thumbnail <%= idx + 1 %>"
-                                                            class="w-full h-full object-cover"
-                                                            onerror="this.src='/images/placeholder.png'" />
-                                                    </button>
-                                                    <% }) %>
-                                            </div>
-                                            <% } %>
-                                                <% } else { %>
-                                                    <div
-                                                        class="aspect-square rounded-xl bg-gray-100 flex items-center justify-center w-full">
-                                                        <div class="text-center text-gray-400">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="48"
-                                                                height="48" fill="currentColor" viewBox="0 0 256 256"
-                                                                class="mx-auto mb-2">
-                                                                <path
-                                                                    d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V200H40ZM160,96a32,32,0,1,1-32-32A32,32,0,0,1,160,96Zm-72,64,27.52-27.52a8,8,0,0,1,11.31,0L144,149.66l27.52-27.52a8,8,0,0,1,11.31,0L200,139.31V200H56V176Z" />
-                                                            </svg>
-                                                            <p class="text-sm">No Image Available</p>
-                                                        </div>
-                                                    </div>
-                                                    <% } %>
-                            </div>
-                        </div>
-                        <div
-                            class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-1 py-4 @xl:px-4">
-                            <p class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em]">
-                                <%= product.title %>
-                            </p>
-                            <p class="text-[#685BCB] text-base font-normal leading-normal">
-                                <%= product.shortDescription || 'No description available.' %>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Technical Specifications -->
-                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                    Technical Specifications</h2>
-                <div class="p-4 grid grid-cols-2">
-                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Connection Type</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                            <%= product.connectionType %>
-                        </p>
-                    </div>
-                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Category</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                            <%= product.category %>
-                        </p>
-                    </div>
-                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Brand</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                            <%= product.brand ? product.brand.name : 'N/A' %>
-                        </p>
-                    </div>
-                    <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Form Factor</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                            <%= product.formFactor || '—' %>
-                        </p>
-                    </div>
-
-                    <% if (product.connectionType==='Wired' ) { %>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
-                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Cable Length</p>
-                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                <%= product.cableLength || '—' %>
-                            </p>
-                        </div>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
-                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Connector Type</p>
-                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                <%= product.connectorType || '—' %>
-                            </p>
-                        </div>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
-                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Impedance</p>
-                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                <%= product.impedance || '—' %>
-                            </p>
-                        </div>
-                        <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
-                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Driver Size</p>
-                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                <%= product.driverSize || '—' %>
-                            </p>
-                        </div>
-                        <% } else if (product.connectionType==='Wireless' ) { %>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
-                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Bluetooth Version</p>
-                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                    <%= product.bluetoothVersion || '—' %>
-                                </p>
-                            </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
-                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Battery Life</p>
-                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                    <%= product.batteryLife || '—' %>
-                                </p>
-                            </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
-                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Charging Time</p>
-                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                    <%= product.chargingTime || '—' %>
-                                </p>
-                            </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
-                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Wireless Range</p>
-                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                    <%= product.wirelessRange || '—' %>
-                                </p>
-                            </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pl-2">
-                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Noise Cancellation Types</p>
-                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                    <%= Array.isArray(product.noiseControlTypes) && product.noiseControlTypes.length ? product.noiseControlTypes.join(', ') : '—' %>
-                                </p>
-                            </div>
-                            <div class="flex flex-col gap-1 border-t border-solid border-t-[#BCA6DB] py-4 pr-2">
-                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Ambient Mode</p>
-                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                    <%= product.ambientModeAvailable ? 'Yes' : 'No' %>
-                                </p>
-                            </div>
-                            <% } %>
-                </div>
-
-                <!-- Pricing & Offers -->
-                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                    Pricing &amp; Offers</h2>
-                <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Current Price</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">₹<%=
-                                product.price.toLocaleString('en-IN') %>
-                        </p>
-                    </div>
-                    <% if (product.originalPrice) { %>
-                        <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                            <p class="text-[#685BCB] text-sm font-normal leading-normal">Original Price</p>
-                            <p class="text-[#1F1F1F] text-sm font-normal leading-normal">₹<%=
-                                    product.originalPrice.toLocaleString('en-IN') %>
-                            </p>
-                        </div>
-                        <% } %>
-                            <% if (product.discountPercentage> 0) { %>
-                                <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                                    <p class="text-[#685BCB] text-sm font-normal leading-normal">Discount</p>
-                                    <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                        <%= product.discountPercentage %>%
-                                    </p>
+                <div class="w-full">
+                    <nav class="flex text-sm text-gray-500 mb-3" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                            <li class="inline-flex items-center">
+                                <a href="/admin/products" class="inline-flex items-center text-gray-500 hover:text-primary">
+                                    Products
+                                </a>
+                            </li>
+                            <li aria-current="page">
+                                <div class="flex items-center">
+                                    <span class="mx-2 text-gray-400">/</span>
+                                    <span class="text-primary font-medium"><%= product.title %></span>
                                 </div>
-                                <% } %>
-                </div>
+                            </li>
+                        </ol>
+                    </nav>
 
-                <!-- Inventory -->
-                <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                    Inventory</h2>
-                <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Stock Count</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                            <%= product.stockCount %>
-                        </p>
-                    </div>
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Reserved Count</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                            <%= product.reservedCount %>
-                        </p>
-                    </div>
-                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Reorder Threshold</p>
-                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                            <%= product.reorderThreshold %>
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Shipping & Weight -->
-                <% if (product.length || product.width || product.height || product.weight) { %>
-                    <h2 class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                        Shipping &amp; Weight</h2>
-                    <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                        <% if (product.length) { %>
-                            <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Length</p>
-                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                    <%= product.length %> cm
-                                </p>
-                            </div>
-                            <% } %>
-                                <% if (product.width) { %>
-                                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Width</p>
-                                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                            <%= product.width %> cm
-                                        </p>
-                                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+                        <section class="lg:col-span-5">
+                            <div class="lg:sticky lg:top-24">
+                                <div class="flex flex-col sm:flex-row gap-3 relative z-20">
+                                    <% if (allImages.length > 1) { %>
+                                        <div
+                                            class="order-2 sm:order-1 flex sm:flex-col gap-2 overflow-x-auto sm:overflow-visible py-1 scrollbar-hide sm:min-w-[88px]">
+                                            <% allImages.forEach((img, index) => { %>
+                                                <button
+                                                    class="thumbnail-image w-20 h-20 border-2 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 bg-white p-1 <%= (img.url === heroUrl) ? 'border-primary ring-1 ring-primary scale-105' : 'border-gray-200 hover:border-primary-light' %>"
+                                                    data-index="<%= index %>">
+                                                    <img src="<%= img.url %>" class="w-full h-full object-contain" alt="Product image <%= index + 1 %>">
+                                                </button>
+                                            <% }); %>
+                                        </div>
                                     <% } %>
-                                        <% if (product.height) { %>
-                                            <div
-                                                class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Height</p>
-                                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                                    <%= product.height %> cm
-                                                </p>
-                                            </div>
-                                            <% } %>
-                                                <% if (product.weight) { %>
-                                                    <div
-                                                        class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                                                        <p class="text-[#685BCB] text-sm font-normal leading-normal">
-                                                            Weight</p>
-                                                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                                            <%= product.weight %> kg
-                                                        </p>
-                                                    </div>
-                                                    <% } %>
-                    </div>
-                    <% } %>
 
-                        <!-- SEO & Metadata -->
-                        <% if (product.metaTitle || product.metaDescription) { %>
-                            <h2
-                                class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                                SEO
-                                &amp; Metadata</h2>
-                            <div class="p-4 grid grid-cols-[20%_1fr] gap-x-6">
-                                <% if (product.metaTitle) { %>
-                                    <div class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                                        <p class="text-[#685BCB] text-sm font-normal leading-normal">Meta Title</p>
-                                        <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                            <%= product.metaTitle %>
-                                        </p>
-                                    </div>
-                                    <% } %>
-                                        <% if (product.metaDescription) { %>
-                                            <div
-                                                class="col-span-2 grid grid-cols-subgrid border-t border-t-[#BCA6DB] py-5">
-                                                <p class="text-[#685BCB] text-sm font-normal leading-normal">Meta
-                                                    Description</p>
-                                                <p class="text-[#1F1F1F] text-sm font-normal leading-normal">
-                                                    <%= product.metaDescription %>
-                                                </p>
+                                    <div class="order-1 sm:order-2 flex-1">
+                                        <div id="imageContainer"
+                                            class="group relative w-full aspect-square bg-white rounded-xl border border-gray-200 shadow-sm flex justify-center items-center overflow-visible cursor-crosshair">
+                                            <img src="<%= heroUrl %>" alt="<%= product.title %>"
+                                                class="w-full h-full object-contain p-4 rounded-xl" id="mainImage">
+
+                                            <button id="prevBtn"
+                                                class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
+                                                aria-label="Previous image">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" class="w-5 h-5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                                                </svg>
+                                            </button>
+                                            <button id="nextBtn"
+                                                class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
+                                                aria-label="Next image">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" class="w-5 h-5">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                                </svg>
+                                            </button>
+
+                                            <div id="zoomBox"
+                                                class="hidden xl:block absolute left-[102%] top-0 w-[95%] h-full bg-white border border-gray-200 shadow-2xl rounded-xl z-50 bg-no-repeat opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none"
+                                                style="background-size: 200%;">
                                             </div>
-                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 bg-white border border-primary-light/40 rounded-lg p-4">
+                                    <h3 class="text-primary text-lg font-bold leading-tight mb-2">Description</h3>
+                                    <p class="text-primary text-sm leading-6 whitespace-pre-line"><%= product.description || product.shortDescription || 'No description available.' %></p>
+                                </div>
                             </div>
+                        </section>
+
+                        <section class="lg:col-span-4 space-y-4">
+                            <h1 class="text-primary tracking-light text-[30px] font-bold leading-tight"><%= product.title %></h1>
+
+                            <% if (Array.isArray(product.badges) && product.badges.length > 0) { %>
+                                <div class="flex flex-wrap gap-2">
+                                    <% product.badges.forEach((badge) => { %>
+                                        <span class="rounded-md bg-accent px-2 py-1 text-xs font-bold text-black"><%= badge %></span>
+                                    <% }) %>
+                                </div>
                             <% } %>
 
-                                <!-- Badges -->
-                                <% if (product.badges && product.badges.length> 0) { %>
-                                    <h2
-                                        class="text-[#1F1F1F] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">
-                                        Badges</h2>
-                                    <div class="flex flex-wrap gap-2 px-4 pb-4">
-                                        <% product.badges.forEach(function(badge) { %>
-                                            <span
-                                                class="inline-flex items-center rounded-lg h-8 px-4 bg-[#e6f4ea] text-[#1e7e34] text-sm font-medium">
-                                                <%= badge %>
-                                            </span>
+                            <div class="flex items-center gap-3 text-sm text-primary">
+                                <span class="font-semibold">SKU:</span>
+                                <span class="text-gray-600"><%= product.sku || 'N/A' %></span>
+                            </div>
+
+                            <p class="text-sm text-gray-600">
+                                Brand:
+                                <span class="text-primary font-medium"><%= product.brand ? product.brand.name : 'N/A' %></span>
+                            </p>
+
+                            <div class="bg-white border border-primary-light/40 rounded-lg p-4">
+                                <h3 class="text-primary text-lg font-bold leading-tight mb-2">Specifications</h3>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Brand</p>
+                                        <p class="text-primary text-sm font-normal leading-normal"><%= product.brand ? product.brand.name : 'N/A' %></p>
+                                    </div>
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Category</p>
+                                        <p class="text-primary text-sm font-normal leading-normal"><%= isCategoryObj ? product.category.name : (product.category || 'N/A') %></p>
+                                    </div>
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Connection Type</p>
+                                        <p class="text-primary text-sm font-normal leading-normal"><%= product.connectionType || '—' %></p>
+                                    </div>
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Form Factor</p>
+                                        <p class="text-primary text-sm font-normal leading-normal"><%= product.formFactor || '—' %></p>
+                                    </div>
+                                    <% if (product.driverSize) { %>
+                                        <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                            <p class="text-primary text-sm font-normal leading-normal">Driver Size</p>
+                                            <p class="text-primary text-sm font-normal leading-normal"><%= product.driverSize %></p>
+                                        </div>
+                                    <% } %>
+                                    <% if (product.batteryLife) { %>
+                                        <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                            <p class="text-primary text-sm font-normal leading-normal">Battery Life</p>
+                                            <p class="text-primary text-sm font-normal leading-normal"><%= product.batteryLife %></p>
+                                        </div>
+                                    <% } %>
+                                    <% if (product.bluetoothVersion) { %>
+                                        <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                            <p class="text-primary text-sm font-normal leading-normal">Bluetooth Version</p>
+                                            <p class="text-primary text-sm font-normal leading-normal"><%= product.bluetoothVersion %></p>
+                                        </div>
+                                    <% } %>
+                                    <% if (product.weight) { %>
+                                        <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                            <p class="text-primary text-sm font-normal leading-normal">Weight</p>
+                                            <p class="text-primary text-sm font-normal leading-normal"><%= product.weight %>g</p>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <% if (noiseCancellationTypes.length || advancedAudio.length || buildMeta.length || smartMeta.length || compatibilityMeta.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange || typeof product.ambientModeAvailable === 'boolean' || product.hasMicrophone || product.batteryChargingTime) { %>
+                                <div class="bg-white border border-primary-light/40 rounded-lg p-4 space-y-4">
+                                    <h3 class="text-primary text-lg font-bold leading-tight">Technical Highlights</h3>
+                                    <% if (noiseCancellationTypes.length || advancedAudio.length || product.formFactor || product.earpieceShape || product.impedanceRange || product.sensitivityRange || typeof product.ambientModeAvailable === 'boolean') { %>
+                                        <div>
+                                            <p class="text-sm font-semibold text-primary mb-1">Audio</p>
+                                            <div class="space-y-1 text-sm text-gray-700">
+                                                <% if (product.formFactor) { %><p><span class="font-semibold text-primary">Form Factor:</span> <%= product.formFactor %></p><% } %>
+                                                <% if (product.earpieceShape) { %><p><span class="font-semibold text-primary">Earpiece Shape:</span> <%= product.earpieceShape %></p><% } %>
+                                                <% if (product.impedanceRange) { %><p><span class="font-semibold text-primary">Impedance Range:</span> <%= product.impedanceRange %></p><% } %>
+                                                <% if (product.sensitivityRange) { %><p><span class="font-semibold text-primary">Sensitivity Range:</span> <%= product.sensitivityRange %></p><% } %>
+                                                <% if (noiseCancellationTypes.length) { %><p><span class="font-semibold text-primary">Noise Cancellation Types:</span> <%= noiseCancellationTypes.join(', ') %></p><% } %>
+                                                <% if (advancedAudio.length) { %><p><span class="font-semibold text-primary">Audio Driver Types:</span> <%= advancedAudio.join(', ') %></p><% } %>
+                                                <% if (typeof product.ambientModeAvailable === 'boolean') { %><p><span class="font-semibold text-primary">Ambient Mode:</span> <%= product.ambientModeAvailable ? 'Yes' : 'No' %></p><% } %>
+                                            </div>
+                                        </div>
+                                    <% } %>
+
+                                    <% if (buildMeta.length) { %>
+                                        <div>
+                                            <p class="text-sm font-semibold text-primary mb-1">Build & Materials</p>
+                                            <div class="space-y-1 text-sm text-gray-700">
+                                                <% if (Array.isArray(product.materials) && product.materials.length) { %><p><span class="font-semibold text-primary">Materials:</span> <%= product.materials.join(', ') %></p><% } %>
+                                                <% if (Array.isArray(product.cableFeatures) && product.cableFeatures.length) { %><p><span class="font-semibold text-primary">Cable Features:</span> <%= product.cableFeatures.join(', ') %></p><% } %>
+                                            </div>
+                                        </div>
+                                    <% } %>
+
+                                    <% if (smartMeta.length || typeof product.hasMicrophone === 'boolean' || product.batteryChargingTime) { %>
+                                        <div>
+                                            <p class="text-sm font-semibold text-primary mb-1">Controls & Smart</p>
+                                            <div class="space-y-1 text-sm text-gray-700">
+                                                <% if (Array.isArray(product.controlMethods) && product.controlMethods.length) { %><p><span class="font-semibold text-primary">Control Methods:</span> <%= product.controlMethods.join(', ') %></p><% } %>
+                                                <% if (Array.isArray(product.smartFeatures) && product.smartFeatures.length) { %><p><span class="font-semibold text-primary">Smart Features:</span> <%= product.smartFeatures.join(', ') %></p><% } %>
+                                                <% if (typeof product.hasMicrophone === 'boolean') { %><p><span class="font-semibold text-primary">Microphone:</span> <%= product.hasMicrophone ? 'Yes' : 'No' %></p><% } %>
+                                                <% if (product.batteryChargingTime) { %><p><span class="font-semibold text-primary">Battery Charging Time:</span> <%= product.batteryChargingTime %>h</p><% } %>
+                                            </div>
+                                        </div>
+                                    <% } %>
+
+                                    <% if (compatibilityMeta.length) { %>
+                                        <div>
+                                            <p class="text-sm font-semibold text-primary mb-1">Compatibility & Box Contents</p>
+                                            <div class="space-y-1 text-sm text-gray-700">
+                                                <% if (Array.isArray(product.compatibleDevices) && product.compatibleDevices.length) { %><p><span class="font-semibold text-primary">Compatible Devices:</span> <%= product.compatibleDevices.join(', ') %></p><% } %>
+                                                <% if (Array.isArray(product.includedComponents) && product.includedComponents.length) { %><p><span class="font-semibold text-primary">Included Components:</span> <%= product.includedComponents.join(', ') %></p><% } %>
+                                            </div>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            <% } %>
+
+                            <div class="bg-white border border-primary-light/40 rounded-lg p-4">
+                                <h3 class="text-primary text-lg font-bold leading-tight mb-2">Reviews</h3>
+                                <p class="text-primary text-base font-normal leading-normal">No reviews yet.</p>
+                            </div>
+                        </section>
+
+                        <aside class="lg:col-span-3 flex flex-col gap-6">
+                            <div class="lg:sticky lg:top-24 border border-primary-light/45 bg-white rounded-lg shadow-sm p-4 space-y-4">
+                                <div class="pb-3 border-b border-primary-light/30">
+                                    <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">₹<%= Number(product.price || 0).toLocaleString('en-IN') %></h2>
+                                    <% if (product.originalPrice && product.originalPrice > product.price) { %>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="text-gray-500 line-through text-sm">₹<%= Number(product.originalPrice).toLocaleString('en-IN') %></span>
+                                            <span class="rounded-md bg-accent px-2 py-1 text-xs font-bold text-black"><%= product.discountPercentage %>% OFF</span>
+                                        </div>
+                                    <% } %>
+                                </div>
+
+                                <div>
+                                    <% if (product.stockCount > 0) { %>
+                                        <span class="text-green-700 font-semibold">In Stock</span>
+                                    <% } else { %>
+                                        <span class="text-red-600 font-semibold">Out of Stock</span>
+                                    <% } %>
+                                </div>
+
+                                <% if (hasVariants) { %>
+                                    <div>
+                                        <p class="text-sm text-primary font-semibold mb-2">Color</p>
+                                        <div id="colorSelector" class="flex flex-wrap gap-2">
+                                            <% product.variants.forEach((variant, index) => { %>
+                                                <button type="button"
+                                                    class="variant-chip h-8 w-8 rounded-full border-2 <%= index === 0 ? 'border-primary ring-1 ring-primary' : 'border-gray-300' %>"
+                                                    data-variant-index="<%= index %>"
+                                                    title="<%= variant.colorName || variant.colorCode %>"
+                                                    style="background-color:<%= variant.colorCode %>"></button>
                                             <% }) %>
+                                        </div>
+                                        <p id="selectedColorLabel" class="text-xs text-[#685BCB] mt-2"><%= selectedVariant && (selectedVariant.colorName || selectedVariant.colorCode) %></p>
                                     </div>
-                                    <% } %>
+                                <% } %>
 
+                                <div class="space-y-3">
+                                    <a href="/admin/products/edit/<%= product._id %>"
+                                        class="theme-primary-btn w-full flex cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 text-sm leading-normal tracking-[0.015em]">
+                                        Edit
+                                    </a>
+
+                                    <button id="deleteBtn"
+                                        class="theme-accent-btn w-full flex h-10 items-center justify-center rounded-lg px-6 text-sm font-bold">
+                                        Delete
+                                    </button>
+
+                                    <button id="toggleListBtn"
+                                        class="w-full flex items-center justify-center gap-2 rounded-lg h-10 border border-primary-light/45 text-primary hover:bg-primary-light/35">
+                                        <span><%= product.isListed ? 'Unlist' : 'List' %></span>
+                                    </button>
+                                </div>
+
+                                <div class="pt-3 border-t border-primary-light/30 space-y-2 text-sm text-primary">
+                                    <p><span class="font-semibold">Status:</span> <%= product.status || 'N/A' %></p>
+                                    <p><span class="font-semibold">Listed:</span> <%= product.isListed ? 'Yes' : 'No' %></p>
+                                    <% if (hasWarranty) { %>
+                                        <p><span class="font-semibold">Warranty:</span> <%= warrantyDuration %> <%= warrantyProvider === 'SoundWave' ? 'SoundWave warranty.' : 'manufacturer warranty.' %></p>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                        </aside>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
 
     <script>
-        // ========== Image Gallery ==========
-        (function () {
-            const mainImg = document.getElementById('galleryMainImg');
-            const prevBtn = document.getElementById('galleryPrev');
-            const nextBtn = document.getElementById('galleryNext');
-            const thumbs = document.querySelectorAll('.gallery-thumb');
-            if (!mainImg || thumbs.length === 0) return;
+        document.addEventListener('DOMContentLoaded', () => {
+            let currentIndex = 0;
+            let currentVariantIndex = 0;
+            const variants = <%- JSON.stringify(product && Array.isArray(product.variants) ? product.variants : []) %>;
 
-            const urls = Array.from(thumbs).map(t => t.dataset.url);
-            let current = 0;
+            const mainImg = document.getElementById('mainImage');
+            const zoomBox = document.getElementById('zoomBox');
+            const container = document.getElementById('imageContainer');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const colorLabel = document.getElementById('selectedColorLabel');
+            const colorChips = Array.from(document.querySelectorAll('.variant-chip'));
+            const thumbnailStrip = document.querySelector('.thumbnail-image')?.parentElement || null;
 
-            function goTo(index) {
-                current = (index + urls.length) % urls.length;
-                mainImg.style.opacity = '0';
-                setTimeout(() => {
-                    mainImg.src = urls[current];
-                    mainImg.style.opacity = '1';
-                }, 150);
-                thumbs.forEach((t, i) => {
-                    if (i === current) {
-                        t.classList.add('border-[#685BCB]', 'opacity-100');
-                        t.classList.remove('border-transparent', 'opacity-60');
-                        t.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            function toUrls(images) {
+                return (images || [])
+                    .map((img) => (img && typeof img === 'object' ? img.url : img))
+                    .filter((url) => typeof url === 'string' && url.trim().length > 0);
+            }
+
+            function getActiveImageUrls() {
+                if (variants.length > 0) {
+                    const variant = variants[currentVariantIndex] || {};
+                    const variantUrls = toUrls(variant.images || []);
+                    if (variantUrls.length > 0) return variantUrls;
+                }
+                return [];
+            }
+
+            let activeImageUrls = getActiveImageUrls();
+            if (activeImageUrls.length > 0 && mainImg) {
+                const currentSrc = mainImg.getAttribute('src');
+                const found = activeImageUrls.findIndex((url) => (
+                    url === currentSrc ||
+                    mainImg.src === url ||
+                    mainImg.src.endsWith(url)
+                ));
+                if (found !== -1) currentIndex = found;
+            }
+
+            function updateZoomBackground() {
+                if (zoomBox && mainImg) {
+                    zoomBox.style.backgroundImage = `url('${mainImg.src}')`;
+                    zoomBox.style.backgroundSize = '200% 200%';
+                }
+            }
+
+            function renderThumbnails() {
+                if (!thumbnailStrip) return;
+                thumbnailStrip.innerHTML = '';
+                if (activeImageUrls.length <= 1) {
+                    thumbnailStrip.classList.add('hidden');
+                    return;
+                }
+                thumbnailStrip.classList.remove('hidden');
+                activeImageUrls.forEach((url, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = `thumbnail-image w-20 h-20 border-2 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 bg-white p-1 ${index === currentIndex ? 'border-primary ring-1 ring-primary scale-105' : 'border-gray-200 hover:border-primary-light'}`;
+                    btn.dataset.index = String(index);
+                    btn.innerHTML = `<img src="${url}" class="w-full h-full object-contain" alt="Thumbnail ${index + 1}">`;
+                    btn.addEventListener('click', () => updateHeroImage(index));
+                    thumbnailStrip.appendChild(btn);
+                });
+            }
+
+            function updateSelectedColorState() {
+                if (!colorChips.length) return;
+                colorChips.forEach((chip, idx) => {
+                    if (idx === currentVariantIndex) {
+                        chip.classList.add('border-primary', 'ring-1', 'ring-primary');
+                        chip.classList.remove('border-gray-300');
                     } else {
-                        t.classList.remove('border-[#685BCB]', 'opacity-100');
-                        t.classList.add('border-transparent', 'opacity-60');
+                        chip.classList.remove('border-primary', 'ring-1', 'ring-primary');
+                        chip.classList.add('border-gray-300');
+                    }
+                });
+                if (colorLabel && variants[currentVariantIndex]) {
+                    colorLabel.textContent = variants[currentVariantIndex].colorName || variants[currentVariantIndex].colorCode || '';
+                }
+            }
+
+            function updateHeroImage(index) {
+                if (!activeImageUrls.length || !mainImg) return;
+
+                if (index < 0) index = activeImageUrls.length - 1;
+                if (index >= activeImageUrls.length) index = 0;
+
+                currentIndex = index;
+                mainImg.src = activeImageUrls[currentIndex];
+                updateZoomBackground();
+
+                document.querySelectorAll('.thumbnail-image').forEach((btn, idx) => {
+                    if (idx === currentIndex) {
+                        btn.classList.add('border-primary', 'ring-1', 'ring-primary', 'scale-105');
+                        btn.classList.remove('border-gray-200', 'hover:border-primary-light');
+                    } else {
+                        btn.classList.remove('border-primary', 'ring-1', 'ring-primary', 'scale-105');
+                        btn.classList.add('border-gray-200', 'hover:border-primary-light');
                     }
                 });
             }
 
-            if (prevBtn) prevBtn.addEventListener('click', () => goTo(current - 1));
-            if (nextBtn) nextBtn.addEventListener('click', () => goTo(current + 1));
-            thumbs.forEach(t => t.addEventListener('click', () => goTo(parseInt(t.dataset.index))));
-        })();
-    </script>
+            function switchVariant(variantIndex) {
+                currentVariantIndex = variantIndex;
+                activeImageUrls = getActiveImageUrls();
+                currentIndex = 0;
+                if (mainImg && activeImageUrls.length > 0) {
+                    mainImg.src = activeImageUrls[0];
+                }
+                updateZoomBackground();
+                renderThumbnails();
+                updateSelectedColorState();
+            }
 
-    <script>
-        document.getElementById('deleteBtn').addEventListener('click', function () {
-            Swal.fire({
+            updateZoomBackground();
+            renderThumbnails();
+            updateSelectedColorState();
+
+            if (prevBtn) prevBtn.addEventListener('click', () => updateHeroImage(currentIndex - 1));
+            if (nextBtn) nextBtn.addEventListener('click', () => updateHeroImage(currentIndex + 1));
+            colorChips.forEach((chip) => chip.addEventListener('click', () => switchVariant(Number(chip.dataset.variantIndex))));
+
+            if (container && zoomBox) {
+                container.addEventListener('mousemove', (e) => {
+                    const rect = container.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    zoomBox.style.backgroundPosition = `${x}% ${y}%`;
+                    zoomBox.style.display = 'block';
+                    zoomBox.style.visibility = 'visible';
+                    zoomBox.style.opacity = '1';
+                });
+
+                container.addEventListener('mouseleave', () => {
+                    zoomBox.style.display = 'none';
+                });
+            }
+        });
+
+        document.getElementById('deleteBtn')?.addEventListener('click', async function () {
+            const result = await Swal.fire({
                 title: 'Delete Product?',
-                text: 'This will unlist the product. It will no longer appear in any listing.',
+                text: 'This will unlist the product.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        const res = await fetch('/admin/products/<%= product._id %>', {
-                            method: 'DELETE',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            await Swal.fire('Deleted!', 'Product has been unlisted.', 'success');
-                            window.location.href = '/admin/products';
-                        } else {
-                            Swal.fire('Error', data.message || 'Failed to delete product', 'error');
-                        }
-                    } catch (err) {
-                        Swal.fire('Error', 'Something went wrong. Please try again.', 'error');
-                    }
-                }
+                cancelButtonColor: '#aaa',
+                confirmButtonText: 'Yes, Delete'
             });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const response = await fetch('/admin/products/<%= product._id %>', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Deleted!',
+                        text: data.message || 'Product unlisted successfully',
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+                    window.location.href = '/admin/products';
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to delete product', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'An unexpected error occurred', 'error');
+            }
+        });
+
+        document.getElementById('toggleListBtn')?.addEventListener('click', async function () {
+            try {
+                const response = await fetch('/admin/products/<%= product._id %>/toggle-list', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    window.location.reload();
+                } else {
+                    Swal.fire('Error', data.message || 'Failed to update listing', 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'An unexpected error occurred', 'error');
+            }
         });
     </script>
 </body>

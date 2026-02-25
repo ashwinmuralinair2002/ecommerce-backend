@@ -8,6 +8,8 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
     <title>Admin · Add Category</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 </head>
 
 <body>
@@ -51,8 +53,17 @@
 
                     <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
                         <p class="text-[#1F1F1F] font-medium mb-3">Category Image</p>
-                        <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                        <input id="categoryImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                             class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
+                        <div id="categoryImagePreviewWrap" class="hidden mt-3 p-3 bg-white rounded-lg border border-gray-100">
+                            <img id="categoryImagePreview" src="" alt="Category preview" class="h-40 w-full object-contain rounded-lg">
+                            <div class="mt-3 flex justify-end">
+                                <button type="button" id="categoryImageRecropBtn"
+                                    class="text-xs font-semibold px-3 py-2 rounded-lg bg-[#685BCB] text-white hover:bg-[#5a4dc0]">
+                                    Crop (1:1)
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
@@ -71,7 +82,134 @@
             </section>
         </main>
     </div>
+
+    <script>
+        (function () {
+            const imageInput = document.getElementById('categoryImageInput');
+            const previewWrap = document.getElementById('categoryImagePreviewWrap');
+            const previewImg = document.getElementById('categoryImagePreview');
+            const recropBtn = document.getElementById('categoryImageRecropBtn');
+            if (!imageInput || !previewWrap || !previewImg || !recropBtn || typeof Cropper === 'undefined') return;
+
+            let cropper = null;
+            let currentSource = '';
+
+            const cropModal = document.createElement('div');
+            cropModal.id = 'categoryCropModal';
+            cropModal.className = 'fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4';
+            cropModal.innerHTML = `
+                <div class="bg-white rounded-xl p-4 w-full max-w-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-[#1F1F1F]">Crop Category Image (1:1)</h2>
+                        <button type="button" id="closeCategoryCropModal" class="text-sm font-semibold text-[#685BCB]">Close</button>
+                    </div>
+                    <div class="bg-gray-100 rounded-lg overflow-hidden max-h-[70vh]">
+                        <img id="categoryCropperImage" src="" alt="Crop preview" class="max-w-full" />
+                    </div>
+                    <div class="flex justify-end gap-3 mt-4">
+                        <button type="button" id="saveCategoryCropBtn"
+                            class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
+                            Save Crop
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(cropModal);
+
+            const cropperImage = cropModal.querySelector('#categoryCropperImage');
+            const closeBtn = cropModal.querySelector('#closeCategoryCropModal');
+            const saveBtn = cropModal.querySelector('#saveCategoryCropBtn');
+
+            function closeModal() {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                cropModal.classList.add('hidden');
+                cropModal.classList.remove('flex');
+            }
+
+            function openModal(src) {
+                if (!src) return;
+                cropModal.classList.remove('hidden');
+                cropModal.classList.add('flex');
+                cropperImage.crossOrigin = 'anonymous';
+                cropperImage.src = src;
+                cropperImage.onload = function () {
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(cropperImage, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        movable: true,
+                        zoomable: true,
+                        scalable: false,
+                        cropBoxResizable: true,
+                        autoCropArea: 0.9
+                    });
+                };
+            }
+
+            function setPreview(src) {
+                currentSource = src || '';
+                if (!currentSource) {
+                    previewWrap.classList.add('hidden');
+                    previewImg.src = '';
+                    return;
+                }
+                previewImg.src = currentSource;
+                previewWrap.classList.remove('hidden');
+            }
+
+            function setInputFile(blob, filename) {
+                const file = new File([blob], filename, { type: blob.type || 'image/png' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                imageInput.files = dt.files;
+            }
+
+            imageInput.addEventListener('change', function () {
+                const file = imageInput.files && imageInput.files[0];
+                if (!file) {
+                    setPreview('');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const src = e.target && e.target.result ? String(e.target.result) : '';
+                    setPreview(src);
+                    openModal(src);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            recropBtn.addEventListener('click', function () {
+                if (!currentSource) return;
+                openModal(currentSource);
+            });
+
+            closeBtn.addEventListener('click', closeModal);
+            cropModal.addEventListener('click', function (e) {
+                if (e.target === cropModal) closeModal();
+            });
+
+            saveBtn.addEventListener('click', function () {
+                if (!cropper) return;
+                const canvas = cropper.getCroppedCanvas({
+                    width: 800,
+                    height: 800,
+                    imageSmoothingQuality: 'high'
+                });
+                if (!canvas) return;
+                canvas.toBlob(function (blob) {
+                    if (!blob) return;
+                    const previewUrl = URL.createObjectURL(blob);
+                    setPreview(previewUrl);
+                    setInputFile(blob, `category-image-${Date.now()}.png`);
+                    closeModal();
+                }, 'image/png');
+            });
+        })();
+    </script>
 </body>
 
 </html>
-
