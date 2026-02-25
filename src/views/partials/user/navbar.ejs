@@ -1,4 +1,41 @@
 <header class="theme-top-nav sticky top-0 z-50 flex items-center justify-between border-b px-6 py-3">
+    <style>
+        .live-search-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            width: 100%;
+            background: #685BCB;
+            color: white;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .live-search-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            cursor: pointer;
+            gap: 10px;
+        }
+
+        .live-search-item img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .live-search-item:hover {
+            background: #574bb5;
+        }
+    </style>
     <div class="flex items-center gap-8">
         <% if (locals.user) { %>
             <a href="/home" class="flex items-center gap-3 text-white">
@@ -24,12 +61,15 @@
 
     <div class="flex items-center gap-3">
         <div class="relative hidden sm:block">
-            <input type="text" placeholder="Search"
-                class="h-10 w-52 rounded-lg border border-white/30 bg-white/20 pl-10 pr-4 text-sm text-white placeholder:text-white/80 focus:outline-none focus:ring-2 focus:ring-white/30" />
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-white" xmlns="http://www.w3.org/2000/svg"
-                width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
-                <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32Z" />
-            </svg>
+            <form method="GET" action="/products" autocomplete="off" class="relative">
+                <input type="text" name="search" id="live-search-input" placeholder="Search"
+                    class="h-10 w-52 rounded-lg border border-white/30 bg-white/20 pl-10 pr-4 text-sm text-white placeholder:text-white/80 focus:outline-none focus:ring-2 focus:ring-white/30" />
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-white" xmlns="http://www.w3.org/2000/svg"
+                    width="18" height="18" fill="currentColor" viewBox="0 0 256 256">
+                    <path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32Z" />
+                </svg>
+                <div id="live-search-results" class="live-search-dropdown"></div>
+            </form>
         </div>
 
         <% if (locals.user) { %>
@@ -53,3 +93,98 @@
         <% } %>
     </div>
 </header>
+<script>
+    (() => {
+        const input = document.getElementById('live-search-input');
+        const dropdown = document.getElementById('live-search-results');
+        const searchForm = input ? input.closest('form') : null;
+        if (!input || !dropdown) return;
+
+        let debounceTimer = null;
+        let activeController = null;
+
+        const hideDropdown = () => {
+            dropdown.style.display = 'none';
+            dropdown.innerHTML = '';
+        };
+
+        const renderResults = (items) => {
+            if (!Array.isArray(items) || items.length === 0) {
+                hideDropdown();
+                return;
+            }
+
+            dropdown.innerHTML = items.map((item) => {
+                const title = item.title || '';
+                const safeTitle = title
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+                const thumbnail = item.thumbnail || '/images/placeholder.png';
+
+                return `
+                    <div class="live-search-item" data-id="${item._id}">
+                        <img src="${thumbnail}" alt="${safeTitle}">
+                        <span>${safeTitle}</span>
+                    </div>
+                `;
+            }).join('');
+
+            dropdown.style.display = 'block';
+        };
+
+        input.addEventListener('input', () => {
+            const value = input.value.trim();
+
+            if (debounceTimer) clearTimeout(debounceTimer);
+            if (activeController) activeController.abort();
+
+            if (value.length < 2) {
+                hideDropdown();
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                try {
+                    activeController = new AbortController();
+                    const res = await fetch(`/api/search?query=${encodeURIComponent(value)}`, {
+                        signal: activeController.signal
+                    });
+                    if (!res.ok) {
+                        hideDropdown();
+                        return;
+                    }
+
+                    const data = await res.json();
+                    renderResults(data);
+                } catch (error) {
+                    if (error.name !== 'AbortError') hideDropdown();
+                } finally {
+                    activeController = null;
+                }
+            }, 300);
+        });
+
+        dropdown.addEventListener('click', (event) => {
+            const item = event.target.closest('.live-search-item');
+            if (!item) return;
+            const productId = item.getAttribute('data-id');
+            if (productId) window.location.href = `/product/${productId}`;
+        });
+
+        document.addEventListener('click', (event) => {
+            if (searchForm && !searchForm.contains(event.target)) {
+                hideDropdown();
+            }
+        });
+
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                hideDropdown();
+                input.blur();
+            }
+        });
+    })();
+</script>

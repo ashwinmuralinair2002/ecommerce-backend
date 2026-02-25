@@ -72,6 +72,8 @@
         <main class="w-full px-4 md:px-6 lg:px-8 xl:px-10 py-5">
 
             <form id="filter-form" action="/products" method="GET" class="flex gap-6 items-start">
+                <% const searchValue = typeof search === 'string' ? search : (query.search || ''); %>
+                <input type="hidden" name="search" value="<%= searchValue %>">
 
                 <!-- Sidebar Filters (Desktop) - Green Theme -->
                 <aside
@@ -216,6 +218,11 @@
                         <div class="flex flex-col sm:flex-row justify-between items-end gap-3">
                             <div>
                                 <h1 class="text-3xl font-bold text-primary">Products</h1>
+                                <% if (searchValue) { %>
+                                    <div class="text-sm text-primary mt-1">
+                                        Showing results for "<%= searchValue %>"
+                                    </div>
+                                <% } %>
                                 <p class="text-sm text-gray-500 mt-1">
                                     Showing <span class="font-bold text-primary">
                                         <%= products.length %>

@@ -86,11 +86,13 @@ async function migrateLegacyProductImages(product) {
 exports.getAllProducts = async (req, res) => {
     try {
         const {
+            search,
             category, brand, connection, minPrice, maxPrice, sort,
             noiseControlTypes, discountRange, hasMicrophone, controlMethods, formFactor,
             cableFeatures, earpieceShape, smartFeatures, newArrivals, sensitivityRange,
             compatibleDevices, materials, impedanceRange, audioDriverTypes, ambientModeAvailable, colors
         } = req.query;
+        const searchTerm = typeof search === 'string' ? search.trim() : '';
         const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).lean();
         const allowedCategoryIds = activeCategories.map(c => c._id);
         const allowedCategorySet = new Set(allowedCategoryIds.map(String));
@@ -163,6 +165,7 @@ exports.getAllProducts = async (req, res) => {
                 categories: activeCategories,
                 brands,
                 query: req.query,
+                search: searchTerm,
                 error: 'Maximum price must be greater than or equal to minimum price.',
                 filterOptions: {
                     ...ENUM_FILTER_OPTIONS,
@@ -275,6 +278,27 @@ exports.getAllProducts = async (req, res) => {
             filter['variants.colorName'] = { $in: colorValues };
         }
 
+        if (searchTerm.length >= 2) {
+            const escapedSearch = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escapedSearch, 'i');
+
+            const [matchingBrands, matchingCategories] = await Promise.all([
+                Brand.find({ name: regex }).select('_id').lean(),
+                Category.find({
+                    name: regex,
+                    isBlocked: { $ne: true },
+                    isDeleted: { $ne: true }
+                }).select('_id').lean()
+            ]);
+
+            filter.$or = [
+                { title: regex },
+                { connectionType: regex },
+                { brand: { $in: matchingBrands.map((b) => b._id) } },
+                { category: { $in: matchingCategories.map((c) => c._id) } }
+            ];
+        }
+
         const productDocs = await Product.find(filter).sort(sortOption);
         for (const productDoc of productDocs) {
             await migrateLegacyProductImages(productDoc);
@@ -310,6 +334,7 @@ exports.getAllProducts = async (req, res) => {
             categories: activeCategories,
             brands,
             query: req.query,
+            search: searchTerm,
             filterOptions
         });
 
@@ -389,5 +414,49 @@ exports.getProductDetails = async (req, res) => {
         console.error('Error fetching product details:', error);
         const homeUrl = req.session && req.session.userId ? '/home' : '/';
         res.status(500).render('user/product-unavailable', { homeUrl });
+    }
+};
+
+exports.liveSearch = async (req, res) => {
+    try {
+        const query = (req.query.query || '').trim();
+        if (!query || query.length < 2) {
+            return res.json([]);
+        }
+
+        const regex = new RegExp(query, 'i');
+
+        const matchingBrands = await Brand.find({ name: regex }).select('_id').lean();
+        const matchingCategories = await Category.find({ name: regex }).select('_id').lean();
+
+        const products = await Product.find({
+            isListed: true,
+            isDeleted: { $ne: true },
+            $or: [
+                { title: regex },
+                { connectionType: regex },
+                { brand: { $in: matchingBrands.map((b) => b._id) } },
+                { category: { $in: matchingCategories.map((c) => c._id) } }
+            ]
+        })
+            .populate('brand', 'name')
+            .limit(6)
+            .lean();
+
+        const results = products.map((p) => ({
+            _id: p._id,
+            title: p.title,
+            brand: p.brand?.name || '',
+            connectionType: p.connectionType,
+            thumbnail:
+                (p.images && p.images.length && p.images[0].url) ||
+                (p.variants?.[0]?.images?.[0]?.url) ||
+                ''
+        }));
+
+        return res.json(results);
+    } catch (err) {
+        console.error('Live search error:', err);
+        return res.json([]);
     }
 };

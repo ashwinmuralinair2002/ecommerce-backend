@@ -241,5 +241,9 @@ productSchema.index({ noiseControlTypes: 1 });
 productSchema.index({ materials: 1 });
 productSchema.index({ audioDriverTypes: 1 });
 productSchema.index({ createdAt: -1 });
+productSchema.index(
+    { title: 'text', shortDescription: 'text' },
+    { weights: { title: 5, shortDescription: 2 } }
+);
 
 module.exports = mongoose.model('Product', productSchema);
