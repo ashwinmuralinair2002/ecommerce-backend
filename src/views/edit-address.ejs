@@ -170,6 +170,16 @@
                             </div>
                         </div>
 
+                        <div class="mb-6">
+                            <% const currentIsDefault = (locals.formData) ? !!formData.isDefault : !!address.isDefault; %>
+                            <label class="inline-flex items-center gap-2 text-sm text-primary cursor-pointer">
+                                <input type="checkbox" name="isDefault" id="isDefault"
+                                    class="h-4 w-4 rounded border-primary-light/50 text-primary focus:ring-primary"
+                                    <%= currentIsDefault ? 'checked' : '' %> />
+                                <span>Set as Default Address</span>
+                            </label>
+                        </div>
+
                         <!-- Buttons -->
                         <div class="flex gap-3 justify-end">
                             <a href="/account/addresses"

@@ -123,7 +123,7 @@ const updateAddress = async (req, res) => {
         return res.redirect('/login');
     }
 
-    const { name, phone, houseNo, street, city, state, postalCode, label } = req.body;
+    const { name, phone, houseNo, street, city, state, postalCode, label, isDefault } = req.body;
     const errors = {};
 
     if (!name || !/^[A-Za-z ]{3,}$/.test(name.trim())) {
@@ -172,7 +172,8 @@ const updateAddress = async (req, res) => {
             state: toTitleCase(state),
             zip: postalCode,
             country: 'India',
-            label
+            label,
+            isDefault: isDefault === 'on'
         };
 
         await profileService.updateAddress(userId, req.params.id, addressData);
