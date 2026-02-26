@@ -200,8 +200,6 @@
 
                 <!-- Form Content -->
                 <form id="addProductForm" class="w-full" action="/admin/products" method="POST" enctype="multipart/form-data" novalidate>
-                    <input type="hidden" name="heroPosterEnabled" id="heroPosterEnabledInput" value="false" disabled>
-                    <input type="hidden" name="heroPosterCropMeta" id="heroPosterCropMetaInput" value="" disabled>
                     <p id="formSubmitError" class="field-error <%= (typeof formError !== 'undefined' && formError) ? 'visible' : '' %>"><%= (typeof formError !== 'undefined' && formError) ? formError : '' %></p>
                                                             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
                         <div class="space-y-6">
@@ -332,29 +330,6 @@
                                                                             + Add Colour Variant
                                                                         </button>
                                                                         <p class="field-error" id="variantError">Please fix variant details before submitting.</p>
-                                                                    </div>
-                            
-                                                                    <h3 class="text-[#1F1F1F] text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Hero Poster</h3>
-                                                                    <div class="px-4 py-2">
-                                                                        <div class="rounded-xl border border-[#BCA6DB] bg-white p-4 space-y-3">
-                                                                            <label class="inline-flex items-center gap-2 text-sm font-medium text-[#1F1F1F]">
-                                                                                <input type="checkbox" id="heroPosterEnabledToggle"
-                                                                                    class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]">
-                                                                                Enable Hero Poster
-                                                                            </label>
-                                                                            <div id="heroPosterPanel" class="hidden space-y-3">
-                                                                                <input type="file" id="heroPosterImageInput" name="heroPosterImage" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                                                                    class="block w-full text-sm text-[#1F1F1F]">
-                                                                                <p id="heroPosterError" class="field-error">Hero poster image is required when enabled.</p>
-                                                                                <div id="heroPosterPreviewWrap" class="hidden p-3 bg-[#F8F7FD] border border-[#D8D1EE] rounded-lg">
-                                                                                    <img id="heroPosterPreview" src="" alt="Hero poster preview" class="w-full max-h-40 rounded-lg object-cover">
-                                                                                    <div class="mt-2">
-                                                                                        <button type="button" id="heroPosterRecropBtn"
-                                                                                            class="text-xs font-semibold px-3 py-2 rounded-lg bg-[#685BCB] text-white hover:bg-[#5a4dc0]">Re-crop (21:9)</button>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
                                                                     </div>
                             
                                                                     <!-- Conditional Specs: Wired -->
@@ -839,7 +814,6 @@
             const pricingNodes = takeByHeading('Pricing').filter((el) => !/^\s*pricing\s*$/i.test(el.textContent.trim()));
             const inventoryNodes = takeByHeading('Inventory').filter((el) => !/^\s*inventory\s*$/i.test(el.textContent.trim()));
             const variantsNodes = takeByHeading('Variants').filter((el) => !/^\s*variants\s*$/i.test(el.textContent.trim()));
-            const heroPosterNodes = takeByHeading('Hero Poster').filter((el) => !/^\s*hero poster\s*$/i.test(el.textContent.trim()));
             const warrantyNodes = takeByHeading('Warranty').filter((el) => !/^\s*warranty\s*$/i.test(el.textContent.trim()));
             const badgesNodes = takeByHeading('Badges').filter((el) => !/^\s*badges\s*$/i.test(el.textContent.trim()));
             const shippingNodes = takeByHeading('Shipping').filter((el) => !/shipping/i.test(el.textContent.trim()));
@@ -885,10 +859,6 @@
             const variants = makeCard('3. Variants');
             variantsNodes.forEach((n) => variants.body.appendChild(n));
             main.appendChild(variants.card);
-
-            const heroPoster = makeCard('Hero Poster');
-            heroPosterNodes.forEach((n) => heroPoster.body.appendChild(n));
-            main.appendChild(heroPoster.card);
 
             const audio = makeCard('4. Audio Specs');
             if (audioDetail) {
@@ -987,17 +957,6 @@
         let variants = [];
         let variantCropper = null;
         let variantCropState = { variantIndex: null, imageId: null };
-        const heroPosterEnabledToggle = document.getElementById('heroPosterEnabledToggle');
-        const heroPosterPanel = document.getElementById('heroPosterPanel');
-        const heroPosterEnabledInput = document.getElementById('heroPosterEnabledInput');
-        const heroPosterCropMetaInput = document.getElementById('heroPosterCropMetaInput');
-        const heroPosterImageInput = document.getElementById('heroPosterImageInput');
-        const heroPosterPreviewWrap = document.getElementById('heroPosterPreviewWrap');
-        const heroPosterPreview = document.getElementById('heroPosterPreview');
-        const heroPosterRecropBtn = document.getElementById('heroPosterRecropBtn');
-        const heroPosterError = document.getElementById('heroPosterError');
-        let heroPosterPreviewUrl = '';
-        let heroPosterCurrentCrop = null;
 
         function showVariantError(message) {
             if (!variantError) return;
@@ -1008,22 +967,6 @@
         function clearVariantError() {
             if (!variantError) return;
             variantError.classList.remove('visible');
-        }
-
-        function setHeroPosterEnabled(enabled) {
-            if (!heroPosterPanel || !heroPosterEnabledInput || !heroPosterCropMetaInput) return;
-            heroPosterPanel.classList.toggle('hidden', !enabled);
-            heroPosterEnabledInput.disabled = !enabled;
-            heroPosterCropMetaInput.disabled = !enabled;
-            heroPosterEnabledInput.value = enabled ? 'true' : 'false';
-            if (!enabled) {
-                if (heroPosterImageInput) heroPosterImageInput.value = '';
-                heroPosterPreviewUrl = '';
-                heroPosterCurrentCrop = null;
-                heroPosterCropMetaInput.value = '';
-                if (heroPosterPreviewWrap) heroPosterPreviewWrap.classList.add('hidden');
-                if (heroPosterError) heroPosterError.classList.remove('visible');
-            }
         }
 
         // Register submit listener early so later script issues do not block submission wiring.
@@ -1367,109 +1310,6 @@
             renderVariants();
             });
         }
-
-        const heroPosterCropModal = document.createElement('div');
-        heroPosterCropModal.id = 'heroPosterCropModal';
-        heroPosterCropModal.className = 'fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4';
-        heroPosterCropModal.innerHTML = `
-            <div class="bg-white rounded-xl p-4 w-full max-w-4xl">
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-lg font-bold text-[#1F1F1F]">Hero Poster Crop (21:9)</h2>
-                    <button type="button" id="closeHeroPosterCropModal" class="text-sm font-semibold text-[#685BCB]">Close</button>
-                </div>
-                <div class="bg-gray-100 rounded-lg overflow-hidden max-h-[70vh]">
-                    <img id="heroPosterCropperImage" src="" alt="Hero poster crop" class="max-w-full" />
-                </div>
-                <div class="flex justify-end gap-3 mt-4">
-                    <button type="button" id="saveHeroPosterCropBtn"
-                        class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Save Crop</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(heroPosterCropModal);
-        const heroPosterCropperImage = heroPosterCropModal.querySelector('#heroPosterCropperImage');
-        const closeHeroPosterCropModal = heroPosterCropModal.querySelector('#closeHeroPosterCropModal');
-        const saveHeroPosterCropBtn = heroPosterCropModal.querySelector('#saveHeroPosterCropBtn');
-        let heroPosterCropper = null;
-
-        function openHeroPosterCropModal(src) {
-            if (!src) return;
-            heroPosterCropModal.classList.remove('hidden');
-            heroPosterCropModal.classList.add('flex');
-            heroPosterCropperImage.src = src;
-            heroPosterCropperImage.onload = function () {
-                if (heroPosterCropper) heroPosterCropper.destroy();
-                heroPosterCropper = new Cropper(heroPosterCropperImage, {
-                    aspectRatio: 21 / 9,
-                    viewMode: 1,
-                    movable: true,
-                    zoomable: true,
-                    scalable: false,
-                    cropBoxResizable: true,
-                    autoCropArea: 0.95,
-                    ready() {
-                        if (heroPosterCurrentCrop && heroPosterCurrentCrop.width && heroPosterCurrentCrop.height) {
-                            heroPosterCropper.setData(heroPosterCurrentCrop);
-                        }
-                    }
-                });
-            };
-        }
-
-        function closeHeroPosterModal() {
-            if (heroPosterCropper) {
-                heroPosterCropper.destroy();
-                heroPosterCropper = null;
-            }
-            heroPosterCropModal.classList.add('hidden');
-            heroPosterCropModal.classList.remove('flex');
-        }
-
-        if (heroPosterEnabledToggle) {
-            heroPosterEnabledToggle.addEventListener('change', function () {
-                setHeroPosterEnabled(this.checked);
-                if (this.checked && heroPosterImageInput) {
-                    heroPosterImageInput.click();
-                }
-            });
-        }
-        if (heroPosterImageInput) {
-            heroPosterImageInput.addEventListener('change', function () {
-                const file = this.files && this.files[0];
-                if (!file) return;
-                heroPosterPreviewUrl = URL.createObjectURL(file);
-                if (heroPosterPreview) heroPosterPreview.src = heroPosterPreviewUrl;
-                if (heroPosterPreviewWrap) heroPosterPreviewWrap.classList.remove('hidden');
-                openHeroPosterCropModal(heroPosterPreviewUrl);
-            });
-        }
-        if (heroPosterRecropBtn) {
-            heroPosterRecropBtn.addEventListener('click', function () {
-                if (heroPosterPreviewUrl) openHeroPosterCropModal(heroPosterPreviewUrl);
-            });
-        }
-        if (saveHeroPosterCropBtn) {
-            saveHeroPosterCropBtn.addEventListener('click', function () {
-                if (!heroPosterCropper) return;
-                const data = heroPosterCropper.getData(true);
-                heroPosterCurrentCrop = {
-                    x: Math.round(data.x),
-                    y: Math.round(data.y),
-                    width: Math.round(data.width),
-                    height: Math.round(data.height)
-                };
-                if (heroPosterCropMetaInput) {
-                    heroPosterCropMetaInput.value = JSON.stringify(heroPosterCurrentCrop);
-                }
-                closeHeroPosterModal();
-            });
-        }
-        if (closeHeroPosterCropModal) {
-            closeHeroPosterCropModal.addEventListener('click', closeHeroPosterModal);
-        }
-        heroPosterCropModal.addEventListener('click', function (e) {
-            if (e.target === heroPosterCropModal) closeHeroPosterModal();
-        });
 
         // delegated handlers - dynamic variants
         if (variantList) {
@@ -1866,17 +1706,6 @@
 
             if (!validateVariants()) valid = false;
 
-            if (heroPosterEnabledToggle && heroPosterEnabledToggle.checked) {
-                const hasPosterFile = heroPosterImageInput && heroPosterImageInput.files && heroPosterImageInput.files[0];
-                if (!hasPosterFile) {
-                    if (heroPosterError) heroPosterError.classList.add('visible');
-                    valid = false;
-                } else if (heroPosterError) {
-                    heroPosterError.classList.remove('visible');
-                }
-            } else if (heroPosterError) {
-                heroPosterError.classList.remove('visible');
-            }
             return valid;
         }
 

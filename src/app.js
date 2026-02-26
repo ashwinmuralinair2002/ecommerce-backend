@@ -13,6 +13,7 @@ const homeRoutes = require('./routes/home.routes');
 const accountRoutes = require('./routes/account.routes');
 const authPagesRoutes = require('./routes/auth-pages.routes');
 const adminWebRoutes = require('./routes/admin-web.routes');
+const adminHeroRoutes = require('./routes/admin.hero.routes');
 
 const { getHomePage } = require('./controllers/home.controller');
 const userRoutes = require('./routes/user.routes');
@@ -78,6 +79,7 @@ app.use(homeRoutes);
 app.use('/account', accountRoutes);
 app.use(authPagesRoutes);
 app.use('/admin', adminWebRoutes);
+app.use(adminHeroRoutes);
 app.use('/', userRoutes);
 
 app.get('/', getHomePage);

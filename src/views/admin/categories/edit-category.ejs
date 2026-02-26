@@ -69,17 +69,6 @@
                             class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
                     </div>
 
-                    <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
-                        <p class="text-[#1F1F1F] font-medium mb-3">Hero Poster</p>
-                        <% if (category.heroImage && category.heroImage.url) { %>
-                            <div class="mb-3 p-3 bg-white rounded-lg border border-gray-100 flex justify-center">
-                                <img src="<%= category.heroImage.url %>" alt="Category Hero" class="h-24 object-contain">
-                            </div>
-                        <% } %>
-                        <input type="file" name="heroImage" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                            class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
-                    </div>
-
                     <div class="flex gap-3 pt-4">
                         <button type="submit"
                             class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Update Category</button>

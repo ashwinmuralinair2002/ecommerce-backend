@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900" />
+    <title>Admin · Hero Management</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../../partials/admin/sidebar', { page: 'heroes' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="admin-page-container max-w-[1400px] mx-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h1 class="text-3xl font-bold text-[#1F1F1F]">Hero Management</h1>
+                            <p class="text-sm text-[#685BCB]">Manage homepage hero banner assets (backend only)</p>
+                        </div>
+                        <a href="/admin/heroes/add"
+                            class="px-4 py-2 rounded-lg bg-[#685BCB] text-white font-bold hover:bg-[#5a4dc0] transition-colors">
+                            Add Hero Banner
+                        </a>
+                    </div>
+
+                    <% if (error) { %>
+                        <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800"><%= error %></div>
+                    <% } %>
+
+                    <% if (success) { %>
+                        <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-emerald-100 text-emerald-800"><%= success %></div>
+                    <% } %>
+
+                    <% if (activeCount >= 5) { %>
+                        <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-amber-100 text-amber-900 border border-amber-300">
+                            <%= maxActiveError %>
+                        </div>
+                    <% } %>
+
+                    <div class="overflow-hidden rounded-xl border border-[#BCA6DB]">
+                        <table class="w-full">
+                            <thead class="bg-white border-b">
+                                <tr>
+                                    <th class="p-3 text-left">Image</th>
+                                    <th class="p-3 text-left">Type</th>
+                                    <th class="p-3 text-left">Order</th>
+                                    <th class="p-3 text-left">Status</th>
+                                    <th class="p-3 text-left">Actions</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <% if (!heroes || heroes.length === 0) { %>
+                                    <tr>
+                                        <td colspan="5" class="p-8 text-center text-sm text-[#685BCB]">No hero banners found.</td>
+                                    </tr>
+                                <% } %>
+
+                                <% (heroes || []).forEach((hero) => { %>
+                                    <tr class="border-t border-[#BCA6DB] align-middle">
+                                        <td class="p-3">
+                                            <div class="w-28 h-16 rounded-md overflow-hidden border border-gray-200 bg-gray-100">
+                                                <img src="<%= hero.image && hero.image.url ? hero.image.url : '' %>" alt="Hero preview"
+                                                    class="w-full h-full object-cover">
+                                            </div>
+                                        </td>
+                                        <td class="p-3 text-[#1F1F1F] capitalize"><%= hero.type %></td>
+                                        <td class="p-3 text-[#1F1F1F]"><%= hero.order %></td>
+                                        <td class="p-3">
+                                            <span class="px-3 py-1 rounded-full text-xs font-semibold <%= hero.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700' %>">
+                                                <%= hero.isActive ? 'Active' : 'Inactive' %>
+                                            </span>
+                                        </td>
+                                        <td class="p-3 text-sm font-medium">
+                                            <div class="flex items-center gap-3 text-[#685BCB]">
+                                                <a href="/admin/heroes/<%= hero._id %>/edit" class="hover:underline">Edit</a>
+                                                <form action="/admin/heroes/<%= hero._id %>/toggle?_method=PATCH" method="POST">
+                                                    <button type="submit" class="hover:underline"><%= hero.isActive ? 'Unlist' : 'List' %></button>
+                                                </form>
+                                                <form id="delete-hero-<%= hero._id %>" action="/admin/heroes/<%= hero._id %>?_method=DELETE" method="POST">
+                                                    <button type="button" onclick="confirmDeleteHero('<%= hero._id %>')" class="text-red-600 hover:underline">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        function confirmDeleteHero(heroId) {
+            Swal.fire({
+                title: 'Delete Hero Banner?',
+                text: 'This action cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, Delete'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const form = document.getElementById('delete-hero-' + heroId);
+                    if (form) form.submit();
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

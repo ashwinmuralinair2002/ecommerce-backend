@@ -120,7 +120,6 @@ exports.addCategory = async (req, res) => {
         }
 
         const image = getImageData(req.files && req.files.image) || { url: '', public_id: '' };
-        const heroImage = getImageData(req.files && req.files.heroImage) || { url: '', public_id: '' };
         const baseSlug = slugify(normalizedName);
 
         // If a soft-deleted category with the same name exists, restore it.
@@ -135,11 +134,6 @@ exports.addCategory = async (req, res) => {
                 await destroyCloudinary(existing.image && existing.image.public_id);
                 existing.image = image;
             }
-            if (heroImage.url) {
-                await destroyCloudinary(existing.heroImage && existing.heroImage.public_id);
-                existing.heroImage = heroImage;
-            }
-
             await existing.save();
             return res.redirect('/admin/categories');
         }
@@ -150,7 +144,6 @@ exports.addCategory = async (req, res) => {
             slug,
             description: description || '',
             image,
-            heroImage,
             isBlocked: false,
             isDeleted: false
         });
@@ -248,12 +241,6 @@ exports.editCategory = async (req, res) => {
             category.image = image;
         }
 
-        const heroImage = getImageData(req.files && req.files.heroImage);
-        if (heroImage) {
-            await destroyCloudinary(category.heroImage && category.heroImage.public_id);
-            category.heroImage = heroImage;
-        }
-
         await category.save();
         return res.redirect(`/admin/categories/${category._id}`);
     } catch (error) {
@@ -270,7 +257,7 @@ exports.editCategory = async (req, res) => {
 
         const category = await Category.findById(req.params.id).lean().catch(() => null);
         return res.render('admin/categories/edit-category', {
-            category: category || { _id: req.params.id, name: '', description: '', image: {}, heroImage: {} },
+            category: category || { _id: req.params.id, name: '', description: '', image: {} },
             error: errorMessage,
             errors: {},
             oldInput: req.body

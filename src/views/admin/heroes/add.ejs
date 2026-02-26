@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
+    <title>Admin · Add Hero Banner</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../../partials/admin/sidebar', { page: 'heroes' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="max-w-5xl">
+                    <div class="flex items-center gap-2 text-sm mb-4">
+                        <a href="/admin/heroes" class="text-[#685BCB] hover:underline">Hero Management</a>
+                        <span class="text-gray-400">/</span>
+                        <span class="text-[#1F1F1F]">Add Hero Banner</span>
+                    </div>
+
+                    <h1 class="text-[32px] font-bold text-[#1F1F1F] mb-2">Add Hero Banner</h1>
+                    <p class="text-sm text-[#685BCB] mb-6">Upload fully designed 16:9 hero posters</p>
+
+                    <% if (error) { %>
+                        <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800"><%= error %></div>
+                    <% } %>
+
+                    <form action="/admin/heroes" method="POST" enctype="multipart/form-data" class="space-y-6" id="heroAddForm">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label class="block text-sm text-[#685BCB] mb-1">Type <span class="text-red-500">*</span></label>
+                                <select id="heroType" name="type"
+                                    class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border border-[#BCA6DB] text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (errors && errors.type) ? 'ring-2 ring-red-400' : '' %>">
+                                    <% ['product', 'category', 'brand', 'custom'].forEach((item) => { %>
+                                        <option value="<%= item %>" <%= String(oldInput && oldInput.type || 'custom') === item ? 'selected' : '' %>>
+                                            <%= item.charAt(0).toUpperCase() + item.slice(1) %>
+                                        </option>
+                                    <% }) %>
+                                </select>
+                                <% if (errors && errors.type) { %><p class="text-red-500 text-xs mt-1"><%= errors.type %></p><% } %>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-[#685BCB] mb-1">Reference (Optional)</label>
+                                <select id="heroRefId" name="refId"
+                                    class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border border-[#BCA6DB] text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]">
+                                    <option value="">No linked reference</option>
+                                </select>
+                                <p id="heroRefHint" class="text-xs text-[#685BCB] mt-1">Select type to load references.</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-[#685BCB] mb-1">Order</label>
+                                <input type="number" name="order" value="<%= oldInput && oldInput.order !== undefined ? oldInput.order : 0 %>"
+                                    class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border border-[#BCA6DB] text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]"
+                                    placeholder="0" />
+                            </div>
+
+                            <div class="flex items-center gap-3 pt-7">
+                                <input id="heroIsActive" type="checkbox" name="isActive" value="true" <%= (oldInput && (String(oldInput.isActive) === 'true' || oldInput.isActive === true)) ? 'checked' : '' %>
+                                    class="h-5 w-5 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]" />
+                                <label for="heroIsActive" class="text-sm text-[#1F1F1F]">Active</label>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
+                            <p class="text-[#1F1F1F] font-medium mb-3">Hero Image <span class="text-red-500">*</span></p>
+                            <input id="heroImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
+
+                            <% if (errors && errors.image) { %><p class="text-red-500 text-xs mt-1"><%= errors.image %></p><% } %>
+                            <p id="heroResolutionHint" class="hidden text-xs mt-2 text-amber-800 bg-amber-100 border border-amber-200 rounded px-2 py-1"></p>
+
+                            <div id="heroImagePreviewWrap" class="hidden mt-4 p-4 bg-white rounded-lg border border-gray-100 w-full md:w-2/3">
+                                <div class="w-full aspect-video rounded-lg overflow-hidden bg-gray-100">
+                                    <img id="heroImagePreview" src="" alt="Hero preview" class="w-full h-full object-cover">
+                                </div>
+                                <div class="mt-3 flex justify-end">
+                                    <button type="button" id="heroImageRecropBtn"
+                                        class="text-xs font-semibold px-3 py-2 rounded-lg bg-[#685BCB] text-white hover:bg-[#5a4dc0]">
+                                        Re-crop 16:9
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 pt-2">
+                            <button type="submit"
+                                class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Create Hero Banner</button>
+                            <a href="/admin/heroes"
+                                class="h-10 px-6 rounded-xl bg-[#FFFFFF] font-bold text-[#1F1F1F] hover:bg-[#D3CEEA] transition-colors flex items-center">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        (function () {
+            const refsData = {
+                product: <%- JSON.stringify((refs && refs.products) || []) %>,
+                category: <%- JSON.stringify((refs && refs.categories) || []) %>,
+                brand: <%- JSON.stringify((refs && refs.brands) || []) %>,
+                custom: []
+            };
+
+            const typeSelect = document.getElementById('heroType');
+            const refSelect = document.getElementById('heroRefId');
+            const refHint = document.getElementById('heroRefHint');
+            const selectedRefId = '<%= oldInput && oldInput.refId ? oldInput.refId : "" %>';
+
+            function refLabelByType(type, item) {
+                if (type === 'product') return item.title || 'Untitled Product';
+                return item.name || 'Untitled';
+            }
+
+            function populateRefOptions() {
+                if (!typeSelect || !refSelect) return;
+
+                const type = typeSelect.value;
+                const options = Array.isArray(refsData[type]) ? refsData[type] : [];
+
+                refSelect.innerHTML = '';
+                const empty = document.createElement('option');
+                empty.value = '';
+                empty.textContent = type === 'custom' ? 'Custom type has no reference' : 'No linked reference';
+                refSelect.appendChild(empty);
+
+                options.forEach((item) => {
+                    const option = document.createElement('option');
+                    option.value = item._id;
+                    option.textContent = refLabelByType(type, item);
+                    refSelect.appendChild(option);
+                });
+
+                if (selectedRefId) {
+                    const exists = options.some((item) => String(item._id) === String(selectedRefId));
+                    refSelect.value = exists ? selectedRefId : '';
+                }
+
+                if (type === 'custom') {
+                    refSelect.value = '';
+                    refSelect.setAttribute('disabled', 'disabled');
+                    refHint.textContent = 'Custom banners do not require a reference.';
+                } else {
+                    refSelect.removeAttribute('disabled');
+                    refHint.textContent = options.length > 0
+                        ? `Loaded ${options.length} reference option(s).`
+                        : 'No references found for this type.';
+                }
+            }
+
+            typeSelect.addEventListener('change', populateRefOptions);
+            populateRefOptions();
+        })();
+
+        (function () {
+            const imageInput = document.getElementById('heroImageInput');
+            const previewWrap = document.getElementById('heroImagePreviewWrap');
+            const previewImg = document.getElementById('heroImagePreview');
+            const recropBtn = document.getElementById('heroImageRecropBtn');
+            const resolutionHint = document.getElementById('heroResolutionHint');
+
+            if (!imageInput || !previewWrap || !previewImg || !recropBtn || !resolutionHint || typeof Cropper === 'undefined') return;
+
+            let cropper = null;
+            let currentSource = '';
+            let latestObjectUrl = null;
+
+            const cropModal = document.createElement('div');
+            cropModal.id = 'heroCropModal';
+            cropModal.className = 'fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4';
+            cropModal.innerHTML = `
+                <div class="bg-white rounded-xl p-4 w-full max-w-4xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-lg font-bold text-[#1F1F1F]">Crop Hero Image (16:9)</h2>
+                        <button type="button" id="closeHeroCropModal" class="text-sm font-semibold text-[#685BCB]">Close</button>
+                    </div>
+                    <div class="bg-gray-100 rounded-lg overflow-hidden max-h-[72vh]">
+                        <img id="heroCropperImage" src="" alt="Crop preview" class="max-w-full" />
+                    </div>
+                    <div class="flex justify-end gap-3 mt-4">
+                        <button type="button" id="saveHeroCropBtn"
+                            class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
+                            Save Crop
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(cropModal);
+
+            const cropperImage = cropModal.querySelector('#heroCropperImage');
+            const closeBtn = cropModal.querySelector('#closeHeroCropModal');
+            const saveBtn = cropModal.querySelector('#saveHeroCropBtn');
+
+            function closeModal() {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                cropModal.classList.add('hidden');
+                cropModal.classList.remove('flex');
+            }
+
+            function setPreview(src) {
+                currentSource = src || '';
+                previewImg.src = currentSource;
+                if (currentSource) {
+                    previewWrap.classList.remove('hidden');
+                } else {
+                    previewWrap.classList.add('hidden');
+                }
+            }
+
+            function openModal(src) {
+                if (!src) return;
+                cropModal.classList.remove('hidden');
+                cropModal.classList.add('flex');
+                cropperImage.crossOrigin = 'anonymous';
+                cropperImage.src = src;
+                cropperImage.onload = function () {
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(cropperImage, {
+                        aspectRatio: 16 / 9,
+                        viewMode: 1,
+                        dragMode: 'move',
+                        movable: true,
+                        zoomable: true,
+                        scalable: false,
+                        cropBoxResizable: false,
+                        autoCropArea: 1
+                    });
+                };
+            }
+
+            function setInputFile(blob, filename) {
+                const file = new File([blob], filename, { type: blob.type || 'image/png' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                imageInput.files = dt.files;
+            }
+
+            function validateResolution(src) {
+                const img = new Image();
+                img.onload = function () {
+                    if (img.naturalWidth < 1600 || img.naturalHeight < 900) {
+                        resolutionHint.textContent = 'Recommended minimum resolution is 1600x900 for best quality.';
+                        resolutionHint.classList.remove('hidden');
+                    } else {
+                        resolutionHint.classList.add('hidden');
+                        resolutionHint.textContent = '';
+                    }
+                };
+                img.src = src;
+            }
+
+            imageInput.addEventListener('change', function () {
+                const file = imageInput.files && imageInput.files[0];
+                if (!file) {
+                    setPreview('');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const src = e.target && e.target.result ? String(e.target.result) : '';
+                    if (!src) return;
+                    validateResolution(src);
+                    setPreview(src);
+                    openModal(src);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            recropBtn.addEventListener('click', function () {
+                if (!currentSource) return;
+                openModal(currentSource);
+            });
+
+            closeBtn.addEventListener('click', closeModal);
+            cropModal.addEventListener('click', function (e) {
+                if (e.target === cropModal) closeModal();
+            });
+
+            saveBtn.addEventListener('click', function () {
+                if (!cropper) return;
+                const canvas = cropper.getCroppedCanvas({
+                    width: 1600,
+                    height: 900,
+                    imageSmoothingQuality: 'high'
+                });
+
+                if (!canvas) return;
+                canvas.toBlob(function (blob) {
+                    if (!blob) return;
+
+                    if (latestObjectUrl) {
+                        URL.revokeObjectURL(latestObjectUrl);
+                    }
+                    latestObjectUrl = URL.createObjectURL(blob);
+
+                    setPreview(latestObjectUrl);
+                    setInputFile(blob, `hero-banner-${Date.now()}.png`);
+                    closeModal();
+                }, 'image/png');
+            });
+        })();
+    </script>
+</body>
+
+</html>
