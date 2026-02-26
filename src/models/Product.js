@@ -115,7 +115,13 @@ const productSchema = new mongoose.Schema({
         },
         images: [{
             url: { type: String, required: true },
-            public_id: { type: String, required: true }
+            public_id: { type: String, required: true },
+            crop: {
+                x: { type: Number, default: null },
+                y: { type: Number, default: null },
+                width: { type: Number, default: null },
+                height: { type: Number, default: null }
+            }
         }]
     }],
     status: {

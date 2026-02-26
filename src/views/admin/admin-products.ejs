@@ -343,8 +343,11 @@
                                                 <td class="h-[72px] px-4 py-2 w-14 text-sm font-normal leading-normal">
                                                     <% if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) { %>
                                                         <% const heroImg = product.variants[0].images[0]; %>
+                                                            <% const heroCrop = heroImg && heroImg.crop ? heroImg.crop : null; %>
+                                                            <% const hasValidCrop = heroCrop && Number.isFinite(Number(heroCrop.x)) && Number.isFinite(Number(heroCrop.y)) && Number(heroCrop.width) > 0 && Number(heroCrop.height) > 0; %>
+                                                            <% const heroUrl = heroImg && heroImg.url ? (hasValidCrop && String(heroImg.url).includes('/upload/') ? String(heroImg.url).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(Number(heroCrop.x))) + ',y_' + Math.max(0, Math.round(Number(heroCrop.y))) + ',w_' + Math.round(Number(heroCrop.width)) + ',h_' + Math.round(Number(heroCrop.height)) + '/') : heroImg.url) : ''; %>
                                                             <div class="w-10 h-10 rounded bg-center bg-cover bg-no-repeat"
-                                                                style="background-image: url('<%= heroImg.url %>');">
+                                                                style="background-image: url('<%= heroUrl %>');">
                                                             </div>
                                                             <% } else { %>
                                                                 <div

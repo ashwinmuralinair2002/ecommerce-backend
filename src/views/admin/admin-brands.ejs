@@ -57,6 +57,19 @@
             <!-- Main Content Panel -->
             <section class="flex-1 p-6 md:p-8">
                 <div class="admin-page-container max-w-[1400px] mx-auto">
+                <% const getCroppedBrandLogoUrl = (brand) => {
+                    if (!brand || !brand.logoUrl) return '';
+                    const crop = brand.logoCrop;
+                    if (!crop) return brand.logoUrl;
+                    const x = Number(crop.x);
+                    const y = Number(crop.y);
+                    const width = Number(crop.width);
+                    const height = Number(crop.height);
+                    if (![x, y, width, height].every(Number.isFinite)) return brand.logoUrl;
+                    if (width <= 0 || height <= 0) return brand.logoUrl;
+                    if (!String(brand.logoUrl).includes('/upload/')) return brand.logoUrl;
+                    return String(brand.logoUrl).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(x)) + ',y_' + Math.max(0, Math.round(y)) + ',w_' + Math.round(width) + ',h_' + Math.round(height) + '/');
+                }; %>
                 <!-- HEADER -->
                 <div class="flex justify-between items-center mb-6">
                     <div>
@@ -124,8 +137,9 @@
                             <% brands.forEach(brand=> { %>
                                 <tr class="border-t border-[#BCA6DB]">
                                     <td class="p-3 flex items-center gap-3">
+                                        <% const logoDisplayUrl = getCroppedBrandLogoUrl(brand); %>
                                         <div class="w-10 h-10 rounded-full bg-cover bg-center <%= brand.logoUrl ? '' : 'bg-[#D3CEEA]' %>"
-                                            style="<%= brand.logoUrl ? " background-image:url('" + brand.logoUrl + "')"
+                                            style="<%= brand.logoUrl ? " background-image:url('" + logoDisplayUrl + "')"
                                             : '' %>"></div>
                                         <span class="font-medium text-[#1F1F1F]">
                                             <%= brand.name %>

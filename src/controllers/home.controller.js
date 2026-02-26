@@ -38,6 +38,7 @@ async function getProductsByBadge(badge, allowedCategoryIds, limit = 8) {
 
 // Public Landing Page
 exports.getHomePage = async (req, res) => {
+    console.log("🔥 ROOT getHomePage HIT");
     try {
         const categories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).sort({ name: 1 }).lean();
         const categoryIds = categories.map(c => c._id);
@@ -61,22 +62,5 @@ exports.getHomePage = async (req, res) => {
     } catch (error) {
         console.error('Error loading home page:', error);
         res.render('user/home', { categories: [], bestSellers: [], newArrivals: [], deals: [], heroBanners: [] });
-    }
-};
-
-// Protected Dashboard / Feed
-exports.getPostLoginHomePage = async (req, res) => {
-    try {
-        const categories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).sort({ name: 1 }).lean();
-        const categoryIds = categories.map(c => c._id);
-        const [bestSellers, newArrivals, deals] = await Promise.all([
-            getProductsByBadge('Best seller', categoryIds),
-            getProductsByBadge('New', categoryIds),
-            getProductsByBadge('Deal', categoryIds)
-        ]);
-        res.render('user/post-login-home', { categories, bestSellers, newArrivals, deals });
-    } catch (error) {
-        console.error('Error loading home page:', error);
-        res.render('user/post-login-home', { categories: [], bestSellers: [], newArrivals: [], deals: [] });
     }
 };

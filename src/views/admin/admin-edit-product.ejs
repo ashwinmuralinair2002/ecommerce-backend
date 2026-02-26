@@ -724,8 +724,10 @@
             colorCode: variant.colorCode || '',
             existingImages: Array.isArray(variant.images) ? variant.images.map((img) => ({
                 url: img.url,
+                originalUrl: img.url,
                 public_id: img.public_id,
-                crop: null,
+                previewUrl: '',
+                crop: img && img.crop ? img.crop : null,
                 isHero: false
             })) : [],
             newImages: []
@@ -766,6 +768,25 @@
             if (fromName) return { colorCode: fromName, colorName: String(input).trim() };
             return null;
         }
+
+        function getCloudinaryCroppedUrl(url, crop) {
+            if (!url || !crop) return url || '';
+            const x = Number(crop.x);
+            const y = Number(crop.y);
+            const width = Number(crop.width);
+            const height = Number(crop.height);
+            if (![x, y, width, height].every(Number.isFinite)) return url;
+            if (width <= 0 || height <= 0) return url;
+            if (!String(url).includes('/upload/')) return url;
+            const transform = `c_crop,x_${Math.max(0, Math.round(x))},y_${Math.max(0, Math.round(y))},w_${Math.round(width)},h_${Math.round(height)}`;
+            return String(url).replace('/upload/', `/upload/${transform}/`);
+        }
+
+        variants.forEach((variant) => {
+            (variant.existingImages || []).forEach((img) => {
+                img.previewUrl = getCloudinaryCroppedUrl(img.url, img.crop);
+            });
+        });
 
         function clearAllHeroFlags() {
             variants.forEach((variant) => {
@@ -889,7 +910,7 @@
                 variant.existingImages.forEach((img, imageIndex) => {
                     const chip = document.createElement('div');
                     chip.className = 'relative w-16 h-16 rounded-lg overflow-hidden border border-[#BCA6DB]';
-                    chip.innerHTML = `<img src="${img.url}" class="w-full h-full object-cover">
+                    chip.innerHTML = `<img src="${img.previewUrl || img.url}" class="w-full h-full object-cover">
                         <button type="button" data-role="remove-existing-variant-image" data-variant-index="${index}" data-image-index="${imageIndex}" class="absolute top-0 right-0 bg-red-600 text-white text-[10px] px-1">x</button>
                         <button type="button" data-role="crop-existing-image" data-index="${index}" data-image-index="${imageIndex}" class="absolute bottom-0 left-0 bg-[#685BCB] text-white text-[9px] px-1 py-[1px]">Crop</button>
                         <label class="absolute bottom-0 right-0 bg-white/90 text-[9px] px-1 py-[1px] rounded-tl">
@@ -957,7 +978,7 @@
             variantCropState = { variantIndex, imageId: imageKey, sourceType: sourceType || 'new' };
             cropModal.classList.remove('hidden');
             cropModal.classList.add('flex');
-            const cropSource = image.originalPreviewUrl || image.previewUrl || image.url || '';
+            const cropSource = image.originalUrl || image.originalPreviewUrl || image.url || image.previewUrl || '';
             if (!cropSource) return;
             variantCropperImage.src = cropSource;
             variantCropperImage.onload = function () {
@@ -998,7 +1019,7 @@
             });
         }
         if (saveVariantCropBtn) {
-            saveVariantCropBtn.addEventListener('click', () => {
+            saveVariantCropBtn.addEventListener('click', async () => {
                 if (!variantCropper || variantCropState.variantIndex === null || variantCropState.imageId === null) return;
                 const data = variantCropper.getData(true);
                 const crop = {
@@ -1010,11 +1031,30 @@
                 if (variantCropState.sourceType === 'existing') {
                     const existingList = variants[variantCropState.variantIndex].existingImages || [];
                     const existingIdx = Number(variantCropState.imageId);
-                    if (existingList[existingIdx]) existingList[existingIdx].crop = crop;
+                    const target = existingList[existingIdx];
+                    if (!target) return;
+
+                    target.crop = crop;
+                    target.previewUrl = getCloudinaryCroppedUrl(target.url, target.crop);
                 } else {
                     const list = variants[variantCropState.variantIndex].newImages || [];
                     const idx = list.findIndex((img) => img.id === variantCropState.imageId);
-                    if (idx >= 0) list[idx].crop = crop;
+                    if (idx < 0) return;
+
+                    const target = list[idx];
+                    const canvas = variantCropper.getCroppedCanvas({ fillColor: '#ffffff' });
+                    if (!canvas) return;
+
+                    const outputType = (target.file && target.file.type) || 'image/jpeg';
+                    const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, 0.95));
+                    if (!blob) return;
+
+                    if (target.previewUrl && target.previewUrl !== target.originalPreviewUrl) {
+                        URL.revokeObjectURL(target.previewUrl);
+                    }
+
+                    target.previewUrl = URL.createObjectURL(blob);
+                    target.crop = crop;
                 }
                 closeVariantCropperModal();
                 renderVariants();

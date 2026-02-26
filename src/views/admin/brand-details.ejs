@@ -55,6 +55,19 @@
 
             <!-- Main Content Panel -->
             <section class="flex-1 p-6 md:p-8">
+                <% const getCroppedBrandLogoUrl = (brand) => {
+                    if (!brand || !brand.logoUrl) return '';
+                    const crop = brand.logoCrop;
+                    if (!crop) return brand.logoUrl;
+                    const x = Number(crop.x);
+                    const y = Number(crop.y);
+                    const width = Number(crop.width);
+                    const height = Number(crop.height);
+                    if (![x, y, width, height].every(Number.isFinite)) return brand.logoUrl;
+                    if (width <= 0 || height <= 0) return brand.logoUrl;
+                    if (!String(brand.logoUrl).includes('/upload/')) return brand.logoUrl;
+                    return String(brand.logoUrl).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(x)) + ',y_' + Math.max(0, Math.round(y)) + ',w_' + Math.round(width) + ',h_' + Math.round(height) + '/');
+                }; %>
                 <!-- Breadcrumb -->
                 <div class="flex items-center gap-2 text-sm mb-4">
                     <a href="/admin/brands" class="text-[#685BCB] hover:underline">Brands</a>
@@ -68,8 +81,9 @@
                 <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
                     <div class="flex items-center gap-4">
                         <!-- Brand Logo -->
+                        <% const logoDisplayUrl = getCroppedBrandLogoUrl(brand); %>
                         <div class="w-20 h-20 rounded-lg bg-cover bg-center flex-shrink-0 <%= brand.logoUrl ? '' : 'bg-[#D3CEEA]' %>"
-                            style="<%= brand.logoUrl ? " background-image:url('" + brand.logoUrl + "')" : '' %>"></div>
+                            style="<%= brand.logoUrl ? " background-image:url('" + logoDisplayUrl + "')" : '' %>"></div>
                         <div>
                             <h1 class="text-[32px] font-bold text-[#1F1F1F]">
                                 <%= brand.name %>

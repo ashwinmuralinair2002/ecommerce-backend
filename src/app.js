@@ -75,14 +75,13 @@ app.use('/api/profile', profileRoutes);
 
 // View Routes
 app.use(addressRoutes);
+app.get('/', getHomePage);
 app.use(homeRoutes);
 app.use('/account', accountRoutes);
 app.use(authPagesRoutes);
 app.use('/admin', adminWebRoutes);
 app.use(adminHeroRoutes);
 app.use('/', userRoutes);
-
-app.get('/', getHomePage);
 
 const PORT = process.env.PORT || 5000;
 

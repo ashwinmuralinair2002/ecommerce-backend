@@ -233,11 +233,24 @@
 
                         <!-- Grid -->
                         <% if (products && products.length> 0) { %>
+                            <% const getCroppedImageUrl = (image) => {
+                                if (!image || !image.url) return '/images/placeholder.png';
+                                const crop = image.crop;
+                                if (!crop) return image.url;
+                                const x = Number(crop.x);
+                                const y = Number(crop.y);
+                                const width = Number(crop.width);
+                                const height = Number(crop.height);
+                                if (![x, y, width, height].every(Number.isFinite)) return image.url;
+                                if (width <= 0 || height <= 0) return image.url;
+                                if (!String(image.url).includes('/upload/')) return image.url;
+                                return String(image.url).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(x)) + ',y_' + Math.max(0, Math.round(y)) + ',w_' + Math.round(width) + ',h_' + Math.round(height) + '/');
+                            }; %>
                             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-5">
                                 <% products.forEach(product=> { %>
                                     <% const variantImages = Array.isArray(product.variants) && product.variants.length > 0 && Array.isArray(product.variants[0].images) ? product.variants[0].images : [];
                                         const heroImg = variantImages[0];
-                                        const imageUrl = (heroImg && heroImg.url) ? heroImg.url : '/images/placeholder.png';
+                                        const imageUrl = getCroppedImageUrl(heroImg);
                                         %>
                                         <a href="/product/<%= product._id %>"
                                             class="group flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-200 h-full">

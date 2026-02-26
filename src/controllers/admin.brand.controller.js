@@ -2,6 +2,26 @@
 const Brand = require('../models/Brand');
 const cloudinary = require('../config/cloudinary');
 
+function normalizeCrop(rawCrop) {
+    if (!rawCrop) return null;
+    const source = typeof rawCrop === 'string' ? (() => {
+        try { return JSON.parse(rawCrop); } catch { return null; }
+    })() : rawCrop;
+    if (!source || typeof source !== 'object') return null;
+    const x = Number(source.x);
+    const y = Number(source.y);
+    const width = Number(source.width);
+    const height = Number(source.height);
+    if (![x, y, width, height].every(Number.isFinite)) return null;
+    if (width <= 0 || height <= 0) return null;
+    return {
+        x: Math.max(0, Math.round(x)),
+        y: Math.max(0, Math.round(y)),
+        width: Math.round(width),
+        height: Math.round(height)
+    };
+}
+
 // @desc    Get All Brands (with Pagination)
 // @route   GET /admin/brands
 exports.getBrands = async (req, res) => {
@@ -62,6 +82,7 @@ exports.renderAddBrand = (req, res) => {
 exports.addBrand = async (req, res) => {
     try {
         const { name, description, website, contactEmail, isActive } = req.body;
+        const logoCrop = normalizeCrop(req.body.logoCrop);
         const errors = {};
 
         // Backend validation
@@ -104,6 +125,7 @@ exports.addBrand = async (req, res) => {
             name,
             description,
             logoUrl,
+            logoCrop,
             website,
             contactEmail,
             isActive: isActive === 'on',
@@ -172,6 +194,7 @@ exports.editBrand = async (req, res) => {
         }
 
         const { name, description, logoUrl } = req.body;
+        const logoCrop = normalizeCrop(req.body.logoCrop);
         const brand = await Brand.findById(req.params.id);
         const errors = {};
 
@@ -207,8 +230,12 @@ exports.editBrand = async (req, res) => {
                 }
             }
             brand.logoUrl = req.file.path;
+            brand.logoCrop = logoCrop;
         } else if (logoUrl && logoUrl.trim() !== '') {
             brand.logoUrl = logoUrl;
+            brand.logoCrop = logoCrop;
+        } else if (logoCrop) {
+            brand.logoCrop = logoCrop;
         }
 
         await brand.save();

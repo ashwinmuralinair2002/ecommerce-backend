@@ -238,14 +238,11 @@
 
                                 if (!response.ok) throw new Error(data.error || 'Verification failed');
 
-                                if (data.success) {
-                                    if (data.role === 'admin') {
-                                        window.location.href = '/admin/dashboard';
-                                    } else {
-                                        window.location.href = '/account';
-                                    }
-                                    return;
-                                }
+                                const redirectTarget = data.role === 'admin' ? '/admin/dashboard' : '/account';
+                                showMessage(data.message || 'Email updated successfully!', 'success');
+                                setTimeout(() => {
+                                    window.location.href = redirectTarget;
+                                }, 1000);
                                 return;
                             } catch (error) {
                                 showMessage(error.message, 'error');

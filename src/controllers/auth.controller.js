@@ -64,7 +64,7 @@ const login = async (req, res, next) => {
                         email: user.email,
                         role: user.role
                     },
-                    redirect: user.role === 'admin' ? '/admin/dashboard' : '/home'
+                    redirect: user.role === 'admin' ? '/admin/dashboard' : '/'
                 });
             });
         });
@@ -102,7 +102,7 @@ const verifyOtp = async (req, res) => {
 
                     res.status(200).json({
                         ...result,
-                        redirect: result.user.role === 'admin' ? '/admin/dashboard' : '/home'
+                        redirect: result.user.role === 'admin' ? '/admin/dashboard' : '/'
                     });
                 });
             });
@@ -214,7 +214,7 @@ const handleGoogleAuthCallback = (req, res) => {
                 console.error('Google Auth Session Save Error:', err);
                 return res.redirect('/login');
             }
-            res.redirect('/home');
+            res.redirect('/');
         });
     });
 };

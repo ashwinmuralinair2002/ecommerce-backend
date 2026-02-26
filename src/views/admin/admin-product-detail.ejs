@@ -23,11 +23,24 @@
 
             <section class="flex-1 px-4 md:px-6 lg:px-8 xl:px-10 py-5 overflow-x-hidden">
                 <% const hasVariants = Array.isArray(product.variants) && product.variants.length > 0;
+                    const getCroppedImageUrl = (image) => {
+                        if (!image || !image.url) return '/images/placeholder.png';
+                        const crop = image.crop;
+                        if (!crop) return image.url;
+                        const x = Number(crop.x);
+                        const y = Number(crop.y);
+                        const width = Number(crop.width);
+                        const height = Number(crop.height);
+                        if (![x, y, width, height].every(Number.isFinite)) return image.url;
+                        if (width <= 0 || height <= 0) return image.url;
+                        if (!String(image.url).includes('/upload/')) return image.url;
+                        return String(image.url).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(x)) + ',y_' + Math.max(0, Math.round(y)) + ',w_' + Math.round(width) + ',h_' + Math.round(height) + '/');
+                    };
                     const selectedVariant = hasVariants ? product.variants[0] : null;
                     const variantImages = selectedVariant && Array.isArray(selectedVariant.images) ? selectedVariant.images : [];
                     const allImages = variantImages;
                     const heroImage = allImages.find(img => img.isHero) || allImages[0];
-                    const heroUrl = heroImage ? heroImage.url : '/images/placeholder.png';
+                    const heroUrl = heroImage ? getCroppedImageUrl(heroImage) : '/images/placeholder.png';
                     const warrantyDuration = product.warranty && product.warranty.duration ? product.warranty.duration : '';
                     const warrantyProvider = product.warranty && product.warranty.provider ? product.warranty.provider : 'Brand';
                     const hasWarranty = warrantyDuration && warrantyDuration !== 'No Warranty';
@@ -66,9 +79,9 @@
                                             class="order-2 sm:order-1 flex sm:flex-col gap-2 overflow-x-auto sm:overflow-visible py-1 scrollbar-hide sm:min-w-[88px]">
                                             <% allImages.forEach((img, index) => { %>
                                                 <button
-                                                    class="thumbnail-image w-20 h-20 border-2 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 bg-white p-1 <%= (img.url === heroUrl) ? 'border-primary ring-1 ring-primary scale-105' : 'border-gray-200 hover:border-primary-light' %>"
+                                                    class="thumbnail-image w-20 h-20 border-2 rounded-lg overflow-hidden flex-shrink-0 transition-all duration-200 bg-white p-1 <%= (getCroppedImageUrl(img) === heroUrl) ? 'border-primary ring-1 ring-primary scale-105' : 'border-gray-200 hover:border-primary-light' %>"
                                                     data-index="<%= index %>">
-                                                    <img src="<%= img.url %>" class="w-full h-full object-contain" alt="Product image <%= index + 1 %>">
+                                                    <img src="<%= getCroppedImageUrl(img) %>" class="w-full h-full object-contain" alt="Product image <%= index + 1 %>">
                                                 </button>
                                             <% }); %>
                                         </div>
@@ -323,7 +336,18 @@
 
             function toUrls(images) {
                 return (images || [])
-                    .map((img) => (img && typeof img === 'object' ? img.url : img))
+                    .map((img) => {
+                        if (!img || typeof img !== 'object') return img;
+                        const crop = img.crop;
+                        if (!crop || !img.url || !String(img.url).includes('/upload/')) return img.url;
+                        const x = Number(crop.x);
+                        const y = Number(crop.y);
+                        const width = Number(crop.width);
+                        const height = Number(crop.height);
+                        if (![x, y, width, height].every(Number.isFinite)) return img.url;
+                        if (width <= 0 || height <= 0) return img.url;
+                        return String(img.url).replace('/upload/', `/upload/c_crop,x_${Math.max(0, Math.round(x))},y_${Math.max(0, Math.round(y))},w_${Math.round(width)},h_${Math.round(height)}/`);
+                    })
                     .filter((url) => typeof url === 'string' && url.trim().length > 0);
             }
 

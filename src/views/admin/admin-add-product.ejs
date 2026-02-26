@@ -1294,20 +1294,37 @@
             });
         }
         if (saveVariantCropBtn) {
-            saveVariantCropBtn.addEventListener('click', () => {
-            if (!variantCropper || variantCropState.variantIndex === null || variantCropState.imageId === null) return;
-            const data = variantCropper.getData(true);
-            const crop = {
-                x: Math.round(data.x),
-                y: Math.round(data.y),
-                width: Math.round(data.width),
-                height: Math.round(data.height)
-            };
-            const list = variants[variantCropState.variantIndex].newImages || [];
-            const idx = list.findIndex((img) => img.id === variantCropState.imageId);
-            if (idx >= 0) list[idx].crop = crop;
-            closeVariantCropperModal();
-            renderVariants();
+            saveVariantCropBtn.addEventListener('click', async () => {
+                if (!variantCropper || variantCropState.variantIndex === null || variantCropState.imageId === null) return;
+
+                const list = variants[variantCropState.variantIndex].newImages || [];
+                const idx = list.findIndex((img) => img.id === variantCropState.imageId);
+                if (idx < 0) return;
+
+                const target = list[idx];
+                const canvas = variantCropper.getCroppedCanvas({ fillColor: '#ffffff' });
+                if (!canvas) return;
+
+                const outputType = (target.file && target.file.type) || 'image/jpeg';
+                const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, 0.95));
+                if (!blob) return;
+                const data = variantCropper.getData(true);
+                const crop = {
+                    x: Math.round(data.x),
+                    y: Math.round(data.y),
+                    width: Math.round(data.width),
+                    height: Math.round(data.height)
+                };
+
+                if (target.previewUrl && target.previewUrl !== target.originalPreviewUrl) {
+                    URL.revokeObjectURL(target.previewUrl);
+                }
+
+                target.previewUrl = URL.createObjectURL(blob);
+                target.crop = crop;
+
+                closeVariantCropperModal();
+                renderVariants();
             });
         }
 
@@ -1383,7 +1400,6 @@
             hasVariantsToggle.checked = true;
             hasVariantsToggle.disabled = true;
         }
-        setHeroPosterEnabled(false);
         if (variantBuilder) {
             variantBuilder.classList.remove('hidden');
         }

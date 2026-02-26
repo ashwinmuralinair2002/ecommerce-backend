@@ -32,6 +32,19 @@
 
     <!-- Navbar -->
     <%- include('../partials/user/navbar', { landingPage: true }) %>
+        <% function getCroppedImageUrl(image) {
+            if (!image || !image.url) return '';
+            const crop = image.crop;
+            if (!crop) return image.url;
+            const x = Number(crop.x);
+            const y = Number(crop.y);
+            const width = Number(crop.width);
+            const height = Number(crop.height);
+            if (![x, y, width, height].every(Number.isFinite)) return image.url;
+            if (width <= 0 || height <= 0) return image.url;
+            if (!String(image.url).includes('/upload/')) return image.url;
+            return String(image.url).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(x)) + ',y_' + Math.max(0, Math.round(y)) + ',w_' + Math.round(width) + ',h_' + Math.round(height) + '/');
+        } %>
 
         <% if (heroBanners && heroBanners.length > 0) { %>
             <section class="w-full relative overflow-hidden" style="height: calc(100vh - 64px);">
@@ -83,7 +96,7 @@
                                 <a href="/product/<%= product._id %>"
                                     class="group bg-white rounded-xl overflow-hidden border border-primary-light/45 hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
                                     <div class="aspect-square overflow-hidden bg-primary-light/20">
-                                        <img src="<%= heroImg ? heroImg.url : '' %>" alt="<%= product.title %>"
+                                        <img src="<%= heroImg ? getCroppedImageUrl(heroImg) : '' %>" alt="<%= product.title %>"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                     </div>
                                     <div class="p-4 space-y-1">
@@ -117,7 +130,7 @@
                                 <a href="/product/<%= product._id %>"
                                     class="group bg-white rounded-xl overflow-hidden border border-primary-light/45 hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
                                     <div class="aspect-square overflow-hidden bg-primary-light/20">
-                                        <img src="<%= heroImg ? heroImg.url : '' %>" alt="<%= product.title %>"
+                                        <img src="<%= heroImg ? getCroppedImageUrl(heroImg) : '' %>" alt="<%= product.title %>"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                     </div>
                                     <div class="p-4 space-y-1">
@@ -151,7 +164,7 @@
                                 <a href="/product/<%= product._id %>"
                                     class="group bg-white rounded-xl overflow-hidden border border-primary-light/45 hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
                                     <div class="aspect-square overflow-hidden bg-primary-light/20">
-                                        <img src="<%= heroImg ? heroImg.url : '' %>" alt="<%= product.title %>"
+                                        <img src="<%= heroImg ? getCroppedImageUrl(heroImg) : '' %>" alt="<%= product.title %>"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                     </div>
                                     <div class="p-4 space-y-1">

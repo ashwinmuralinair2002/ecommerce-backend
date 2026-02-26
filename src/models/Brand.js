@@ -11,6 +11,12 @@ const brandSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    logoCrop: {
+        x: { type: Number, default: null },
+        y: { type: Number, default: null },
+        width: { type: Number, default: null },
+        height: { type: Number, default: null }
+    },
     description: {
         type: String,
         trim: true

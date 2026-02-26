@@ -67,6 +67,22 @@ function parseVariantPayload(payloadRaw) {
     }
 }
 
+function normalizeCrop(rawCrop) {
+    if (!rawCrop || typeof rawCrop !== 'object') return null;
+    const x = Number(rawCrop.x);
+    const y = Number(rawCrop.y);
+    const width = Number(rawCrop.width);
+    const height = Number(rawCrop.height);
+    if (![x, y, width, height].every(Number.isFinite)) return null;
+    if (width <= 0 || height <= 0) return null;
+    return {
+        x: Math.max(0, Math.round(x)),
+        y: Math.max(0, Math.round(y)),
+        width: Math.round(width),
+        height: Math.round(height)
+    };
+}
+
 async function migrateLegacyProductImages(product) {
     if (!product) return product;
     const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -103,17 +119,19 @@ async function buildVariantsFromRequest(req, existingVariants = []) {
         const colorName = String(row.colorName || '').trim();
         const keptImages = Array.isArray(row.existingImages)
             ? row.existingImages
-                .map((img) => ({
+                .map((img, index) => ({
                     url: img && img.url ? img.url : '',
-                    public_id: img && img.public_id ? img.public_id : ''
+                    public_id: img && img.public_id ? img.public_id : '',
+                    crop: normalizeCrop(Array.isArray(row.existingImageCrops) ? row.existingImageCrops[index] : null)
                 }))
                 .filter((img) => img.url && img.public_id)
             : [];
 
         const newFiles = (req.files || []).filter((file) => file.fieldname === `variantImages_${i}`);
-        const uploadedImages = newFiles.map((file) => ({
+        const uploadedImages = newFiles.map((file, index) => ({
             url: file.path,
-            public_id: file.filename
+            public_id: file.filename,
+            crop: normalizeCrop(Array.isArray(row.newImageCrops) ? row.newImageCrops[index] : null)
         }));
 
         const mergedImages = [...keptImages, ...uploadedImages];

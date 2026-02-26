@@ -5,7 +5,7 @@ const heroController = require('../controllers/admin.hero.controller');
 
 const router = express.Router();
 
-router.use(ensureAdminAuthenticated);
+router.use('/admin', ensureAdminAuthenticated);
 
 router.get('/admin/heroes', heroController.getAllHeroes);
 router.get('/admin/heroes/add', heroController.getAddHero);
