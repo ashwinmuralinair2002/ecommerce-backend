@@ -12,9 +12,40 @@ const getAddresses = async (req, res) => {
 
     try {
         const user = await User.findById(userId).select('name addresses').lean();
-        res.render('user-addresses', { user: user || {} });
+        const currentPage = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const limit = 3;
+        const allAddresses = (user && user.addresses) ? user.addresses : [];
+        const totalAddresses = allAddresses.length;
+        const totalPages = Math.max(Math.ceil(totalAddresses / limit), 1);
+        const safeCurrentPage = Math.min(currentPage, totalPages);
+        const startIndex = (safeCurrentPage - 1) * limit;
+        const slicedAddresses = allAddresses.slice(startIndex, startIndex + limit);
+
+        const pagination = {
+            currentPage: safeCurrentPage,
+            totalPages,
+            totalAddresses,
+            hasPrevPage: safeCurrentPage > 1,
+            hasNextPage: safeCurrentPage < totalPages
+        };
+
+        res.render('user-addresses', {
+            user: user || {},
+            addresses: slicedAddresses,
+            pagination
+        });
     } catch (error) {
-        res.render('user-addresses', { user: {} });
+        res.render('user-addresses', {
+            user: {},
+            addresses: [],
+            pagination: {
+                currentPage: 1,
+                totalPages: 1,
+                totalAddresses: 0,
+                hasPrevPage: false,
+                hasNextPage: false
+            }
+        });
     }
 };
 
