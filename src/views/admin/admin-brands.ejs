@@ -85,7 +85,7 @@
                 <!-- SEARCH -->
                 <!-- SEARCH -->
                 <div class="mb-4 relative">
-                    <input type="text" name="search" placeholder="Search brand name" value="<%= locals.search || '' %>"
+                    <input id="searchInput" type="text" name="search" placeholder="Search brand name" value="<%= locals.search || '' %>"
                         onkeydown="handleSearch(event)"
                         class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
 
@@ -104,21 +104,47 @@
                 </div>
 
                 <script>
+                    function applyFilters() {
+                        const params = new URLSearchParams();
+                        const search = document.getElementById('searchInput').value.trim();
+                        const status = document.getElementById('filterStatus').value;
+                        const sort = document.getElementById('sortSelect').value;
+
+                        if (search) params.set('search', search);
+                        if (status) params.set('status', status);
+                        if (sort && sort !== 'newest') params.set('sort', sort);
+
+                        window.location.href = '/admin/brands?' + params.toString();
+                    }
+
                     function handleSearch(e) {
                         if (e.key === 'Enter') {
-                            const val = e.target.value.trim();
-                            if (val) {
-                                window.location.href = '?search=' + encodeURIComponent(val);
-                            } else {
-                                window.location.href = window.location.pathname;
-                            }
+                            applyFilters();
                         }
                     }
 
                     function clearSearch() {
-                        window.location.href = window.location.pathname;
+                        document.getElementById('searchInput').value = '';
+                        applyFilters();
                     }
                 </script>
+
+                <div class="flex flex-wrap gap-4 pb-4">
+                    <select id="filterStatus" onchange="applyFilters()"
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                        <option value="">All</option>
+                        <option value="listed" <%=status==='listed' ? 'selected' : '' %>>Listed</option>
+                        <option value="unlisted" <%=status==='unlisted' ? 'selected' : '' %>>Unlisted</option>
+                    </select>
+
+                    <select id="sortSelect" onchange="applyFilters()"
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                        <option value="newest" <%=currentSort==='newest' ? 'selected' : '' %>>Newest First</option>
+                        <option value="oldest" <%=currentSort==='oldest' ? 'selected' : '' %>>Oldest First</option>
+                        <option value="az" <%=currentSort==='az' ? 'selected' : '' %>>Name (A–Z)</option>
+                        <option value="za" <%=currentSort==='za' ? 'selected' : '' %>>Name (Z–A)</option>
+                    </select>
+                </div>
 
                 <!-- TABLE -->
                 <div class="overflow-hidden rounded-xl border border-[#BCA6DB]">
@@ -135,7 +161,8 @@
 
                         <tbody>
                             <% brands.forEach(brand=> { %>
-                                <tr class="border-t border-[#BCA6DB]">
+                                <tr class="border-t border-[#BCA6DB] cursor-pointer hover:bg-gray-50"
+                                    onclick="window.location.href='/admin/brands/<%= brand._id %>'">
                                     <td class="p-3 flex items-center gap-3">
                                         <% const logoDisplayUrl = getCroppedBrandLogoUrl(brand); %>
                                         <div class="w-10 h-10 rounded-full bg-cover bg-center <%= brand.logoUrl ? '' : 'bg-[#D3CEEA]' %>"
@@ -150,23 +177,25 @@
                                         <%= brand.productCount %>
                                     </td>
 
-                                    <td class="p-3">
-                                        <form method="POST" action="/admin/brands/<%= brand._id %>/toggle-status?_method=PATCH">
-                                            <button class="px-4 py-1 rounded-lg text-sm font-medium
-                                                <%= brand.isActive ? 'bg-[#FFFFFF]' : 'bg-[#ffecec] text-red-600' %>">
-                                                <%= brand.isActive ? 'Active' : 'Inactive' %>
-                                            </button>
-                                        </form>
+                                    <td class="p-3 brand-status-cell">
+                                        <span class="brand-status px-4 py-1 rounded-lg text-sm font-medium
+                                            <%= brand.isActive ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-[#ffecec] text-red-600' %>">
+                                            <%= brand.isActive ? 'Listed' : 'Unlisted' %>
+                                        </span>
                                     </td>
 
                                     <td class="p-3 text-[#685BCB]">
                                         <%= brand.updatedAt.toDateString() %>
                                     </td>
 
-                                    <td class="p-3 flex gap-3 text-sm font-medium text-[#685BCB]">
-                                        <a href="/admin/brands/<%= brand._id %>">View</a>
+                                    <td class="p-3 flex gap-3 text-sm font-medium text-[#685BCB]" onclick="event.stopPropagation()">
+                                        <button type="button"
+                                            onclick="event.stopPropagation(); toggleBrandStatus('<%= brand._id %>', this)"
+                                            class="px-3 py-1 rounded-md <%= brand.isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700' %> text-white text-sm transition">
+                                            <%= brand.isActive ? 'Unlist' : 'List' %>
+                                        </button>
                                         <button type="button" class="text-red-600"
-                                            onclick="confirmBrandDelete('<%= brand._id %>')">Delete</button>
+                                            onclick="event.stopPropagation(); confirmBrandDelete('<%= brand._id %>')">Delete</button>
                                         <form id="delete-form-<%= brand._id %>" method="POST"
                                             action="/admin/brands/<%= brand._id %>/delete" style="display:none;">
                                         </form>
@@ -179,10 +208,14 @@
 
                 <!-- Pagination UI -->
                 <% if (pagination && pagination.totalPages> 0) { %>
+                    <% var qp=[]; if (search) qp.push('search=' + encodeURIComponent(search));
+                        if (status) qp.push('status=' + encodeURIComponent(status));
+                        if (currentSort && currentSort !== 'newest') qp.push('sort=' + encodeURIComponent(currentSort));
+                        var baseQs = qp.length > 0 ? '&' + qp.join('&') : '' ; %>
                     <div class="flex justify-center items-center gap-2 mt-6">
                         <!-- Previous Button -->
                         <% if (pagination.hasPrevPage) { %>
-                            <a href="/admin/brands?page=<%= pagination.currentPage - 1 %>"
+                            <a href="/admin/brands?page=<%= pagination.currentPage - 1 %><%= baseQs %>"
                                 class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                 &laquo; Previous
                             </a>
@@ -202,7 +235,7 @@
                                                     <%= i %>
                                                 </span>
                                                 <% } else { %>
-                                                    <a href="/admin/brands?page=<%= i %>"
+                                                    <a href="/admin/brands?page=<%= i %><%= baseQs %>"
                                                         class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                         <%= i %>
                                                     </a>
@@ -212,7 +245,7 @@
 
                                     <!-- Next Button -->
                                     <% if (pagination.hasNextPage) { %>
-                                        <a href="/admin/brands?page=<%= pagination.currentPage + 1 %>"
+                                        <a href="/admin/brands?page=<%= pagination.currentPage + 1 %><%= baseQs %>"
                                             class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                             Next &raquo;
                                         </a>
@@ -234,6 +267,47 @@
             </section>
         </main>
     </div>
+    <script>
+        async function toggleBrandStatus(id, btn) {
+            try {
+                const res = await fetch(`/admin/brands/${id}/toggle-status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    const isListed = data.isListed;
+
+                    btn.textContent = isListed ? 'Unlist' : 'List';
+                    btn.classList.remove('bg-red-500', 'hover:bg-red-600', 'bg-green-600', 'hover:bg-green-700');
+
+                    if (isListed) {
+                        btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                    } else {
+                        btn.classList.add('bg-green-600', 'hover:bg-green-700');
+                    }
+
+                    const row = btn.closest('tr');
+                    const statusCell = row ? row.querySelector('.brand-status') : null;
+                    if (statusCell) {
+                        statusCell.textContent = isListed ? 'Listed' : 'Unlisted';
+                        statusCell.classList.remove('bg-[#e6f4ea]', 'text-[#1e7e34]', 'bg-[#ffecec]', 'text-red-600');
+                        if (isListed) {
+                            statusCell.classList.add('bg-[#e6f4ea]', 'text-[#1e7e34]');
+                        } else {
+                            statusCell.classList.add('bg-[#ffecec]', 'text-red-600');
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Toggle failed', err);
+            }
+        }
+    </script>
 </body>
 
 </html>

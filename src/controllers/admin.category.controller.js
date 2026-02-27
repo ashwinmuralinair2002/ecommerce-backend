@@ -43,19 +43,33 @@ async function destroyCloudinary(publicId) {
 // @route GET /admin/categories
 exports.getCategoriesPage = async (req, res) => {
     try {
-        const { page = 1, search = '' } = req.query;
-        const limit = 8;
-        const currentPage = parseInt(page, 10) || 1;
+        const { search = '', status = 'all', sort = 'newest' } = req.query;
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = 5;
+        const skip = (page - 1) * limit;
 
-        const query = { isDeleted: { $ne: true } };
+        const query = {};
         if (search) query.name = { $regex: search, $options: 'i' };
+        if (status === 'listed') {
+            query.isBlocked = false;
+            query.isDeleted = false;
+        } else if (status === 'unlisted') {
+            query.isBlocked = true;
+            query.isDeleted = false;
+        } else {
+            query.isDeleted = { $ne: true };
+        }
+
+        let sortOption = { createdAt: -1 };
+        if (sort === 'oldest') {
+            sortOption = { createdAt: 1 };
+        }
 
         const totalCategories = await Category.countDocuments(query);
         const totalPages = Math.ceil(totalCategories / limit) || 1;
-        const skip = (currentPage - 1) * limit;
 
         const categories = await Category.find(query)
-            .sort({ createdAt: -1 })
+            .sort(sortOption)
             .skip(skip)
             .limit(limit)
             .lean();
@@ -63,18 +77,23 @@ exports.getCategoriesPage = async (req, res) => {
         res.render('admin/admin-categories', {
             categories,
             search,
+            status,
+            currentSort: sort,
             pagination: {
-                currentPage,
+                currentPage: page,
                 totalPages,
+                totalItems: totalCategories,
                 totalCategories,
-                hasNextPage: currentPage < totalPages,
-                hasPrevPage: currentPage > 1
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
             }
         });
     } catch (error) {
         res.render('admin/admin-categories', {
             categories: [],
             search: '',
+            status: 'all',
+            currentSort: 'newest',
             pagination: {
                 currentPage: 1,
                 totalPages: 1,

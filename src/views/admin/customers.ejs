@@ -110,17 +110,26 @@
 
         function handleSearch(e) {
             if (e.key === 'Enter') {
-                const val = e.target.value.trim();
-                if (val) {
-                    window.location.href = '?search=' + encodeURIComponent(val);
-                } else {
-                    window.location.href = window.location.pathname;
-                }
+                applyFilters();
             }
         }
 
         function clearSearch() {
-            window.location.href = window.location.pathname;
+            document.getElementById('searchInput').value = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const params = new URLSearchParams();
+            const search = document.getElementById('searchInput').value.trim();
+            const status = document.getElementById('filterStatus').value;
+            const sort = document.getElementById('sortSelect').value;
+
+            if (search) params.set('search', search);
+            if (status) params.set('status', status);
+            if (sort && sort !== 'newest') params.set('sort', sort);
+
+            window.location.href = '/admin/customers?' + params.toString();
         }
     </script>
 </head>
@@ -153,7 +162,7 @@
                 </div>
                 <div class="px-4 pt-1 pb-4">
                     <div class="relative">
-                        <input type="text" placeholder="Search by name / email / phone" value="<%= search %>"
+                        <input id="searchInput" type="text" placeholder="Search by name / email / phone" value="<%= search %>"
                             onkeydown="handleSearch(event)"
                             class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
                         <% if (search) { %>
@@ -169,6 +178,22 @@
                             </button>
                             <% } %>
                     </div>
+                </div>
+                <div class="flex flex-wrap gap-4 px-4 pb-4">
+                    <select id="filterStatus" onchange="applyFilters()"
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                        <option value="">All</option>
+                        <option value="active" <%=status==='active' ? 'selected' : '' %>>Active</option>
+                        <option value="banned" <%=status==='banned' ? 'selected' : '' %>>Banned</option>
+                    </select>
+
+                    <select id="sortSelect" onchange="applyFilters()"
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                        <option value="newest" <%=currentSort==='newest' ? 'selected' : '' %>>Newest First</option>
+                        <option value="oldest" <%=currentSort==='oldest' ? 'selected' : '' %>>Oldest First</option>
+                        <option value="az" <%=currentSort==='az' ? 'selected' : '' %>>Name (A–Z)</option>
+                        <option value="za" <%=currentSort==='za' ? 'selected' : '' %>>Name (Z–A)</option>
+                    </select>
                 </div>
                 <!-- Divider line -->
                 <div class="border-b border-[#BCA6DB] mx-4 mb-4"></div>
@@ -292,10 +317,14 @@
 
                     <!-- Pagination UI -->
                     <% if (pagination && pagination.totalPages> 0) { %>
+                        <% var qp=[]; if (search) qp.push('search=' + encodeURIComponent(search));
+                            if (status) qp.push('status=' + encodeURIComponent(status));
+                            if (currentSort && currentSort !== 'newest') qp.push('sort=' + encodeURIComponent(currentSort));
+                            var baseQs = qp.length > 0 ? '&' + qp.join('&') : '' ; %>
                         <div class="flex justify-center items-center gap-2 mt-6">
                             <!-- Previous Button -->
                             <% if (pagination.hasPrevPage) { %>
-                                <a href="/admin/customers?page=<%= pagination.currentPage - 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+                                <a href="/admin/customers?page=<%= pagination.currentPage - 1 %><%= baseQs %>"
                                     class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                     &laquo; Previous
                                 </a>
@@ -315,7 +344,7 @@
                                                         <%= i %>
                                                     </span>
                                                     <% } else { %>
-                                                        <a href="/admin/customers?page=<%= i %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+                                                        <a href="/admin/customers?page=<%= i %><%= baseQs %>"
                                                             class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                             <%= i %>
                                                         </a>
@@ -325,7 +354,7 @@
 
                                         <!-- Next Button -->
                                         <% if (pagination.hasNextPage) { %>
-                                            <a href="/admin/customers?page=<%= pagination.currentPage + 1 %><%= search ? '&search=' + encodeURIComponent(search) : '' %>"
+                                            <a href="/admin/customers?page=<%= pagination.currentPage + 1 %><%= baseQs %>"
                                                 class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                                 Next &raquo;
                                             </a>

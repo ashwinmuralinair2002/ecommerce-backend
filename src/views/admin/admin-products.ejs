@@ -31,12 +31,14 @@
             const category = document.getElementById('filterCategory').value;
             const brand = document.getElementById('filterBrand').value;
             const connectionType = document.getElementById('filterConnection').value;
+            const listing = document.getElementById('filterListing').value;
             const sort = document.getElementById('sortSelect').value;
 
             if (search) params.set('search', search);
             if (category) params.set('category', category);
             if (brand) params.set('brand', brand);
             if (connectionType) params.set('connectionType', connectionType);
+            if (listing) params.set('listing', listing);
             if (sort) params.set('sort', sort);
 
             window.location.href = '/admin/products?' + params.toString();
@@ -266,6 +268,13 @@
                         </option>
                     </select>
 
+                    <select id="filterListing" onchange="applyFilters()"
+                        class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                        <option value="">All</option>
+                        <option value="listed" <%=filters.listing==='listed' ? 'selected' : '' %>>Listed</option>
+                        <option value="unlisted" <%=filters.listing==='unlisted' ? 'selected' : '' %>>Unlisted</option>
+                    </select>
+
                     <select id="sortSelect" onchange="applyFilters()"
                         class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB] ml-auto">
                         <option value="newest" <%=currentSort==='newest' ? 'selected' : '' %>>Newest First</option>
@@ -309,9 +318,6 @@
                                     <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
                                         Stock</th>
                                     <th
-                                        class="px-4 py-3 text-left text-[#1F1F1F] w-28 text-sm font-medium leading-normal">
-                                        Status</th>
-                                    <th
                                         class="px-4 py-3 text-left text-[#1F1F1F] w-36 text-sm font-medium leading-normal">
                                         Listing</th>
                                     <th
@@ -322,7 +328,7 @@
                             <tbody>
                                 <% if (products.length===0) { %>
                                     <tr>
-                                        <td colspan="11" class="text-center py-8 text-[#685BCB]">No products found</td>
+                                        <td colspan="10" class="text-center py-8 text-[#685BCB]">No products found</td>
                                     </tr>
                                     <% } else { %>
                                         <% products.forEach(product=> { %>
@@ -398,15 +404,6 @@
                                                     <%= product.stockCount %>
                                                 </td>
 
-                                                <!-- Status -->
-                                                <td class="h-[72px] px-4 py-2 w-28 text-sm font-normal leading-normal">
-                                                    <span
-                                                        class="inline-flex items-center justify-center rounded-lg h-8 px-4 text-sm font-medium w-full user-select-none
-                                                    <%= product.status === 'Active' ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-[#f3f4f6] text-[#6b7280]' %>">
-                                                        <%= product.status %>
-                                                    </span>
-                                                </td>
-
                                                 <td class="h-[72px] px-4 py-2 w-36 text-sm font-normal leading-normal"
                                                     onclick="event.stopPropagation()">
                                                     <button onclick="toggleProductList('<%= product._id %>')"
@@ -435,6 +432,7 @@
                             if (filters.category) qp.push('category=' + encodeURIComponent(filters.category));
                             if (filters.brand) qp.push('brand=' + encodeURIComponent(filters.brand));
                             if (filters.connectionType) qp.push('connectionType=' + encodeURIComponent(filters.connectionType));
+                            if (filters.listing) qp.push('listing=' + encodeURIComponent(filters.listing));
                             if (currentSort && currentSort !== 'newest') qp.push('sort=' + encodeURIComponent(currentSort));
                             var baseQs = qp.length > 0 ? '&' + qp.join('&') : '' ; %>
                             <div class="flex justify-center items-center gap-2 mt-6">

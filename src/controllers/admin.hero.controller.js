@@ -113,15 +113,30 @@ async function renderEditPage(res, hero, payload) {
 
 exports.getAllHeroes = async (req, res) => {
     try {
-        const [heroes, activeCount] = await Promise.all([
-            HeroBanner.find({}).sort({ order: 1, createdAt: -1 }).lean(),
-            HeroBanner.countDocuments({ isActive: true })
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = 5;
+        const skip = (page - 1) * limit;
+
+        const [heroes, activeCount, totalHeroes] = await Promise.all([
+            HeroBanner.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+            HeroBanner.countDocuments({ isActive: true }),
+            HeroBanner.countDocuments({})
         ]);
+
+        const totalPages = Math.max(1, Math.ceil(totalHeroes / limit));
+        const pagination = {
+            currentPage: page,
+            totalPages,
+            totalItems: totalHeroes,
+            hasPrevPage: page > 1,
+            hasNextPage: page < totalPages
+        };
 
         return res.render('admin/heroes/list', {
             page: 'heroes',
             heroes,
             activeCount,
+            pagination,
             maxActiveError: MAX_ACTIVE_ERROR,
             error: req.query.error || null,
             success: req.query.success || null
@@ -131,6 +146,13 @@ exports.getAllHeroes = async (req, res) => {
             page: 'heroes',
             heroes: [],
             activeCount: 0,
+            pagination: {
+                currentPage: 1,
+                totalPages: 1,
+                totalItems: 0,
+                hasPrevPage: false,
+                hasNextPage: false
+            },
             maxActiveError: MAX_ACTIVE_ERROR,
             error: 'Failed to load hero banners.',
             success: null

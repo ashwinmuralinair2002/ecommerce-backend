@@ -89,7 +89,7 @@
                                 <%= brand.name %>
                             </h1>
                             <p class="text-sm <%= brand.isActive ? 'text-[#53a145]' : 'text-red-600' %>">
-                                <%= brand.isActive ? 'Active' : 'Inactive' %>
+                                <%= brand.isActive ? 'Listed' : 'Unlisted' %>
                             </p>
                         </div>
                     </div>
@@ -104,7 +104,7 @@
                             <button
                                 class="h-10 px-4 rounded-lg font-medium transition-colors
                                 <%= brand.isActive ? 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]' : 'bg-[#e8f4e6] hover:bg-[#d8e4d6]' %>">
-                                <%= brand.isActive ? 'Deactivate' : 'Activate' %>
+                                <%= brand.isActive ? 'Unlist' : 'List' %>
                             </button>
                         </form>
 
@@ -217,7 +217,7 @@
                                             <td class="p-3">
                                                 <span
                                                     class="px-2 py-1 rounded-lg text-xs font-medium <%= p.isActive ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-gray-100 text-gray-600' %>">
-                                                    <%= p.isActive ? 'Active' : 'Inactive' %>
+                                                    <%= p.isActive ? 'Listed' : 'Unlisted' %>
                                                 </span>
                                             </td>
                                             <td class="p-3">

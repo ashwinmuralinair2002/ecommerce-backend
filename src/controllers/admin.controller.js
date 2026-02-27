@@ -9,7 +9,7 @@ const bcrypt = require('bcryptjs');
 // @route   GET /admin/customers
 const getCustomersPage = async (req, res) => {
     try {
-        const { search, page = 1 } = req.query;
+        const { search, page = 1, status, sort } = req.query;
         const limit = 5;
         const currentPage = parseInt(page) || 1;
 
@@ -23,19 +23,38 @@ const getCustomersPage = async (req, res) => {
             ];
         }
 
+        if (status === 'active') {
+            query.isBlocked = false;
+        }
+        if (status === 'banned') {
+            query.isBlocked = true;
+        }
+
+        let sortOption = { createdAt: -1 };
+        if (sort === 'oldest') {
+            sortOption = { createdAt: 1 };
+        }
+        if (sort === 'az') {
+            sortOption = { name: 1 };
+        }
+        if (sort === 'za') {
+            sortOption = { name: -1 };
+        }
+
         const totalCustomers = await User.countDocuments(query);
         const totalPages = Math.ceil(totalCustomers / limit);
 
         // If current page exceeds total pages (e.g., last user on page was deleted), redirect to last valid page
         if (currentPage > totalPages && totalPages > 0) {
-            const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
-            return res.redirect(`/admin/customers?page=${totalPages}${searchParam}`);
+            const params = new URLSearchParams(req.query);
+            params.set('page', totalPages);
+            return res.redirect(`/admin/customers?${params.toString()}`);
         }
 
         const skip = (currentPage - 1) * limit;
 
         const users = await User.find(query)
-            .sort({ createdAt: -1 })
+            .sort(sortOption)
             .skip(skip)
             .limit(limit);
 
@@ -49,6 +68,8 @@ const getCustomersPage = async (req, res) => {
         res.render('admin/customers', {
             consumers: augmentedUsers,
             search: search || '',
+            status: status || '',
+            currentSort: sort || 'newest',
             pagination: {
                 currentPage,
                 totalPages,
@@ -61,6 +82,8 @@ const getCustomersPage = async (req, res) => {
         res.render('admin/customers', {
             consumers: [],
             search: '',
+            status: '',
+            currentSort: 'newest',
             error: 'Failed to load customers. Please try again.',
             pagination: { currentPage: 1, totalPages: 0, totalCustomers: 0, hasNextPage: false, hasPrevPage: false }
         });

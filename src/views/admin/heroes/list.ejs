@@ -67,7 +67,8 @@
                                 <% } %>
 
                                 <% (heroes || []).forEach((hero) => { %>
-                                    <tr class="border-t border-[#BCA6DB] align-middle">
+                                    <tr class="border-t border-[#BCA6DB] align-middle cursor-pointer hover:bg-gray-50"
+                                        onclick="window.location.href='/admin/heroes/<%= hero._id %>'">
                                         <td class="p-3">
                                             <div class="w-28 h-16 rounded-md overflow-hidden border border-gray-200 bg-gray-100">
                                                 <img src="<%= hero.image && hero.image.url ? hero.image.url : '' %>" alt="Hero preview"
@@ -83,12 +84,12 @@
                                         </td>
                                         <td class="p-3 text-sm font-medium">
                                             <div class="flex items-center gap-3 text-[#685BCB]">
-                                                <a href="/admin/heroes/<%= hero._id %>/edit" class="hover:underline">Edit</a>
+                                                <a href="/admin/heroes/<%= hero._id %>/edit" class="hover:underline" onclick="event.stopPropagation();">Edit</a>
                                                 <form action="/admin/heroes/<%= hero._id %>/toggle?_method=PATCH" method="POST">
-                                                    <button type="submit" class="hover:underline"><%= hero.isActive ? 'Unlist' : 'List' %></button>
+                                                    <button type="submit" class="hover:underline" onclick="event.stopPropagation();"><%= hero.isActive ? 'Unlist' : 'List' %></button>
                                                 </form>
                                                 <form id="delete-hero-<%= hero._id %>" action="/admin/heroes/<%= hero._id %>?_method=DELETE" method="POST">
-                                                    <button type="button" onclick="confirmDeleteHero('<%= hero._id %>')" class="text-red-600 hover:underline">Delete</button>
+                                                    <button type="button" onclick="event.stopPropagation(); confirmDeleteHero('<%= hero._id %>')" class="text-red-600 hover:underline">Delete</button>
                                                 </form>
                                             </div>
                                         </td>
@@ -97,6 +98,47 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <% if (pagination) { %>
+                        <div class="flex justify-center items-center gap-2 mt-6">
+                            <% if (pagination.hasPrevPage) { %>
+                                <a href="/admin/heroes?page=<%= pagination.currentPage - 1 %>"
+                                   class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    &laquo; Previous
+                                </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                    &laquo; Previous
+                                </span>
+                            <% } %>
+
+                            <div class="flex gap-1">
+                                <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+                                    <% if (i === pagination.currentPage) { %>
+                                        <span class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold">
+                                            <%= i %>
+                                        </span>
+                                    <% } else { %>
+                                        <a href="/admin/heroes?page=<%= i %>"
+                                           class="flex items-center justify-center h-10 w-10 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                            <%= i %>
+                                        </a>
+                                    <% } %>
+                                <% } %>
+                            </div>
+
+                            <% if (pagination.hasNextPage) { %>
+                                <a href="/admin/heroes?page=<%= pagination.currentPage + 1 %>"
+                                   class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    Next &raquo;
+                                </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                    Next &raquo;
+                                </span>
+                            <% } %>
+                        </div>
+                    <% } %>
                 </div>
             </section>
         </main>

@@ -93,6 +93,9 @@ exports.getAllProducts = async (req, res) => {
             compatibleDevices, materials, impedanceRange, audioDriverTypes, ambientModeAvailable, colors
         } = req.query;
         const searchTerm = typeof search === 'string' ? search.trim() : '';
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = 15;
+        const skip = (page - 1) * limit;
         const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).lean();
         const allowedCategoryIds = activeCategories.map(c => c._id);
         const allowedCategorySet = new Set(allowedCategoryIds.map(String));
@@ -166,6 +169,14 @@ exports.getAllProducts = async (req, res) => {
                 brands,
                 query: req.query,
                 search: searchTerm,
+                currentSort: sort || 'newest',
+                pagination: {
+                    currentPage: page,
+                    totalPages: 1,
+                    totalItems: 0,
+                    hasPrevPage: false,
+                    hasNextPage: false
+                },
                 error: 'Maximum price must be greater than or equal to minimum price.',
                 filterOptions: {
                     ...ENUM_FILTER_OPTIONS,
@@ -299,11 +310,23 @@ exports.getAllProducts = async (req, res) => {
             ];
         }
 
-        const productDocs = await Product.find(filter).sort(sortOption);
+        const totalProducts = await Product.countDocuments(filter);
+        const productDocs = await Product.find(filter)
+            .sort(sortOption)
+            .skip(skip)
+            .limit(limit);
         for (const productDoc of productDocs) {
             await migrateLegacyProductImages(productDoc);
         }
         const products = productDocs.map((doc) => doc.toObject());
+        const totalPages = Math.max(1, Math.ceil(totalProducts / limit));
+        const pagination = {
+            currentPage: page,
+            totalPages,
+            totalItems: totalProducts,
+            hasPrevPage: page > 1,
+            hasNextPage: page < totalPages
+        };
 
         const [brands, variantColors] = await Promise.all([
             Brand.find({ isActive: true, isDeleted: false }).lean(),
@@ -335,7 +358,9 @@ exports.getAllProducts = async (req, res) => {
             brands,
             query: req.query,
             search: searchTerm,
-            filterOptions
+            filterOptions,
+            currentSort: sort || 'newest',
+            pagination
         });
 
     } catch (error) {

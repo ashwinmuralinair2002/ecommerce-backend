@@ -167,7 +167,7 @@ async function buildVariantsFromRequest(req, existingVariants = []) {
 // @route   GET /admin/products
 const getProductsPage = async (req, res) => {
     try {
-        const { search, page = 1, category, brand, connectionType, sort } = req.query;
+        const { search, page = 1, category, brand, connectionType, listing, sort } = req.query;
         const limit = 10;
         const currentPage = parseInt(page) || 1;
 
@@ -199,6 +199,11 @@ const getProductsPage = async (req, res) => {
         }
         if (connectionType) {
             query.connectionType = connectionType;
+        }
+        if (listing === 'listed') {
+            query.isListed = true;
+        } else if (listing === 'unlisted') {
+            query.isListed = false;
         }
 
         // Sort
@@ -266,7 +271,8 @@ const getProductsPage = async (req, res) => {
             filters: {
                 category: category || '',
                 brand: brand || '',
-                connectionType: connectionType || ''
+                connectionType: connectionType || '',
+                listing: listing || ''
             },
             currentSort: sort || 'newest',
             pagination: {
@@ -284,7 +290,7 @@ const getProductsPage = async (req, res) => {
             brands: [],
             categories: [],
             search: '',
-            filters: { category: '', brand: '', connectionType: '' },
+            filters: { category: '', brand: '', connectionType: '', listing: '' },
             currentSort: 'newest',
             error: 'Failed to load products. Please try again.',
             pagination: { currentPage: 1, totalPages: 0, totalProducts: 0, hasNextPage: false, hasPrevPage: false }

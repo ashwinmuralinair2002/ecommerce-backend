@@ -26,7 +26,7 @@ function normalizeCrop(rawCrop) {
 // @route   GET /admin/brands
 exports.getBrands = async (req, res) => {
     try {
-        const { page = 1, search = '' } = req.query;
+        const { page = 1, search = '', status, sort } = req.query;
         const limit = 5;
         const currentPage = parseInt(page) || 1;
 
@@ -35,13 +35,24 @@ exports.getBrands = async (req, res) => {
         if (search) {
             query.name = { $regex: search, $options: 'i' };
         }
+        if (status === 'listed') {
+            query.isActive = true;
+        }
+        if (status === 'unlisted') {
+            query.isActive = false;
+        }
+
+        let sortOption = { createdAt: -1 };
+        if (sort === 'oldest') sortOption = { createdAt: 1 };
+        if (sort === 'az') sortOption = { name: 1 };
+        if (sort === 'za') sortOption = { name: -1 };
 
         const totalBrands = await Brand.countDocuments(query);
         const totalPages = Math.ceil(totalBrands / limit);
         const skip = (currentPage - 1) * limit;
 
         const brands = await Brand.find(query)
-            .sort({ createdAt: -1 })
+            .sort(sortOption)
             .skip(skip)
             .limit(limit);
 
@@ -53,6 +64,8 @@ exports.getBrands = async (req, res) => {
         res.render('admin/admin-brands', {
             brands,
             search,
+            status: status || '',
+            currentSort: sort || 'newest',
             pagination: {
                 currentPage,
                 totalPages,
@@ -65,6 +78,8 @@ exports.getBrands = async (req, res) => {
         res.render('admin/admin-brands', {
             brands: [],
             search: '',
+            status: '',
+            currentSort: 'newest',
             error: 'Failed to load brands. Please try again.',
             pagination: { currentPage: 1, totalPages: 0, totalBrands: 0, hasNextPage: false, hasPrevPage: false }
         });
@@ -261,9 +276,21 @@ exports.toggleBrandStatus = async (req, res) => {
 
         brand.isActive = !brand.isActive;
         await brand.save();
-        res.redirect('/admin/brands/' + req.params.id);
+        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.json({
+                success: true,
+                isListed: brand.isActive
+            });
+        }
+        res.redirect(req.get('referer') || '/admin/brands');
     } catch (error) {
-        res.redirect('/admin/brands/' + req.params.id);
+        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to toggle brand status'
+            });
+        }
+        res.redirect(req.get('referer') || '/admin/brands');
     }
 };
 
