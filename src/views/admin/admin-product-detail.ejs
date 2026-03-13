@@ -263,11 +263,19 @@
                                 </div>
 
                                 <div>
-                                    <% if (product.stockCount > 0) { %>
-                                        <span class="text-green-700 font-semibold">In Stock</span>
-                                    <% } else { %>
-                                        <span class="text-red-600 font-semibold">Out of Stock</span>
+                                    <% const initialVariantStock = selectedVariant ? (parseInt(selectedVariant.stockCount, 10) || 0) : 0; %>
+                                    <% const reorderThreshold = parseInt(product.reorderThreshold, 10) || 0; %>
+                                    <% let initialStockText = 'Out of Stock'; %>
+                                    <% let initialStockClass = 'text-red-600'; %>
+                                    <% if (initialVariantStock > 0 && initialVariantStock <= reorderThreshold) { %>
+                                        <% initialStockText = `⚠ Low Stock (${initialVariantStock} pieces remaining)`; %>
+                                    <% } else if (initialVariantStock > reorderThreshold) { %>
+                                        <% initialStockText = `In Stock (${initialVariantStock} pieces remaining)`; %>
+                                        <% initialStockClass = 'text-green-700'; %>
                                     <% } %>
+                                    <span id="variantStockLabel" class="<%= initialStockClass %> font-semibold">
+                                        <%= initialStockText %>
+                                    </span>
                                 </div>
 
                                 <% if (hasVariants) { %>
@@ -331,6 +339,7 @@
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
             const colorLabel = document.getElementById('selectedColorLabel');
+            const stockLabel = document.getElementById('variantStockLabel');
             const colorChips = Array.from(document.querySelectorAll('.variant-chip'));
             const thumbnailStrip = document.querySelector('.thumbnail-image')?.parentElement || null;
 
@@ -409,6 +418,25 @@
                 });
                 if (colorLabel && variants[currentVariantIndex]) {
                     colorLabel.textContent = variants[currentVariantIndex].colorName || variants[currentVariantIndex].colorCode || '';
+                }
+                if (stockLabel) {
+                    const activeVariant = variants[currentVariantIndex] || {};
+                    const stockCount = parseInt(activeVariant.stockCount, 10) || 0;
+                    const reorderThreshold = <%- JSON.stringify(parseInt(product.reorderThreshold, 10) || 0) %>;
+
+                    let stockText = 'Out of Stock';
+                    let isInStock = false;
+
+                    if (stockCount > 0 && stockCount <= reorderThreshold) {
+                        stockText = `⚠ Low Stock (${stockCount} pieces remaining)`;
+                    } else if (stockCount > reorderThreshold) {
+                        stockText = `In Stock (${stockCount} pieces remaining)`;
+                        isInStock = true;
+                    }
+
+                    stockLabel.textContent = stockText;
+                    stockLabel.classList.toggle('text-green-700', isInStock);
+                    stockLabel.classList.toggle('text-red-600', !isInStock);
                 }
             }
 

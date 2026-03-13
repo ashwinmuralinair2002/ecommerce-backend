@@ -117,6 +117,7 @@ async function buildVariantsFromRequest(req, existingVariants = []) {
         }
 
         const colorName = String(row.colorName || '').trim();
+        const stockCount = Math.max(0, parseInt(row.stockCount, 10) || 0);
         const keptImages = Array.isArray(row.existingImages)
             ? row.existingImages
                 .map((img, index) => ({
@@ -142,6 +143,7 @@ async function buildVariantsFromRequest(req, existingVariants = []) {
         variants.push({
             colorName,
             colorCode,
+            stockCount,
             images: mergedImages
         });
     }
@@ -408,7 +410,7 @@ const createProduct = async (req, res) => {
         const {
             title, sku, brand, connectionType, category, shortDescription,
             price, originalPrice, discountPercentage,
-            stockCount, reservedCount, reorderThreshold,
+            reservedCount, reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
             bluetoothVersion, batteryLife, chargingTime, wirelessRange,
             warrantyDuration, warrantyProvider,
@@ -427,6 +429,7 @@ const createProduct = async (req, res) => {
                 message: 'At least one variant is required.'
             });
         }
+        const totalVariantStock = variants.reduce((sum, variant) => sum + (parseInt(variant.stockCount, 10) || 0), 0);
 
         // Auto-generate SKU if not provided
         const productSku = sku || `SKU-${Date.now()}`;
@@ -448,7 +451,7 @@ const createProduct = async (req, res) => {
             price: parseFloat(price),
             originalPrice: originalPrice ? parseFloat(originalPrice) : null,
             discountPercentage: discountPercentage ? parseFloat(discountPercentage) : 0,
-            stockCount: parseInt(stockCount) || 0,
+            stockCount: totalVariantStock,
             reservedCount: parseInt(reservedCount) || 0,
             reorderThreshold: parseInt(reorderThreshold) || 5,
             images: [],
@@ -515,7 +518,7 @@ const updateProduct = async (req, res) => {
         const {
             title, sku, brand, connectionType, category, shortDescription,
             price, originalPrice, discountPercentage,
-            stockCount, reservedCount, reorderThreshold,
+            reservedCount, reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
             bluetoothVersion, batteryLife, chargingTime, wirelessRange,
             warrantyDuration, warrantyProvider,
@@ -537,6 +540,7 @@ const updateProduct = async (req, res) => {
                 message: 'At least one variant is required.'
             });
         }
+        const totalVariantStock = variants.reduce((sum, variant) => sum + (parseInt(variant.stockCount, 10) || 0), 0);
 
         // Find Category ID
         let categoryId = product.category;
@@ -555,7 +559,7 @@ const updateProduct = async (req, res) => {
         product.price = parseFloat(price);
         product.originalPrice = originalPrice ? parseFloat(originalPrice) : null;
         product.discountPercentage = discountPercentage ? parseFloat(discountPercentage) : 0;
-        product.stockCount = parseInt(stockCount) || 0;
+        product.stockCount = totalVariantStock;
         product.reservedCount = parseInt(reservedCount) || 0;
         product.reorderThreshold = parseInt(reorderThreshold) || 5;
         product.images = [];

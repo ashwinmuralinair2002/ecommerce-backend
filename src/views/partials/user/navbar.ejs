@@ -186,5 +186,22 @@
                 input.blur();
             }
         });
+
+        if (searchForm) {
+            searchForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+
+                const value = input.value.trim();
+                const params = new URLSearchParams(window.location.search);
+
+                if (value) {
+                    params.set('search', value);
+                } else {
+                    params.delete('search');
+                }
+
+                window.location.href = `/products?${params.toString()}`;
+            });
+        }
     })();
 </script>

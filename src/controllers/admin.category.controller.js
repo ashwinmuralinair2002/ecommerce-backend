@@ -111,6 +111,25 @@ exports.renderAddCategory = (req, res) => {
     res.render('admin/categories/add-category', { error: null, errors: {}, oldInput: {} });
 };
 
+// @route GET /admin/categories/check-name
+exports.checkCategoryName = async (req, res) => {
+    try {
+        const normalizedName = String(req.query.name || '').trim();
+        if (!normalizedName) {
+            return res.json({ exists: false });
+        }
+
+        const existing = await Category.findOne({
+            name: { $regex: new RegExp(`^${escapeRegex(normalizedName)}$`, 'i') },
+            isDeleted: { $ne: true }
+        }).select('_id').lean();
+
+        return res.json({ exists: Boolean(existing) });
+    } catch (error) {
+        return res.status(500).json({ exists: false });
+    }
+};
+
 // @route POST /admin/categories
 exports.addCategory = async (req, res) => {
     try {
@@ -127,7 +146,7 @@ exports.addCategory = async (req, res) => {
         });
 
         if (existing && existing.isDeleted !== true) {
-            return res.redirect(`/admin/categories/${existing._id}`);
+            errors.name = 'Category name already exists';
         }
 
         if (Object.keys(errors).length > 0) {
@@ -171,9 +190,11 @@ exports.addCategory = async (req, res) => {
     } catch (error) {
         console.error('Add category failed:', error);
         let errorMessage = 'Failed to add category.';
+        const errors = {};
 
         if (error && error.code === 11000 && error.keyPattern && error.keyPattern.name) {
-            errorMessage = 'Category name already exists.';
+            errors.name = 'Category name already exists';
+            errorMessage = null;
         } else if (error && error.name === 'MulterError' && error.code === 'LIMIT_FILE_SIZE') {
             errorMessage = 'Image is too large. Maximum allowed size is 4MB.';
         } else if (error && error.message) {
@@ -182,7 +203,7 @@ exports.addCategory = async (req, res) => {
 
         return res.render('admin/categories/add-category', {
             error: errorMessage,
-            errors: {},
+            errors,
             oldInput: req.body
         });
     }

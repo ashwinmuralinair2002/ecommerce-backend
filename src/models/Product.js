@@ -113,6 +113,11 @@ const productSchema = new mongoose.Schema({
             required: true,
             trim: true
         },
+        stockCount: {
+            type: Number,
+            default: 0,
+            min: 0
+        },
         images: [{
             url: { type: String, required: true },
             public_id: { type: String, required: true },

@@ -43,6 +43,7 @@ router.post('/brands/:id/delete', brandController.deleteBrand);
 
 router.get('/categories', categoryController.getCategoriesPage);
 router.get('/categories/add', categoryController.renderAddCategory);
+router.get('/categories/check-name', categoryController.checkCategoryName);
 router.post('/categories', categoryUpload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'heroImage', maxCount: 1 }

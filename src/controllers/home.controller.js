@@ -26,6 +26,7 @@ async function getProductsByBadge(badge, allowedCategoryIds, limit = 8) {
     const docs = await Product.find({
         badges: badge,
         isListed: true,
+        isDeleted: { $ne: true },
         category: { $in: allowedCategoryIds }
     })
         .sort({ createdAt: -1 })

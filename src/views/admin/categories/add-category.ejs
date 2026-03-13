@@ -38,10 +38,10 @@
                 <form action="/admin/categories" method="POST" enctype="multipart/form-data" class="max-w-lg space-y-5" id="addCategoryForm">
                     <div>
                         <label class="block text-sm text-[#685BCB] mb-1">Category Name <span class="text-red-500">*</span></label>
-                        <input type="text" name="name" value="<%= oldInput && oldInput.name ? oldInput.name : '' %>"
+                        <input type="text" id="categoryNameInput" name="name" value="<%= oldInput && oldInput.name ? oldInput.name : '' %>"
                             class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
                             placeholder="Enter category name" />
-                        <% if (errors && errors.name) { %><p class="text-red-500 text-xs mt-1"><%= errors.name %></p><% } %>
+                        <p id="categoryNameClientError" class="text-red-500 text-xs mt-1 <%= (errors && errors.name) ? '' : 'hidden' %>"><%= (errors && errors.name) ? errors.name : 'Category already exists' %></p>
                     </div>
 
                     <div>
@@ -67,7 +67,7 @@
                     </div>
 
                     <div class="flex gap-3 pt-4">
-                        <button type="submit"
+                        <button type="submit" id="createCategoryBtn"
                             class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">Create Category</button>
                         <a href="/admin/categories"
                             class="h-10 px-6 rounded-xl bg-[#FFFFFF] font-bold text-[#1F1F1F] hover:bg-[#D3CEEA] transition-colors flex items-center">Cancel</a>
@@ -78,6 +78,92 @@
     </div>
 
     <script>
+        (function () {
+            const form = document.getElementById('addCategoryForm');
+            const nameInput = document.getElementById('categoryNameInput');
+            const submitBtn = document.getElementById('createCategoryBtn');
+            const duplicateError = document.getElementById('categoryNameClientError');
+            let duplicateCheckTimer = null;
+            let activeDuplicateRequest = null;
+            let duplicateExists = <%= (errors && errors.name === 'Category name already exists') ? 'true' : 'false' %>;
+
+            const updateDuplicateUI = (message) => {
+                if (!nameInput || !submitBtn || !duplicateError) return;
+                if (message) {
+                    duplicateExists = true;
+                    duplicateError.textContent = message;
+                    duplicateError.classList.remove('hidden');
+                    nameInput.classList.add('ring-2', 'ring-red-400');
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                } else {
+                    duplicateExists = false;
+                    duplicateError.classList.add('hidden');
+                    nameInput.classList.remove('ring-2', 'ring-red-400');
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
+            };
+
+            const checkDuplicateName = async (value) => {
+                const normalizedValue = String(value || '').trim();
+                if (normalizedValue.length < 2) {
+                    updateDuplicateUI('');
+                    return;
+                }
+
+                if (activeDuplicateRequest) activeDuplicateRequest.abort();
+
+                try {
+                    activeDuplicateRequest = new AbortController();
+                    const response = await fetch(`/admin/categories/check-name?name=${encodeURIComponent(normalizedValue)}`, {
+                        signal: activeDuplicateRequest.signal,
+                        headers: { Accept: 'application/json' }
+                    });
+
+                    if (!response.ok) {
+                        updateDuplicateUI('');
+                        return;
+                    }
+
+                    const data = await response.json();
+                    updateDuplicateUI(data && data.exists ? 'Category already exists' : '');
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        updateDuplicateUI('');
+                    }
+                } finally {
+                    activeDuplicateRequest = null;
+                }
+            };
+
+            if (nameInput) {
+                nameInput.addEventListener('input', function () {
+                    if (duplicateCheckTimer) clearTimeout(duplicateCheckTimer);
+                    duplicateCheckTimer = setTimeout(() => {
+                        checkDuplicateName(nameInput.value);
+                    }, 250);
+                });
+
+                if (nameInput.value.trim().length >= 2) {
+                    checkDuplicateName(nameInput.value);
+                } else {
+                    updateDuplicateUI('');
+                }
+            }
+
+            if (form) {
+                form.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+                    if (!nameInput) return;
+                    await checkDuplicateName(nameInput.value);
+                    if (!duplicateExists) {
+                        HTMLFormElement.prototype.submit.call(form);
+                    }
+                });
+            }
+        })();
+
         (function () {
             const imageInput = document.getElementById('categoryImageInput');
             const previewWrap = document.getElementById('categoryImagePreviewWrap');

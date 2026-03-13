@@ -442,17 +442,6 @@
                                                                         <div class="mt-4">
                                                                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                                                                         <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Stock Count <span
-                                                                                    class="text-red-500">*</span></p>
-                                                                            <input id="stockCount" name="stockCount" placeholder="Number of items in stock"
-                                                                                type="number" step="1" min="0" required
-                                                                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                                                                value="" />
-                                                                            <p class="field-error" id="stockCountError">Must be a whole number (0 or more)</p>
-                                                                        </label>
-                                                                    </div>
-                                                                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                                                        <label class="flex flex-col min-w-40 flex-1">
                                                                             <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Reserved Count (Initial)
                                                                             </p>
                                                                             <input id="reservedCount" name="reservedCount" placeholder="0" type="number" step="1"
@@ -1015,6 +1004,7 @@
                         return {
                             colorName: variant.colorName || '',
                             colorCode: variant.colorCode || '',
+                            stockCount: parseInt(variant.stockCount, 10) || 0,
                             existingImages: [],
                             newImageCrops: (variant.newImages || []).map((img) => img.crop || null),
                             newImageIsHero: (variant.newImages || []).map((img) => img && img.isHero === true),
@@ -1154,7 +1144,7 @@
         }
 
         function addVariant() {
-            variants.push({ colorInput: '', colorCode: '', colorName: '', newImages: [] });
+            variants.push({ colorInput: '', colorCode: '', colorName: '', stockCount: 0, newImages: [] });
             renderVariants();
         }
 
@@ -1174,6 +1164,9 @@
                         <input type="text" data-role="color-input" data-index="${index}" value="${variant.colorInput || ''}"
                             placeholder="HEX or colour name (e.g., #000000 / royalblue)"
                             class="h-11 flex-1 min-w-[240px] rounded-xl border border-[#BCA6DB] px-3 text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]">
+                        <input type="number" data-role="variant-stock" data-index="${index}" value="${Number.isFinite(Number(variant.stockCount)) ? Number(variant.stockCount) : 0}"
+                            min="0" step="1" placeholder="Stock"
+                            class="h-11 w-28 rounded-xl border border-[#BCA6DB] px-3 text-sm text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]">
                         <span data-role="color-preview" class="inline-block w-8 h-8 rounded-full border border-[#BCA6DB]" style="background:${variant.colorCode || '#FFFFFF'}"></span>
                         <button type="button" data-role="remove-variant" data-index="${index}"
                             class="h-10 px-3 rounded-lg bg-[#ffecec] text-red-600 text-sm font-bold hover:bg-[#ffdddd]">Remove</button>
@@ -1219,6 +1212,13 @@
                     if (meta) {
                         meta.textContent = variants[idx].colorCode ? `Normalized: ${variants[idx].colorCode}` : '';
                     }
+                });
+            });
+
+            variantList.querySelectorAll('[data-role="variant-stock"]').forEach((input) => {
+                input.addEventListener('input', function () {
+                    const idx = Number(this.dataset.index);
+                    variants[idx].stockCount = Math.max(0, parseInt(this.value, 10) || 0);
                 });
             });
 
@@ -1385,6 +1385,10 @@
                     showVariantError('Each variant needs a valid HEX or CSS colour name.');
                     return false;
                 }
+                if (!/^\d+$/.test(String(variant.stockCount))) {
+                    showVariantError('Each variant needs a stock count of 0 or more.');
+                    return false;
+                }
                 const newCount = (variant.newImages || []).length;
                 if (newCount < 3 || newCount > 10) {
                     showVariantError('Each variant must contain 3 to 10 images.');
@@ -1497,7 +1501,7 @@
 
         // ========== Validation Helpers ==========
         ['productTitle', 'productSku', 'brandSelect', 'connectionType', 'categorySelect', 'shortDescription', 'productPrice',
-            'originalPrice', 'discountPercentage', 'stockCount', 'reservedCount', 'reorderThreshold',
+            'originalPrice', 'discountPercentage', 'reservedCount', 'reorderThreshold',
             'warrantyDuration', 'warrantyProvider', 'shippingLength', 'shippingWidth', 'shippingHeight', 'shippingWeight'
         ].forEach((id) => {
             const el = document.getElementById(id);
@@ -1676,13 +1680,12 @@
                 valid = setFieldError('originalPrice', 'Original price must be greater than or equal to price.') && valid;
             }
 
-            const stock = getValue('stockCount');
             const reserved = getValue('reservedCount');
             const reorder = getValue('reorderThreshold');
-            if (!/^\d+$/.test(stock)) valid = setFieldError('stockCount', 'Stock count must be an integer >= 0.') && valid; else clearFieldError('stockCount');
             if (!/^\d+$/.test(reserved)) valid = setFieldError('reservedCount', 'Reserved count is required and must be an integer >= 0.') && valid; else clearFieldError('reservedCount');
             if (!/^\d+$/.test(reorder)) valid = setFieldError('reorderThreshold', 'Reorder threshold is required and must be an integer >= 0.') && valid; else clearFieldError('reorderThreshold');
-            if (/^\d+$/.test(stock) && /^\d+$/.test(reserved) && Number(reserved) > Number(stock)) {
+            const totalVariantStock = variants.reduce((sum, variant) => sum + (parseInt(variant.stockCount, 10) || 0), 0);
+            if (/^\d+$/.test(reserved) && Number(reserved) > totalVariantStock) {
                 valid = setFieldError('reservedCount', 'Reserved count cannot exceed stock count.') && valid;
             }
 
