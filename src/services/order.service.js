@@ -43,14 +43,12 @@ const placeOrder = async (userId) => {
 
             const price = Number(item.product && typeof item.product.price === 'number' ? item.product.price : item.priceSnapshot || 0);
             const totalPrice = roundCurrency(price * quantity);
-            const imageUrl =
-                product &&
-                product.variants &&
-                product.variants.length > 0 &&
-                product.variants[0].images &&
-                product.variants[0].images.length > 0
-                    ? product.variants[0].images[0].url
-                    : '';
+            const checkoutVariant = item && item.variant ? item.variant : {};
+            const variantImages = Array.isArray(checkoutVariant.images) ? checkoutVariant.images : [];
+            const variantImage = variantImages[0];
+            const imageUrl = (variantImage && variantImage.url)
+                ? variantImage.url
+                : '/images/placeholder.png';
 
             orderItems.push({
                 productId: product._id,

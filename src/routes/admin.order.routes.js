@@ -1,0 +1,16 @@
+const express = require('express');
+const { ensureAdminAuthenticated } = require('../middleware/admin-auth.middleware');
+const adminOrderController = require('../controllers/admin.order.controller');
+
+const router = express.Router();
+
+router.use(ensureAdminAuthenticated);
+
+router.get('/orders-page', adminOrderController.renderOrdersPage);
+router.get('/orders', adminOrderController.getOrders);
+router.get('/orders/:orderId/page', adminOrderController.renderOrderDetailsPage);
+router.get('/orders/:orderId', adminOrderController.getOrderDetails);
+router.patch('/orders/bulk-status', adminOrderController.bulkUpdateStatus);
+router.patch('/orders/:orderId/status', adminOrderController.updateStatus);
+
+module.exports = router;

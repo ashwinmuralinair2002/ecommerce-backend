@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900" />
+
+    <title>Admin · Orders</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let selectMode = false;
+        let bulkUpdateInProgress = false;
+
+        function getSelectedOrders() {
+            return Array.from(document.querySelectorAll('.order-checkbox:checked'))
+                .map(cb => cb.value);
+        }
+
+        function getSelectedOrderStatuses() {
+            return Array.from(document.querySelectorAll('.order-checkbox:checked'))
+                .map(cb => cb.dataset.status)
+                .filter(Boolean);
+        }
+
+        function getBulkStatusOptions(status) {
+            if (status === 'pending') {
+                return {
+                    shipped: 'shipped',
+                    cancelled: 'cancelled'
+                };
+            }
+
+            if (status === 'shipped') {
+                return {
+                    delivered: 'delivered'
+                };
+            }
+
+            return {};
+        }
+
+        function syncBulkActionButton() {
+            const bulkButton = document.getElementById('bulkUpdateBtn');
+            if (!bulkButton) {
+                return;
+            }
+
+            const hasSelection = getSelectedOrders().length > 0;
+            bulkButton.disabled = !hasSelection || bulkUpdateInProgress;
+            bulkButton.classList.toggle('opacity-60', bulkButton.disabled);
+            bulkButton.classList.toggle('cursor-not-allowed', bulkButton.disabled);
+        }
+
+        function handleSearch(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFilters();
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const params = new URLSearchParams(window.location.search);
+            const search = document.getElementById('searchInput').value.trim();
+            const status = document.getElementById('filterStatus').value;
+            const payment = document.getElementById('filterPayment').value;
+            const price = document.getElementById('filterPrice').value;
+            const sort = document.getElementById('sortSelect').value;
+
+            if (search) {
+                params.set('search', search);
+            } else {
+                params.delete('search');
+            }
+
+            if (status) {
+                params.set('status', status);
+            } else {
+                params.delete('status');
+            }
+
+            if (payment) {
+                params.set('payment', payment);
+            } else {
+                params.delete('payment');
+            }
+
+            if (price) {
+                params.set('price', price);
+            } else {
+                params.delete('price');
+            }
+
+            if (sort && sort !== 'newest') {
+                params.set('sort', sort);
+            } else {
+                params.delete('sort');
+            }
+
+            const queryString = params.toString();
+            window.location.href = '/admin/orders-page' + (queryString ? `?${queryString}` : '');
+        }
+
+        function toggleSelectMode() {
+            selectMode = !selectMode;
+            const checkboxCells = document.querySelectorAll('.checkbox-cell');
+            const selectBtn = document.getElementById('selectBtn');
+            const selectAll = document.getElementById('selectAll');
+
+            checkboxCells.forEach(cell => {
+                cell.classList.toggle('hidden', !selectMode);
+            });
+
+            selectBtn.textContent = selectMode ? 'Cancel' : 'Select';
+
+            if (!selectMode) {
+                document.querySelectorAll('.order-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                if (selectAll) {
+                    selectAll.checked = false;
+                }
+            }
+
+            syncBulkActionButton();
+        }
+
+        async function updateSelectedStatus() {
+            const selectedOrders = getSelectedOrders();
+            const selectedStatuses = getSelectedOrderStatuses();
+
+            if (selectedOrders.length === 0 || bulkUpdateInProgress) {
+                syncBulkActionButton();
+                return;
+            }
+
+            const uniqueStatuses = [...new Set(selectedStatuses)];
+
+            if (uniqueStatuses.length !== 1) {
+                await Swal.fire('Invalid Selection', 'Please select orders with same status', 'warning');
+                return;
+            }
+
+            const currentStatus = uniqueStatuses[0];
+
+            if (currentStatus === 'delivered' || currentStatus === 'cancelled') {
+                await Swal.fire('Invalid Selection', 'Selected orders cannot be updated', 'warning');
+                return;
+            }
+
+            const allowedOptions = getBulkStatusOptions(currentStatus);
+
+            if (Object.keys(allowedOptions).length === 0) {
+                await Swal.fire('Invalid Selection', 'Selected orders cannot be updated', 'warning');
+                return;
+            }
+
+            const { value: selectedStatus } = await Swal.fire({
+                title: 'Update Order Status',
+                input: 'select',
+                inputOptions: allowedOptions,
+                inputPlaceholder: 'Select status',
+                showCancelButton: true,
+                confirmButtonText: 'Update',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Please select a status';
+                    }
+                }
+            });
+
+            if (!selectedStatus) {
+                return;
+            }
+
+            bulkUpdateInProgress = true;
+            const bulkButton = document.getElementById('bulkUpdateBtn');
+            const originalLabel = bulkButton ? bulkButton.textContent.trim() : 'Update Status';
+
+            if (bulkButton) {
+                bulkButton.textContent = 'Updating...';
+            }
+            syncBulkActionButton();
+
+            try {
+                const response = await fetch('/admin/orders/bulk-status', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        orderIds: selectedOrders,
+                        status: selectedStatus
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to update orders');
+                }
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Status Updated',
+                    text: `Updated ${data.updatedCount} order(s), skipped ${data.skippedCount} order(s).`
+                });
+
+                document.querySelectorAll('.order-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                const selectAll = document.getElementById('selectAll');
+                if (selectAll) {
+                    selectAll.checked = false;
+                }
+
+                window.location.reload();
+            } catch (error) {
+                await Swal.fire('Error', error.message || 'Failed to update orders', 'error');
+            } finally {
+                bulkUpdateInProgress = false;
+                if (bulkButton) {
+                    bulkButton.textContent = originalLabel;
+                }
+                syncBulkActionButton();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('tr[data-href]').forEach(row => {
+                row.addEventListener('click', (event) => {
+                    if (event.target.closest('a, button, input, select, textarea, label')) {
+                        return;
+                    }
+
+                    window.location.href = row.dataset.href;
+                });
+            });
+
+            document.querySelectorAll('.order-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', syncBulkActionButton);
+            });
+
+            const selectAll = document.getElementById('selectAll');
+            if (selectAll) {
+                selectAll.addEventListener('change', () => {
+                    syncBulkActionButton();
+                });
+            }
+
+            syncBulkActionButton();
+        });
+    </script>
+</head>
+
+<body>
+    <% const currentFilters = typeof filters === 'object' && filters ? filters : { search: '', status: '', sort: 'newest' }; %>
+    <div class="min-h-screen flex flex-col bg-white"
+        style='font-family: Inter, "Noto Sans", sans-serif;'>
+
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'orders' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="admin-page-container max-w-[1400px] mx-auto">
+
+                    <div class="flex flex-wrap justify-between gap-3 mb-6">
+                        <div class="flex min-w-72 flex-col gap-1">
+                            <h1 class="text-[32px] font-bold text-[#1F1F1F]">Orders</h1>
+                            <p class="text-[#685BCB] text-sm">Manage customer orders</p>
+                        </div>
+                        <div class="h-10"></div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3 px-4 py-4">
+                        <button id="selectBtn" onclick="toggleSelectMode()"
+                            class="flex items-center justify-center rounded-lg h-10 px-5 bg-[#685BCB] text-white text-sm font-bold shadow-sm hover:bg-[#5a4dc0] transition-colors">
+                            Select
+                        </button>
+                        <button id="bulkUpdateBtn" onclick="updateSelectedStatus()"
+                            class="flex items-center justify-center rounded-lg h-10 px-5 bg-red-500 text-white text-sm font-bold shadow-sm hover:bg-red-600 transition-colors">
+                            Update Status
+                        </button>
+                    </div>
+
+                    <div class="px-4 pt-1 pb-4">
+                        <div class="relative">
+                            <input id="searchInput" type="text" placeholder="Search by Order ID or Customer"
+                                value="<%= currentFilters.search %>"
+                                onkeydown="handleSearch(event)"
+                                class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
+                            <% if (currentFilters.search) { %>
+                            <button onclick="clearSearch()"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors"
+                                title="Clear Search">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                    viewBox="0 0 256 256">
+                                    <path
+                                        d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
+                                    </path>
+                                </svg>
+                            </button>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 px-4 pb-4">
+                        <select id="filterStatus" onchange="applyFilters()"
+                            class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                            <option value="">All Orders</option>
+                            <option value="pending" <%= currentFilters.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                            <option value="shipped" <%= currentFilters.status === 'shipped' ? 'selected' : '' %>>Shipped</option>
+                            <option value="delivered" <%= currentFilters.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                            <option value="cancelled" <%= currentFilters.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                        </select>
+
+                        <select id="filterPayment" onchange="applyFilters()"
+                            class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                            <option value="">All Payments</option>
+                            <option value="COD" <%= currentFilters.payment === 'COD' ? 'selected' : '' %>>COD</option>
+                        </select>
+
+                        <select id="filterPrice" onchange="applyFilters()"
+                            class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                            <option value="">All Prices</option>
+                            <option value="lt1000" <%= currentFilters.price === 'lt1000' ? 'selected' : '' %>>Below ₹1000</option>
+                            <option value="1000-3000" <%= currentFilters.price === '1000-3000' ? 'selected' : '' %>>₹1000–₹3000</option>
+                            <option value="3000-5000" <%= currentFilters.price === '3000-5000' ? 'selected' : '' %>>₹3000–₹5000</option>
+                            <option value="5000-10000" <%= currentFilters.price === '5000-10000' ? 'selected' : '' %>>₹5000–₹10000</option>
+                            <option value="gt10000" <%= currentFilters.price === 'gt10000' ? 'selected' : '' %>>Above ₹10000</option>
+                        </select>
+
+                        <select id="sortSelect" onchange="applyFilters()"
+                            class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB] ml-auto">
+                            <option value="newest" <%= currentFilters.sort === 'newest' ? 'selected' : '' %>>Newest First</option>
+                            <option value="oldest" <%= currentFilters.sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+                            <option value="amount_high" <%= currentFilters.sort === 'amount_high' ? 'selected' : '' %>>Amount High to Low</option>
+                            <option value="amount_low" <%= currentFilters.sort === 'amount_low' ? 'selected' : '' %>>Amount Low to High</option>
+                        </select>
+                    </div>
+
+                    <div class="border-b border-[#BCA6DB] mx-4 mb-4"></div>
+
+                    <div class="px-4 py-2 @container">
+                        <div class="flex overflow-hidden rounded-lg border border-[#BCA6DB] bg-white">
+                            <table class="flex-1">
+                                <thead>
+                                    <tr class="bg-white">
+                                        <th
+                                            class="checkbox-cell hidden px-4 py-3 w-10 text-sm font-medium text-[#1F1F1F] leading-normal">
+                                            <input type="checkbox" id="selectAll"
+                                                onchange="document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = this.checked)"
+                                                class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-0" />
+                                        </th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
+                                            Order ID</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
+                                            Customer</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
+                                            Items</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
+                                            Total</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
+                                            Payment</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">
+                                            Date</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] w-36 text-sm font-medium leading-normal">
+                                            Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (orders.length===0) { %>
+                                        <tr>
+                                            <td colspan="8" class="text-center py-8 text-[#685BCB]">No orders found</td>
+                                        </tr>
+                                    <% } else { %>
+                                        <% orders.forEach(order => { %>
+                                            <% let statusClasses = 'bg-gray-100 text-gray-700'; %>
+                                            <% if (order.orderStatus === 'pending') { %>
+                                                <% statusClasses = 'bg-[#fff7d6] text-[#9a6700] hover:bg-[#fff1b8]'; %>
+                                            <% } else if (order.orderStatus === 'shipped') { %>
+                                                <% statusClasses = 'bg-[#ecf3ff] text-[#1d4ed8] hover:bg-[#dbeafe]'; %>
+                                            <% } else if (order.orderStatus === 'delivered') { %>
+                                                <% statusClasses = 'bg-[#ecffef] text-green-700 hover:bg-[#ddffe3]'; %>
+                                            <% } else if (order.orderStatus === 'cancelled') { %>
+                                                <% statusClasses = 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]'; %>
+                                            <% } %>
+                                            <tr class="border-t border-t-[#BCA6DB] hover:bg-gray-50 cursor-pointer"
+                                                data-href="/admin/orders/<%= order.orderId %>/page"
+                                                role="button">
+                                                <td class="checkbox-cell hidden h-[72px] px-4 py-2 w-10"
+                                                    onclick="event.stopPropagation()">
+                                                    <input type="checkbox"
+                                                        class="order-checkbox h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-0"
+                                                        name="selectedOrders"
+                                                        value="<%= order.orderId %>"
+                                                        data-status="<%= order.orderStatus %>" />
+                                                </td>
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">
+                                                    <%= order.orderId %>
+                                                </td>
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
+                                                    <%= order.userName %>
+                                                </td>
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
+                                                    <%= order.totalItems %>
+                                                </td>
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">
+                                                    ₹ <%= order.totalAmount.toLocaleString('en-IN') %>
+                                                </td>
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
+                                                    <%= order.paymentMethod %>
+                                                </td>
+                                                <td
+                                                    class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal">
+                                                    <%= new Date(order.createdAt).toLocaleDateString('en-IN') %>
+                                                </td>
+                                                <td class="h-[72px] px-4 py-2 w-36 text-sm font-normal leading-normal">
+                                                    <span
+                                                        class="inline-flex items-center justify-center rounded-lg h-8 px-4 text-xs font-bold transition-colors <%= statusClasses %>">
+                                                        <%= order.orderStatus %>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

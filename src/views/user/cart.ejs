@@ -12,6 +12,7 @@
 
     <%- include('../partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
@@ -312,6 +313,8 @@
 
 <script>
     (() => {
+        const params = new URLSearchParams(window.location.search);
+        const error = params.get('error');
         const initialCart = <%- JSON.stringify(cartData) %>;
         const cartState = {
             items: Array.isArray(initialCart.items) ? initialCart.items : [],
@@ -342,6 +345,28 @@
         const summaryGrandTotal = document.getElementById('summary-grand-total');
         const checkoutButton = document.getElementById('checkout-button');
         const checkoutFeedback = document.getElementById('checkout-feedback');
+
+        if (error) {
+            const normalizedError = error.toLowerCase();
+            let message = 'Unable to proceed to checkout';
+
+            if (normalizedError.includes('address')) {
+                message = 'Please add a delivery address before proceeding to checkout';
+            } else if (error.includes('Cart is empty')) {
+                message = 'Your cart is empty';
+            } else if (normalizedError.includes('invalid cart')) {
+                message = 'Some items in your cart are unavailable';
+            }
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'Checkout Blocked',
+                text: message,
+                confirmButtonColor: '#E0CB56'
+            }).then(() => {
+                window.history.replaceState({}, document.title, '/cart');
+            });
+        }
 
         const formatCurrency = (value) => {
             const amount = Number(value || 0);

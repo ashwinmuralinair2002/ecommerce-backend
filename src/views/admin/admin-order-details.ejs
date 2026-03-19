@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700" />
+    <title>Admin · <%= order.orderId %></title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.svg" />
+    <%- include('../partials/user/theme-config') %>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-background-soft" style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+    <div class="min-h-screen flex flex-col">
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'orders' }) %>
+            </aside>
+
+            <section class="flex-1 px-4 md:px-6 lg:px-8 xl:px-10 py-5 overflow-x-hidden">
+                <% const statusOptions = ['pending', 'shipped', 'delivered', 'cancelled']; %>
+                <% const isDelivered = order.orderStatus === 'delivered'; %>
+                <% const address = order.shippingAddress || {}; %>
+
+                <div class="w-full">
+                    <nav class="flex text-sm text-gray-500 mb-3" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                            <li class="inline-flex items-center">
+                                <a href="/admin/orders-page" class="inline-flex items-center text-gray-500 hover:text-primary">
+                                    Orders
+                                </a>
+                            </li>
+                            <li aria-current="page">
+                                <div class="flex items-center">
+                                    <span class="mx-2 text-gray-400">/</span>
+                                    <span class="text-primary font-medium"><%= order.orderId %></span>
+                                </div>
+                            </li>
+                        </ol>
+                    </nav>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+                        <section class="lg:col-span-8 space-y-4">
+                            <div class="bg-white border border-primary-light/40 rounded-lg p-4">
+                                <h1 class="text-primary tracking-light text-[30px] font-bold leading-tight"><%= order.orderId %></h1>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 mt-4">
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Customer Name</p>
+                                        <p class="text-primary text-sm font-normal leading-normal"><%= order.user && order.user.name ? order.user.name : 'N/A' %></p>
+                                    </div>
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Payment Method</p>
+                                        <p class="text-primary text-sm font-normal leading-normal"><%= order.paymentMethod %></p>
+                                    </div>
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pr-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Order Date</p>
+                                        <p class="text-primary text-sm font-normal leading-normal"><%= new Date(order.createdAt).toLocaleDateString('en-IN') %></p>
+                                    </div>
+                                    <div class="flex flex-col gap-1 border-t border-solid border-t-primary-light/70 py-3 pl-2">
+                                        <p class="text-primary text-sm font-normal leading-normal">Total Amount</p>
+                                        <p class="text-primary text-sm font-normal leading-normal">₹<%= Number(order.totalAmount || 0).toLocaleString('en-IN') %></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white border border-primary-light/40 rounded-lg p-4">
+                                <h3 class="text-primary text-lg font-bold leading-tight mb-4">Items</h3>
+                                <div class="flex overflow-hidden rounded-lg border border-[#BCA6DB] bg-white">
+                                    <table class="flex-1">
+                                        <thead>
+                                            <tr class="bg-white">
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Image</th>
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Product</th>
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Variant</th>
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Quantity</th>
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Price</th>
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Total</th>
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% order.items.forEach(item => { %>
+                                                <tr class="border-t border-t-[#BCA6DB] hover:bg-gray-50">
+                                                    <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
+                                                        <img
+                                                            src="<%= item.imageUrl && item.imageUrl.trim() !== '' ? item.imageUrl : '/images/placeholder.png' %>"
+                                                            class="h-12 w-12 object-cover rounded-lg border bg-gray-100"
+                                                            alt="Product Image">
+                                                    </td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal"><%= item.productName %></td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal"><%= item.colorName || 'N/A' %></td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal"><%= item.quantity %></td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">₹<%= Number(item.price || 0).toLocaleString('en-IN') %></td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">₹<%= Number(item.totalPrice || 0).toLocaleString('en-IN') %></td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal"><%= item.status %></td>
+                                                </tr>
+                                            <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </section>
+
+                        <aside class="lg:col-span-4 flex flex-col gap-6">
+                            <div class="lg:sticky lg:top-24 border border-primary-light/45 bg-white rounded-lg shadow-sm p-4 space-y-4">
+                                <div class="pb-3 border-b border-primary-light/30">
+                                    <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">Status Control</h2>
+                                    <p class="text-sm text-gray-600 mt-1">Update the order status without leaving this page.</p>
+                                </div>
+
+                                <div class="space-y-2 text-sm text-primary">
+                                    <p><span class="font-semibold">Current Status:</span> <span id="currentOrderStatus"><%= order.orderStatus %></span></p>
+                                    <% if (order.user) { %>
+                                        <p><span class="font-semibold">Customer Email:</span> <%= order.user.email || 'N/A' %></p>
+                                        <p><span class="font-semibold">Customer Phone:</span> <%= order.user.phone || 'N/A' %></p>
+                                    <% } %>
+                                </div>
+
+                                <div>
+                                    <label for="orderStatusSelect" class="block text-sm text-primary font-semibold mb-2">Order Status</label>
+                                    <select id="orderStatusSelect"
+                                        class="form-input w-full rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB] disabled:bg-gray-100 disabled:text-gray-400"
+                                        <%= isDelivered ? 'disabled' : '' %>>
+                                        <% statusOptions.forEach((status) => { %>
+                                            <option value="<%= status %>" <%= order.orderStatus === status ? 'selected' : '' %>><%= status %></option>
+                                        <% }) %>
+                                    </select>
+                                    <% if (isDelivered) { %>
+                                        <p class="text-xs text-red-600 mt-2">Delivered orders cannot be updated.</p>
+                                    <% } %>
+                                </div>
+
+                                <div class="pt-3 border-t border-primary-light/30 space-y-2 text-sm text-primary">
+                                    <h3 class="text-primary text-lg font-bold leading-tight">Shipping Address</h3>
+                                    <p><span class="font-semibold">Name:</span> <%= address.name || 'N/A' %></p>
+                                    <p><span class="font-semibold">Phone:</span> <%= address.phone || 'N/A' %></p>
+                                    <p><span class="font-semibold">Address:</span> <%= address.addressLine1 || 'N/A' %></p>
+                                    <p><span class="font-semibold">City, State, Pincode:</span> <%= [address.city, address.state, address.pincode].filter(Boolean).join(', ') || 'N/A' %></p>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const orderId = <%- JSON.stringify(order.orderId) %>;
+            const statusSelect = document.getElementById('orderStatusSelect');
+            const currentOrderStatus = document.getElementById('currentOrderStatus');
+
+            if (!statusSelect || statusSelect.disabled) {
+                return;
+            }
+
+            let previousValue = statusSelect.value;
+
+            statusSelect.addEventListener('change', async function () {
+                const selectedValue = statusSelect.value;
+
+                statusSelect.disabled = true;
+
+                try {
+                    const response = await fetch(`/admin/orders/${orderId}/status`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            status: selectedValue
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Failed to update order status');
+                    }
+
+                    previousValue = selectedValue;
+                    if (currentOrderStatus) {
+                        currentOrderStatus.textContent = data.data && data.data.orderStatus ? data.data.orderStatus : selectedValue;
+                    }
+
+                    if (selectedValue === 'delivered') {
+                        statusSelect.disabled = true;
+                    } else {
+                        statusSelect.disabled = false;
+                    }
+
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Updated',
+                        text: 'Order status updated successfully',
+                        timer: 1400,
+                        showConfirmButton: false
+                    });
+                } catch (error) {
+                    statusSelect.value = previousValue;
+                    statusSelect.disabled = false;
+
+                    Swal.fire('Error', error.message || 'Failed to update order status', 'error');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
