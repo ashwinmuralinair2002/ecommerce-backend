@@ -2,6 +2,11 @@
 const User = require('../models/user.model');
 const profileService = require('../services/profile.service');
 
+const getReturnPath = (req) => {
+    const returnTo = req.body.returnTo || req.query.returnTo;
+    return returnTo === 'cart' ? '/cart' : '/account/addresses';
+};
+
 // @desc    Render Address List Page
 // @route   GET /account/addresses
 const getAddresses = async (req, res) => {
@@ -52,7 +57,7 @@ const getAddresses = async (req, res) => {
 // @desc    Render Add Address Form
 // @route   GET /account/addresses/new
 const renderAddAddress = (req, res) => {
-    res.render('add-address', { user: req.user || {} });
+    res.render('add-address', { user: req.user || {}, returnTo: req.query.returnTo || '' });
 };
 
 // @desc    Add New Address
@@ -93,7 +98,8 @@ const addAddress = async (req, res) => {
         return res.render('add-address', {
             user: req.user || {},
             errors,
-            formData: req.body
+            formData: req.body,
+            returnTo: req.body.returnTo || ''
         });
     }
 
@@ -116,12 +122,13 @@ const addAddress = async (req, res) => {
         };
 
         await profileService.addAddress(userId, addressData);
-        res.redirect('/account/addresses?success=address_saved');
+        res.redirect(getReturnPath(req));
     } catch (error) {
         res.status(500).render('add-address', {
             user: req.user || {},
             errors: { general: 'Failed to save address. Please try again.' },
-            formData: req.body
+            formData: req.body,
+            returnTo: req.body.returnTo || ''
         });
     }
 };
@@ -143,7 +150,7 @@ const renderEditAddress = async (req, res) => {
     if (!address) {
         return res.redirect('/account/addresses');
     }
-    res.render('edit-address', { user, address });
+    res.render('edit-address', { user, address, returnTo: req.query.returnTo || '' });
 };
 
 // @desc    Update Address
@@ -186,7 +193,8 @@ const updateAddress = async (req, res) => {
             user: req.user || {},
             address: mockAddress,
             errors,
-            formData: req.body
+            formData: req.body,
+            returnTo: req.body.returnTo || ''
         });
     }
 
@@ -208,14 +216,15 @@ const updateAddress = async (req, res) => {
         };
 
         await profileService.updateAddress(userId, req.params.id, addressData);
-        res.redirect('/account/addresses?success=address_updated');
+        res.redirect(getReturnPath(req));
     } catch (error) {
         const mockAddress = { _id: req.params.id, ...req.body, zip: postalCode };
         res.status(500).render('edit-address', {
             user: req.user || {},
             address: mockAddress,
             errors: { general: 'Failed to update address. Please try again.' },
-            formData: req.body
+            formData: req.body,
+            returnTo: req.body.returnTo || ''
         });
     }
 };

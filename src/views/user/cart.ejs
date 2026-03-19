@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <meta charset="UTF-8" />
+    <title>SoundWave | Cart</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap" />
+
+    <%- include('../partials/user/theme-config') %>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+</head>
+
+<body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+<%
+    const cartData = (typeof cart !== 'undefined' && cart) ? cart : { items: [], totalItems: 0 };
+    const cartItems = Array.isArray(cartData.items) ? cartData.items : [];
+    const placeholderImage = '/images/placeholder.png';
+    const userAddresses = locals.user && Array.isArray(locals.user.addresses) ? locals.user.addresses : [];
+    const defaultAddress = userAddresses.find((address) => address && address.isDefault === true) || userAddresses[0] || null;
+    const addressLine = defaultAddress
+        ? [defaultAddress.houseNo, defaultAddress.originalStreet || defaultAddress.street].filter(Boolean).join(', ')
+        : '';
+    const addressLocation = defaultAddress
+        ? [defaultAddress.city, defaultAddress.state, defaultAddress.zip || defaultAddress.postalCode].filter(Boolean).join(', ')
+        : '';
+    const selectedAddressIndex = defaultAddress
+        ? userAddresses.findIndex((address) => String(address && address._id) === String(defaultAddress._id))
+        : -1;
+    const editAddressHref = defaultAddress && defaultAddress._id
+        ? `/account/addresses/${defaultAddress._id}/edit?returnTo=cart`
+        : '/account/addresses';
+
+    const formatCurrency = (value) => {
+        const amount = Number(value || 0);
+        return `₹ ${amount.toLocaleString('en-IN')}`;
+    };
+
+    const getDisplayPrice = (item) => {
+        if (item && item.product && typeof item.product.price === 'number') return item.product.price;
+        return Number(item && item.priceSnapshot ? item.priceSnapshot : 0);
+    };
+
+    const totalItems = typeof cartData.totalItems === 'number'
+        ? cartData.totalItems
+        : cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const subtotal = typeof cartData.subtotal === 'number'
+        ? cartData.subtotal
+        : cartItems.reduce((sum, item) => sum + (getDisplayPrice(item) * Number(item.quantity || 0)), 0);
+    const gst = typeof cartData.gst === 'number' ? cartData.gst : subtotal * 0.18;
+    const totalPrice = typeof cartData.total === 'number' ? cartData.total : subtotal + gst;
+    const hasInvalidItems = cartItems.some((item) => {
+        const product = item.product || {};
+        const variant = item.variant || {};
+        return product.isListed === false || product.isDeleted === true || Number(variant.stockCount || 0) === 0;
+    });
+%>
+
+<%- include('../partials/user/navbar') %>
+
+<main class="w-full px-3 py-5 md:px-5 lg:px-6 xl:px-8">
+    <div class="mx-auto max-w-[1450px]">
+        <nav class="mb-3 flex text-sm text-gray-500" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                <li class="inline-flex items-center">
+                    <a href="/home" class="inline-flex items-center text-gray-500 hover:text-primary">Home</a>
+                </li>
+                <li aria-current="page">
+                    <div class="flex items-center">
+                        <span class="mx-2 text-gray-400">/</span>
+                        <span class="font-medium text-primary">Cart</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+
+        <div class="mb-6 flex flex-col gap-2 border-b border-primary-light/45 pb-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-primary">Shopping Cart</h1>
+                <p class="mt-1 text-sm text-gray-500">Review your items before checkout.</p>
+            </div>
+            <div class="inline-flex items-center rounded-lg bg-primary-light/30 px-3 py-2 text-sm font-medium text-primary">
+                <span id="cart-header-count"><%= totalItems %></span>&nbsp;items
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-5 xl:gap-6 lg:grid-cols-12">
+            <section class="lg:col-span-9">
+                <div id="cart-feedback" class="hidden mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"></div>
+                <div id="cart-validation-message" class="<%= hasInvalidItems ? '' : 'hidden' %> mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    Some items in your cart are unavailable or out of stock. Please update your cart.
+                </div>
+
+                <div id="cart-empty-state" class="<%= cartItems.length ? 'hidden' : '' %> rounded-xl border border-primary-light/45 bg-white px-6 py-12 text-center shadow-sm">
+                    <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-light/25 text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256">
+                            <path d="M223.85,47.12A8,8,0,0,0,217.29,44H72.28L66.35,21.42A20,20,0,0,0,47,8H24a8,8,0,0,0,0,16H47a4,4,0,0,1,3.86,2.93L88.76,171.17A20,20,0,0,0,108.06,186H192a20,20,0,0,0,19.42-14.85l21.62-80A8,8,0,0,0,223.85,47.12ZM196,167.06a4,4,0,0,1-3.88,2.94H108.06a4,4,0,0,1-3.87-3L76.48,60H206.79Z"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-primary">Your cart is empty</h2>
+                    <p class="mt-2 text-sm text-gray-500">Looks like you have not added anything yet.</p>
+                    <a href="/products" class="mt-6 inline-flex items-center justify-center rounded-lg bg-accent px-5 py-3 text-sm font-bold text-black transition hover:opacity-90">
+                        Continue Shopping
+                    </a>
+                </div>
+
+                <div id="cart-items" class="space-y-4 <%= cartItems.length ? '' : 'hidden' %>">
+                    <% cartItems.forEach((item) => {
+                        const product = item.product || {};
+                        const variant = item.variant || {};
+                        const isUnavailable = product.isListed === false || product.isDeleted === true;
+                        const unitPrice = getDisplayPrice(item);
+                        const lineSubtotal = unitPrice * Number(item.quantity || 0);
+                        const variantLabel = variant.colorName || 'Default';
+                        const variantImages = Array.isArray(variant.images) ? variant.images : [];
+                        const variantImage = variantImages[0];
+                        const productImageUrl = variantImage && variantImage.url ? variantImage.url : placeholderImage;
+                        const decrementDisabled = isUnavailable || Number(item.quantity || 0) <= 1;
+                        const incrementDisabled = isUnavailable
+                            || Number(item.quantity || 0) >= 5
+                            || Number(item.quantity || 0) >= Number(variant.stockCount || 0);
+                    %>
+                        <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md <%= isUnavailable ? 'opacity-60' : '' %>" data-product-id="<%= product._id || '' %>" data-variant-id="<%= variant._id || '' %>">
+                            <div class="flex flex-col gap-4 sm:flex-row">
+                                <div class="cart-product-media">
+                                    <img src="<%= productImageUrl %>" alt="<%= product.title || 'Cart product image' %>" onerror="this.onerror=null;this.src='<%= placeholderImage %>';">
+                                </div>
+
+                                <div class="flex-1 space-y-4">
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <h2 class="text-lg font-bold text-primary"><%= product.title || 'Product unavailable' %></h2>
+                                            <p class="mt-1 text-sm text-gray-500">Variant: <span class="font-medium text-primary"><%= variantLabel %></span></p>
+                                            <p class="mt-1 text-sm text-gray-500">Available stock: <span class="font-medium text-primary"><%= typeof variant.stockCount === 'number' ? variant.stockCount : 0 %></span></p>
+                                            <% if (item.hasPriceChanged) { %>
+                                                <p class="mt-2 text-xs font-medium text-primary">Price updated from <%= formatCurrency(item.priceSnapshot) %></p>
+                                            <% } %>
+                                            <% if (product.isListed === false || product.isDeleted === true) { %>
+                                                <p class="mt-2 text-xs font-medium text-red-600">This product is currently unavailable.</p>
+                                            <% } %>
+                                        </div>
+
+                                        <button type="button" class="remove-item theme-danger-btn inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm">
+                                            Remove
+                                        </button>
+                                    </div>
+
+                                    <div class="flex flex-col gap-4 border-t border-primary-light/45 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div class="inline-flex items-center rounded-lg border border-primary-light/45">
+                                            <button type="button" class="quantity-btn flex h-10 w-10 items-center justify-center text-lg font-bold text-primary transition hover:bg-primary-light/20 disabled:cursor-not-allowed disabled:opacity-40" data-action="decrement" <%= decrementDisabled ? 'disabled' : '' %>>-</button>
+                                            <span class="quantity-value flex h-10 min-w-[52px] items-center justify-center border-x border-primary-light/45 px-4 text-sm font-semibold text-primary"><%= item.quantity %></span>
+                                            <button type="button" class="quantity-btn flex h-10 w-10 items-center justify-center text-lg font-bold text-primary transition hover:bg-primary-light/20 disabled:cursor-not-allowed disabled:opacity-40" data-action="increment" <%= incrementDisabled ? 'disabled' : '' %>>+</button>
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center gap-6 text-sm">
+                                            <div>
+                                                <p class="text-gray-500">Price</p>
+                                                <p class="font-bold text-primary"><%= formatCurrency(unitPrice) %></p>
+                                            </div>
+                                            <div>
+                                                <p class="text-gray-500">Subtotal</p>
+                                                <p class="item-subtotal font-bold text-primary"><%= formatCurrency(lineSubtotal) %></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    <% }) %>
+                </div>
+            </section>
+
+            <aside class="space-y-4 lg:col-span-3">
+                <div class="rounded-xl border border-primary-light/45 bg-white p-5 shadow-sm">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-bold text-primary">Delivery Address</h2>
+                            <p class="mt-1 text-sm text-gray-500">Choose where your order should be delivered.</p>
+                        </div>
+                        <% if (defaultAddress && defaultAddress.label) { %>
+                            <span class="rounded-full bg-primary-light/25 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary"><%= defaultAddress.label %></span>
+                        <% } %>
+                    </div>
+
+                    <% if (defaultAddress) { %>
+                        <div class="relative mt-4">
+                            <button type="button" id="toggle-address-selector" class="flex w-full items-start justify-between gap-3 rounded-lg border border-primary-light/35 bg-white p-4 text-left text-sm transition hover:bg-primary-light/10">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <p id="selected-address-name" class="font-semibold text-primary"><%= defaultAddress.name || (locals.user && locals.user.name) || 'Primary Address' %></p>
+                                        <span id="selected-address-badge" class="inline-block rounded bg-[#E0CB56] px-2 py-0.5 text-xs font-semibold text-black <%= defaultAddress.isDefault ? '' : 'hidden' %>">Default</span>
+                                    </div>
+                                    <p id="selected-address-phone" class="mt-2 text-gray-600 <%= defaultAddress.phone ? '' : 'hidden' %>"><%= defaultAddress.phone || '' %></p>
+                                    <p id="selected-address-line" class="mt-2 text-gray-600 <%= addressLine ? '' : 'hidden' %>"><%= addressLine %></p>
+                                    <p id="selected-address-location" class="mt-1 text-gray-600 <%= addressLocation ? '' : 'hidden' %>"><%= addressLocation %></p>
+                                </div>
+                                <div class="flex flex-col items-end gap-2">
+                                    <span class="text-xs font-medium text-primary">Change Address</span>
+                                    <svg id="address-selector-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256" class="text-primary transition-transform duration-200">
+                                        <path d="M181.66,114.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,156.69l42.34-42.35A8,8,0,0,1,181.66,114.34Z"></path>
+                                    </svg>
+                                </div>
+                            </button>
+
+                            <% if (userAddresses.length > 1) { %>
+                                <div id="address-selector" class="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-20 hidden rounded-lg border border-primary-light/35 bg-white p-2 shadow-lg">
+                                    <div class="space-y-2">
+                                        <% userAddresses.forEach((address, index) => {
+                                            const optionLine = [address.houseNo, address.originalStreet || address.street].filter(Boolean).join(', ');
+                                            const optionLocation = [address.city, address.state, address.zip || address.postalCode].filter(Boolean).join(', ');
+                                        %>
+                                            <button
+                                                type="button"
+                                                class="address-option flex w-full flex-col rounded-lg border border-transparent px-3 py-3 text-left transition hover:border-primary-light/35 hover:bg-primary-light/10 <%= index === selectedAddressIndex ? 'border-primary-light/35 bg-primary-light/10' : '' %>"
+                                                data-index="<%= index %>"
+                                                data-id="<%= address._id || '' %>"
+                                                data-name="<%= address.name || '' %>"
+                                                data-phone="<%= address.phone || '' %>"
+                                                data-line="<%= optionLine %>"
+                                                data-location="<%= optionLocation %>"
+                                                data-is-default="<%= address.isDefault ? 'true' : 'false' %>">
+                                                <span class="font-medium text-primary"><%= address.name || 'Saved Address' %></span>
+                                                <% if (address.phone) { %>
+                                                    <span class="mt-1 text-sm text-gray-600"><%= address.phone %></span>
+                                                <% } %>
+                                                <% if (optionLine) { %>
+                                                    <span class="mt-1 line-clamp-1 text-sm text-gray-600"><%= optionLine %></span>
+                                                <% } %>
+                                                <% if (optionLocation) { %>
+                                                    <span class="line-clamp-1 text-sm text-gray-600"><%= optionLocation %></span>
+                                                <% } %>
+                                            </button>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                            <% } %>
+                        </div>
+                    <% } else { %>
+                        <div class="mt-4 rounded-lg border border-dashed border-primary-light/45 bg-primary-light/10 p-4 text-sm text-gray-600">
+                            No saved delivery address found. Add one before checkout.
+                        </div>
+                    <% } %>
+
+                    <a href="/account/addresses/new?returnTo=cart" class="mt-6 flex h-12 w-full items-center justify-center rounded-lg bg-[#E0CB56] px-5 text-sm font-bold text-black transition hover:opacity-90">
+                        Add New Address
+                    </a>
+
+                    <a id="edit-address-link" href="<%= editAddressHref %>" class="mt-3 flex h-11 w-full items-center justify-center rounded-lg border border-primary-light/45 px-5 text-sm font-medium text-primary transition hover:bg-primary-light/20">
+                        Edit Address
+                    </a>
+                </div>
+
+                <div class="sticky top-24 rounded-xl border border-primary-light/45 bg-white p-5 shadow-sm">
+                    <h2 class="text-xl font-bold text-primary">Order Summary</h2>
+
+                    <div class="mt-5 space-y-3 border-b border-primary-light/45 pb-4 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Total Items</span>
+                            <span id="summary-total-items" class="font-semibold text-primary"><%= totalItems %></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Subtotal</span>
+                            <span id="summary-subtotal" class="font-semibold text-primary"><%= formatCurrency(subtotal) %></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">GST (18%)</span>
+                            <span id="summary-gst" class="font-semibold text-primary"><%= formatCurrency(gst) %></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-between">
+                        <span class="text-base font-bold text-primary">Total</span>
+                        <span id="summary-grand-total" class="text-lg font-bold text-primary"><%= formatCurrency(totalPrice) %></span>
+                    </div>
+
+                    <a id="checkout-button" href="<%= hasInvalidItems ? '#' : '/checkout' %>" class="theme-primary-btn mt-6 flex h-12 w-full items-center justify-center rounded-lg px-5 text-sm font-bold transition <%= hasInvalidItems ? 'pointer-events-none opacity-50' : '' %>" aria-disabled="<%= hasInvalidItems ? 'true' : 'false' %>" title="<%= hasInvalidItems ? 'Remove unavailable or out-of-stock items to continue.' : 'Proceed to checkout' %>">
+                        Proceed to Checkout
+                    </a>
+                    <p id="checkout-feedback" class="mt-2 text-xs text-red-600 <%= hasInvalidItems ? '' : 'hidden' %>">Remove unavailable or out-of-stock items to continue.</p>
+
+                    <a href="/products" class="theme-secondary-btn mt-3 flex h-11 w-full items-center justify-center rounded-lg px-5 text-sm font-medium transition">
+                        Continue Shopping
+                    </a>
+                </div>
+            </aside>
+        </div>
+    </div>
+</main>
+
+<script>
+    (() => {
+        const initialCart = <%- JSON.stringify(cartData) %>;
+        const cartState = {
+            items: Array.isArray(initialCart.items) ? initialCart.items : [],
+            subtotal: Number(initialCart.subtotal || 0),
+            gst: Number(initialCart.gst || 0),
+            total: Number(initialCart.total || 0)
+        };
+        let isUpdating = false;
+        const placeholderImage = '/images/placeholder.png';
+        const addressSelector = document.getElementById('address-selector');
+        const toggleAddressSelectorButton = document.getElementById('toggle-address-selector');
+        const addressSelectorIcon = document.getElementById('address-selector-icon');
+        const selectedAddressName = document.getElementById('selected-address-name');
+        const selectedAddressBadge = document.getElementById('selected-address-badge');
+        const selectedAddressPhone = document.getElementById('selected-address-phone');
+        const selectedAddressLine = document.getElementById('selected-address-line');
+        const selectedAddressLocation = document.getElementById('selected-address-location');
+        const editAddressLink = document.getElementById('edit-address-link');
+
+        const cartItemsContainer = document.getElementById('cart-items');
+        const emptyState = document.getElementById('cart-empty-state');
+        const feedback = document.getElementById('cart-feedback');
+        const validationMessage = document.getElementById('cart-validation-message');
+        const headerCount = document.getElementById('cart-header-count');
+        const summaryTotalItems = document.getElementById('summary-total-items');
+        const summarySubtotal = document.getElementById('summary-subtotal');
+        const summaryGst = document.getElementById('summary-gst');
+        const summaryGrandTotal = document.getElementById('summary-grand-total');
+        const checkoutButton = document.getElementById('checkout-button');
+        const checkoutFeedback = document.getElementById('checkout-feedback');
+
+        const formatCurrency = (value) => {
+            const amount = Number(value || 0);
+            return `₹ ${amount.toLocaleString('en-IN')}`;
+        };
+
+        const getUnitPrice = (item) => {
+            if (item && item.product && typeof item.product.price === 'number') return item.product.price;
+            return Number(item && item.priceSnapshot ? item.priceSnapshot : 0);
+        };
+
+        const getVariantLabel = (item) => {
+            if (item && item.variant) {
+                if (item.variant.colorName) return item.variant.colorName;
+            }
+            return 'Default';
+        };
+
+        const getTotalItems = () => cartState.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const hasInvalidItems = () => cartState.items.some((item) => {
+            const product = item.product || {};
+            const variant = item.variant || {};
+            return product.isListed === false || product.isDeleted === true || Number(variant.stockCount || 0) === 0;
+        });
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        const showFeedback = (message) => {
+            if (!feedback) return;
+            if (!message) {
+                feedback.classList.add('hidden');
+                feedback.textContent = '';
+                return;
+            }
+            feedback.textContent = message;
+            feedback.classList.remove('hidden');
+        };
+
+        const syncNavbarCartCount = (count) => {
+            const explicitTarget = document.querySelector('[data-cart-count]');
+            if (explicitTarget) explicitTarget.textContent = String(count);
+        };
+
+        const updateSummary = () => {
+            const totalItems = getTotalItems();
+            const subtotal = Number(cartState.subtotal || 0);
+            const gst = Number(cartState.gst || 0);
+            const totalPrice = Number(cartState.total || 0);
+            const invalidItemsPresent = hasInvalidItems();
+
+            if (headerCount) headerCount.textContent = String(totalItems);
+            if (summaryTotalItems) summaryTotalItems.textContent = String(totalItems);
+            if (summarySubtotal) summarySubtotal.textContent = formatCurrency(subtotal);
+            if (summaryGst) summaryGst.textContent = formatCurrency(gst);
+            if (summaryGrandTotal) summaryGrandTotal.textContent = formatCurrency(totalPrice);
+
+            syncNavbarCartCount(totalItems);
+
+            if (emptyState) emptyState.classList.toggle('hidden', totalItems > 0);
+            if (cartItemsContainer) cartItemsContainer.classList.toggle('hidden', totalItems === 0);
+            if (validationMessage) {
+                validationMessage.classList.toggle('hidden', !invalidItemsPresent || totalItems === 0);
+            }
+            if (checkoutButton) {
+                checkoutButton.setAttribute('href', invalidItemsPresent ? '#' : '/checkout');
+                checkoutButton.setAttribute('aria-disabled', invalidItemsPresent ? 'true' : 'false');
+                checkoutButton.setAttribute('title', invalidItemsPresent ? 'Remove unavailable or out-of-stock items to continue.' : 'Proceed to checkout');
+                checkoutButton.classList.toggle('pointer-events-none', invalidItemsPresent);
+                checkoutButton.classList.toggle('opacity-50', invalidItemsPresent);
+            }
+            if (checkoutFeedback) {
+                checkoutFeedback.classList.toggle('hidden', !invalidItemsPresent);
+            }
+        };
+
+        const renderItems = () => {
+            if (!cartItemsContainer) return;
+
+            cartItemsContainer.innerHTML = cartState.items.map((item) => {
+                const product = item.product || {};
+                const variant = item.variant || {};
+                const quantity = Number(item.quantity || 0);
+                const unitPrice = getUnitPrice(item);
+                const lineSubtotal = unitPrice * quantity;
+                const title = product.title || 'Product unavailable';
+                const variantLabel = getVariantLabel(item);
+                const safeTitle = escapeHtml(title);
+                const variantImages = Array.isArray(variant.images) ? variant.images : [];
+                const variantImage = variantImages[0];
+                const productImageUrl = variantImage && variantImage.url ? variantImage.url : placeholderImage;
+                const isUnavailable = product.isListed === false || product.isDeleted === true;
+                const decrementDisabled = isUnavailable || quantity <= 1;
+                const incrementDisabled = isUnavailable || quantity >= 5 || quantity >= Number(variant.stockCount || 0);
+                const priceNote = item.hasPriceChanged
+                    ? `<p class="mt-2 text-xs font-medium text-primary">Price updated from ${formatCurrency(item.priceSnapshot)}</p>`
+                    : '';
+                const unavailableNote = isUnavailable
+                    ? '<p class="mt-2 text-xs font-medium text-red-600">This product is currently unavailable.</p>'
+                    : '';
+
+                return `
+                    <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md ${isUnavailable ? 'opacity-60' : ''}" data-product-id="${product._id || ''}" data-variant-id="${variant._id || ''}">
+                        <div class="flex flex-col gap-4 sm:flex-row">
+                            <div class="cart-product-media">
+                                <img src="${productImageUrl}" alt="${safeTitle || 'Cart product image'}" onerror="this.onerror=null;this.src='${placeholderImage}';">
+                            </div>
+                            <div class="flex-1 space-y-4">
+                                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <h2 class="text-lg font-bold text-primary">${safeTitle}</h2>
+                                        <p class="mt-1 text-sm text-gray-500">Variant: <span class="font-medium text-primary">${variantLabel}</span></p>
+                                        <p class="mt-1 text-sm text-gray-500">Available stock: <span class="font-medium text-primary">${typeof variant.stockCount === 'number' ? variant.stockCount : 0}</span></p>
+                                        ${priceNote}
+                                        ${unavailableNote}
+                                    </div>
+                                    <button type="button" class="remove-item theme-danger-btn inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm">Remove</button>
+                                </div>
+                                <div class="flex flex-col gap-4 border-t border-primary-light/45 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="inline-flex items-center rounded-lg border border-primary-light/45">
+                                        <button type="button" class="quantity-btn flex h-10 w-10 items-center justify-center text-lg font-bold text-primary transition hover:bg-primary-light/20 disabled:cursor-not-allowed disabled:opacity-40" data-action="decrement" ${decrementDisabled ? 'disabled' : ''}>-</button>
+                                        <span class="quantity-value flex h-10 min-w-[52px] items-center justify-center border-x border-primary-light/45 px-4 text-sm font-semibold text-primary">${quantity}</span>
+                                        <button type="button" class="quantity-btn flex h-10 w-10 items-center justify-center text-lg font-bold text-primary transition hover:bg-primary-light/20 disabled:cursor-not-allowed disabled:opacity-40" data-action="increment" ${incrementDisabled ? 'disabled' : ''}>+</button>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-6 text-sm">
+                                        <div>
+                                            <p class="text-gray-500">Price</p>
+                                            <p class="font-bold text-primary">${formatCurrency(unitPrice)}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-gray-500">Subtotal</p>
+                                            <p class="item-subtotal font-bold text-primary">${formatCurrency(lineSubtotal)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            updateSummary();
+        };
+
+        const replaceCart = (nextCart) => {
+            cartState.items = Array.isArray(nextCart && nextCart.items) ? nextCart.items : [];
+            cartState.subtotal = Number(nextCart && nextCart.subtotal ? nextCart.subtotal : 0);
+            cartState.gst = Number(nextCart && nextCart.gst ? nextCart.gst : 0);
+            cartState.total = Number(nextCart && nextCart.total ? nextCart.total : 0);
+            renderItems();
+        };
+
+        const sendCartRequest = async (url, method, payload) => {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json().catch(() => null);
+
+            if (!response.ok || !result || result.success !== true) {
+                throw new Error(result && result.message ? result.message : 'Unable to update cart');
+            }
+
+            return result.data;
+        };
+
+        if (cartItemsContainer) {
+            cartItemsContainer.addEventListener('click', (event) => {
+                if (event.target.closest('.remove-item') || event.target.closest('.quantity-btn') || event.target.closest('.quantity-value')) {
+                    return;
+                }
+
+                const cartItem = event.target.closest('.cart-item');
+                if (!cartItem) return;
+
+                const productId = cartItem.getAttribute('data-product-id');
+                if (!productId) return;
+
+                window.location.href = `/product/${productId}`;
+            });
+        }
+
+        const setAddressDropdownState = (isOpen) => {
+            if (!addressSelector) return;
+            addressSelector.classList.toggle('hidden', !isOpen);
+            if (addressSelectorIcon) {
+                addressSelectorIcon.classList.toggle('rotate-180', isOpen);
+            }
+        };
+
+        const setAddressText = (element, value) => {
+            if (!element) return;
+            element.textContent = value || '';
+            element.classList.toggle('hidden', !value);
+        };
+
+        const selectAddressOption = (optionButton) => {
+            if (!optionButton) return;
+
+            document.querySelectorAll('.address-option').forEach((option) => {
+                option.classList.toggle('bg-primary-light/10', option === optionButton);
+            });
+
+            if (selectedAddressName) {
+                selectedAddressName.textContent = optionButton.getAttribute('data-name') || 'Saved Address';
+            }
+            setAddressText(selectedAddressPhone, optionButton.getAttribute('data-phone') || '');
+            setAddressText(selectedAddressLine, optionButton.getAttribute('data-line') || '');
+            setAddressText(selectedAddressLocation, optionButton.getAttribute('data-location') || '');
+
+            if (selectedAddressBadge) {
+                selectedAddressBadge.classList.toggle('hidden', optionButton.getAttribute('data-is-default') !== 'true');
+            }
+
+            if (editAddressLink) {
+                const addressId = optionButton.getAttribute('data-id');
+                editAddressLink.setAttribute('href', addressId ? `/account/addresses/${addressId}/edit?returnTo=cart` : '/account/addresses');
+            }
+
+            setAddressDropdownState(false);
+        };
+
+        if (toggleAddressSelectorButton && addressSelector) {
+            toggleAddressSelectorButton.addEventListener('click', () => {
+                setAddressDropdownState(addressSelector.classList.contains('hidden'));
+            });
+        }
+
+        document.addEventListener('click', async (event) => {
+            if (addressSelector && toggleAddressSelectorButton) {
+                const clickedInsideSelector = addressSelector.contains(event.target);
+                const clickedTrigger = toggleAddressSelectorButton.contains(event.target);
+                if (!clickedInsideSelector && !clickedTrigger) {
+                    setAddressDropdownState(false);
+                }
+            }
+
+            const addressOption = event.target.closest('.address-option');
+            if (addressOption) {
+                selectAddressOption(addressOption);
+                return;
+            }
+
+            const quantityButton = event.target.closest('.quantity-btn');
+            const removeButton = event.target.closest('.remove-item');
+
+            if (!quantityButton && !removeButton) return;
+
+            const cartItem = event.target.closest('.cart-item');
+            if (!cartItem) return;
+
+            const productId = cartItem.getAttribute('data-product-id');
+            const variantId = cartItem.getAttribute('data-variant-id');
+
+            if (!productId || !variantId) {
+                showFeedback('Unable to identify cart item.');
+                return;
+            }
+
+            if ((quantityButton && quantityButton.disabled) || (removeButton && removeButton.disabled)) {
+                return;
+            }
+
+            if (isUpdating) return;
+            isUpdating = true;
+
+            try {
+                if (quantityButton) {
+                    quantityButton.disabled = true;
+                    const action = quantityButton.getAttribute('data-action');
+                    const updatedCart = await sendCartRequest('/api/cart/update-quantity', 'PATCH', {
+                        productId,
+                        variantId,
+                        action
+                    });
+                    replaceCart(updatedCart);
+                }
+
+                if (removeButton) {
+                    removeButton.disabled = true;
+                    const updatedCart = await sendCartRequest('/api/cart/remove', 'DELETE', {
+                        productId,
+                        variantId
+                    });
+                    replaceCart(updatedCart);
+                }
+                showFeedback('');
+            } catch (error) {
+                showFeedback(error.message);
+            } finally {
+                isUpdating = false;
+                if (quantityButton) quantityButton.disabled = false;
+                if (removeButton) removeButton.disabled = false;
+            }
+        });
+
+        updateSummary();
+    })();
+</script>
+
+</body>
+
+</html>

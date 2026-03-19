@@ -1,11 +1,21 @@
 const User = require('../models/user.model');
+const Cart = require('../models/cart.model');
 
 const attachSessionUser = async (req, res, next) => {
     try {
+        res.locals.cartCount = 0;
+
         if (req.session && req.session.userId) {
             // Fetch user to populate res.locals.user for Navbar
-            const user = await User.findById(req.session.userId).select('name email role profileImage isBlocked phone');
+            const [user, cart] = await Promise.all([
+                User.findById(req.session.userId).select('name email role profileImage isBlocked phone addresses'),
+                Cart.findOne({ userId: req.session.userId }).select('items.quantity')
+            ]);
             console.log("MIDDLEWARE → DB user fetched:", user?.name, user?.phone);
+
+            if (cart && Array.isArray(cart.items)) {
+                res.locals.cartCount = cart.items.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+            }
 
             if (user) {
                 // Check if user is blocked - OPTIONAL: Force logout here if strictly required,
@@ -24,6 +34,7 @@ const attachSessionUser = async (req, res, next) => {
                     return; // Stop processing this middleware instance
                 }
 
+                user.addresses = Array.isArray(user.addresses) ? user.addresses : [];
                 res.locals.user = user;
                 res.locals.role = user.role;
                 req.user = user; // Attach for legacy compatibility/passport-like access
@@ -42,11 +53,13 @@ const attachSessionUser = async (req, res, next) => {
         } else {
             res.locals.user = null;
             res.locals.role = null;
+            res.locals.cartCount = 0;
         }
     } catch (err) {
         console.error('Session User Fetch Error:', err);
         res.locals.user = null;
         res.locals.role = null;
+        res.locals.cartCount = 0;
     }
     next();
 };
