@@ -12,6 +12,7 @@ const addressRoutes = require('./routes/address.routes');
 const homeRoutes = require('./routes/home.routes');
 const accountRoutes = require('./routes/account.routes');
 const cartRoutes = require('./routes/cart.routes');
+const orderRoutes = require('./routes/order.routes');
 const authPagesRoutes = require('./routes/auth-pages.routes');
 const adminWebRoutes = require('./routes/admin-web.routes');
 const adminHeroRoutes = require('./routes/admin.hero.routes');
@@ -74,6 +75,7 @@ app.use(injectDevOtp);
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api', cartRoutes);
+app.use('/api', orderRoutes);
 
 // View Routes
 app.use(addressRoutes);

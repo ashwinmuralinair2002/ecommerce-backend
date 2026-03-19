@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const userProductController = require('../controllers/user.product.controller');
 const cartPageController = require('../controllers/cart.page.controller');
+const checkoutController = require('../controllers/checkout.controller');
+const invoiceController = require('../controllers/invoice.controller');
+const orderPageController = require('../controllers/order.page.controller');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
 
 router.get('/api/search', userProductController.liveSearch);
@@ -10,6 +13,9 @@ router.get('/api/search', userProductController.liveSearch);
 router.get('/products', userProductController.getAllProducts);
 
 router.get('/cart', ensureAuthenticated, cartPageController.getCartPage);
+router.get('/checkout', ensureAuthenticated, checkoutController.getCheckoutPage);
+router.get('/order-success', ensureAuthenticated, orderPageController.getOrderSuccessPage);
+router.get('/api/invoice/:orderId', ensureAuthenticated, invoiceController.downloadInvoice);
 
 // Product Details
 router.get('/product/:id', userProductController.getProductDetails);

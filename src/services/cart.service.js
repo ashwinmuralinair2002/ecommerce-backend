@@ -63,7 +63,7 @@ const findCartItemIndex = (items, productId, variantId) => {
 const buildCartResponse = async (userId) => {
     const cart = await Cart.findOne({ userId }).populate({
         path: 'items.productId',
-        select: 'title price isListed isDeleted variants images'
+        select: 'title price originalPrice discountPercentage isListed isDeleted variants images'
     });
 
     if (!cart) {
@@ -85,6 +85,8 @@ const buildCartResponse = async (userId) => {
                 _id: product._id,
                 title: product.title,
                 price: product.price,
+                originalPrice: product.originalPrice,
+                discountPercentage: product.discountPercentage,
                 imageUrl: getProductImageUrl(product),
                 isListed: product.isListed,
                 isDeleted: product.isDeleted

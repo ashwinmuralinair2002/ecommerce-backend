@@ -39,17 +39,18 @@
         return `₹ ${amount.toLocaleString('en-IN')}`;
     };
 
-    const getDisplayPrice = (item) => {
-        if (item && item.product && typeof item.product.price === 'number') return item.product.price;
-        return Number(item && item.priceSnapshot ? item.priceSnapshot : 0);
-    };
-
     const totalItems = typeof cartData.totalItems === 'number'
         ? cartData.totalItems
         : cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
     const subtotal = typeof cartData.subtotal === 'number'
         ? cartData.subtotal
-        : cartItems.reduce((sum, item) => sum + (getDisplayPrice(item) * Number(item.quantity || 0)), 0);
+        : cartItems.reduce((sum, item) => {
+            const product = item.product || {};
+            const discountedPrice = typeof product.price === 'number'
+                ? product.price
+                : Number(item.priceSnapshot || 0);
+            return sum + (discountedPrice * Number(item.quantity || 0));
+        }, 0);
     const gst = typeof cartData.gst === 'number' ? cartData.gst : subtotal * 0.18;
     const totalPrice = typeof cartData.total === 'number' ? cartData.total : subtotal + gst;
     const hasInvalidItems = cartItems.some((item) => {
@@ -111,9 +112,14 @@
                     <% cartItems.forEach((item) => {
                         const product = item.product || {};
                         const variant = item.variant || {};
+                        const quantity = Number(item.quantity || 0);
                         const isUnavailable = product.isListed === false || product.isDeleted === true;
-                        const unitPrice = getDisplayPrice(item);
-                        const lineSubtotal = unitPrice * Number(item.quantity || 0);
+                        const originalPrice = Number(product.originalPrice || 0) || (typeof product.price === 'number' ? product.price : Number(item.priceSnapshot || 0));
+                        const discountedPrice = typeof product.price === 'number'
+                            ? product.price
+                            : Number(item.priceSnapshot || 0);
+                        const subtotal = discountedPrice * quantity;
+                        const savings = originalPrice && originalPrice > discountedPrice ? (originalPrice - discountedPrice) : 0;
                         const variantLabel = variant.colorName || 'Default';
                         const variantImages = Array.isArray(variant.images) ? variant.images : [];
                         const variantImage = variantImages[0];
@@ -151,19 +157,33 @@
                                     <div class="flex flex-col gap-4 border-t border-primary-light/45 pt-4 sm:flex-row sm:items-center sm:justify-between">
                                         <div class="inline-flex items-center rounded-lg border border-primary-light/45">
                                             <button type="button" class="quantity-btn flex h-10 w-10 items-center justify-center text-lg font-bold text-primary transition hover:bg-primary-light/20 disabled:cursor-not-allowed disabled:opacity-40" data-action="decrement" <%= decrementDisabled ? 'disabled' : '' %>>-</button>
-                                            <span class="quantity-value flex h-10 min-w-[52px] items-center justify-center border-x border-primary-light/45 px-4 text-sm font-semibold text-primary"><%= item.quantity %></span>
+                                            <span class="quantity-value flex h-10 min-w-[52px] items-center justify-center border-x border-primary-light/45 px-4 text-sm font-semibold text-primary"><%= quantity %></span>
                                             <button type="button" class="quantity-btn flex h-10 w-10 items-center justify-center text-lg font-bold text-primary transition hover:bg-primary-light/20 disabled:cursor-not-allowed disabled:opacity-40" data-action="increment" <%= incrementDisabled ? 'disabled' : '' %>>+</button>
                                         </div>
 
-                                        <div class="flex flex-wrap items-center gap-6 text-sm">
-                                            <div>
-                                                <p class="text-gray-500">Price</p>
-                                                <p class="font-bold text-primary"><%= formatCurrency(unitPrice) %></p>
+                                        <div class="flex flex-col items-end text-sm">
+                                            <div class="flex items-center gap-6">
+                                                <div class="text-right">
+                                                    <p class="text-gray-500">Price</p>
+                                                    <p class="font-semibold text-primary"><%= formatCurrency(originalPrice) %></p>
+                                                </div>
+
+                                                <div class="text-right">
+                                                    <p class="text-gray-500">Discounted Price</p>
+                                                    <p class="font-bold text-primary"><%= formatCurrency(discountedPrice) %></p>
+                                                </div>
+
+                                                <div class="text-right">
+                                                    <p class="text-gray-500">Subtotal</p>
+                                                    <p class="font-bold text-primary"><%= formatCurrency(subtotal) %></p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p class="text-gray-500">Subtotal</p>
-                                                <p class="item-subtotal font-bold text-primary"><%= formatCurrency(lineSubtotal) %></p>
-                                            </div>
+
+                                            <% if (savings > 0) { %>
+                                                <p class="mt-1 text-xs text-green-600 font-medium text-right">
+                                                    You save <%= formatCurrency(savings) %>
+                                                </p>
+                                            <% } %>
                                         </div>
                                     </div>
                                 </div>
@@ -191,7 +211,7 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <p id="selected-address-name" class="font-semibold text-primary"><%= defaultAddress.name || (locals.user && locals.user.name) || 'Primary Address' %></p>
-                                        <span id="selected-address-badge" class="inline-block rounded bg-[#E0CB56] px-2 py-0.5 text-xs font-semibold text-black <%= defaultAddress.isDefault ? '' : 'hidden' %>">Default</span>
+                                        <span id="selected-address-badge" class="inline-block rounded bg-accent px-2 py-0.5 text-xs font-semibold text-black <%= defaultAddress.isDefault ? '' : 'hidden' %>">Default</span>
                                     </div>
                                     <p id="selected-address-phone" class="mt-2 text-gray-600 <%= defaultAddress.phone ? '' : 'hidden' %>"><%= defaultAddress.phone || '' %></p>
                                     <p id="selected-address-line" class="mt-2 text-gray-600 <%= addressLine ? '' : 'hidden' %>"><%= addressLine %></p>
@@ -244,7 +264,7 @@
                         </div>
                     <% } %>
 
-                    <a href="/account/addresses/new?returnTo=cart" class="mt-6 flex h-12 w-full items-center justify-center rounded-lg bg-[#E0CB56] px-5 text-sm font-bold text-black transition hover:opacity-90">
+                    <a href="/account/addresses/new?returnTo=cart" class="mt-6 flex h-12 w-full items-center justify-center rounded-lg bg-accent px-5 text-sm font-bold text-black transition hover:opacity-90">
                         Add New Address
                     </a>
 
@@ -328,9 +348,15 @@
             return `₹ ${amount.toLocaleString('en-IN')}`;
         };
 
-        const getUnitPrice = (item) => {
+        const getDiscountedPrice = (item) => {
             if (item && item.product && typeof item.product.price === 'number') return item.product.price;
             return Number(item && item.priceSnapshot ? item.priceSnapshot : 0);
+        };
+
+        const getOriginalPrice = (item) => {
+            const discountedPrice = getDiscountedPrice(item);
+            if (item && item.product && item.product.originalPrice) return Number(item.product.originalPrice);
+            return discountedPrice;
         };
 
         const getVariantLabel = (item) => {
@@ -408,8 +434,10 @@
                 const product = item.product || {};
                 const variant = item.variant || {};
                 const quantity = Number(item.quantity || 0);
-                const unitPrice = getUnitPrice(item);
-                const lineSubtotal = unitPrice * quantity;
+                const originalPrice = getOriginalPrice(item);
+                const discountedPrice = getDiscountedPrice(item);
+                const subtotal = discountedPrice * quantity;
+                const savings = originalPrice && originalPrice > discountedPrice ? (originalPrice - discountedPrice) : 0;
                 const title = product.title || 'Product unavailable';
                 const variantLabel = getVariantLabel(item);
                 const safeTitle = escapeHtml(title);
@@ -449,15 +477,22 @@
                                         <span class="quantity-value flex h-10 min-w-[52px] items-center justify-center border-x border-primary-light/45 px-4 text-sm font-semibold text-primary">${quantity}</span>
                                         <button type="button" class="quantity-btn flex h-10 w-10 items-center justify-center text-lg font-bold text-primary transition hover:bg-primary-light/20 disabled:cursor-not-allowed disabled:opacity-40" data-action="increment" ${incrementDisabled ? 'disabled' : ''}>+</button>
                                     </div>
-                                    <div class="flex flex-wrap items-center gap-6 text-sm">
-                                        <div>
-                                            <p class="text-gray-500">Price</p>
-                                            <p class="font-bold text-primary">${formatCurrency(unitPrice)}</p>
+                                    <div class="flex flex-col items-end text-sm">
+                                        <div class="flex items-center gap-6">
+                                            <div class="text-right">
+                                                <p class="text-gray-500">Price</p>
+                                                <p class="font-semibold text-primary">${formatCurrency(originalPrice)}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-gray-500">Discounted Price</p>
+                                                <p class="font-bold text-primary">${formatCurrency(discountedPrice)}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-gray-500">Subtotal</p>
+                                                <p class="font-bold text-primary">${formatCurrency(subtotal)}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p class="text-gray-500">Subtotal</p>
-                                            <p class="item-subtotal font-bold text-primary">${formatCurrency(lineSubtotal)}</p>
-                                        </div>
+                                        ${savings > 0 ? `<p class="mt-1 text-xs text-green-600 font-medium text-right">You save ${formatCurrency(savings)}</p>` : ''}
                                     </div>
                                 </div>
                             </div>

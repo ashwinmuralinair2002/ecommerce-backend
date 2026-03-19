@@ -2,7 +2,7 @@
   --primary: #685BCB;
   --primary-light: #BCA6DB;
   --background-soft: #D3CEEA;
-  --accent: #F4DD5D;
+  --accent: #fff500;
   --white: #FFFFFF;
 }
 
@@ -22,6 +22,14 @@
 .theme-top-nav span,
 .theme-top-nav input {
   color: var(--white);
+}
+
+.theme-top-nav a.theme-accent-btn {
+  color: #000;
+}
+
+.theme-top-nav a.theme-accent-btn:hover {
+  color: #000;
 }
 
 .theme-top-nav input {
