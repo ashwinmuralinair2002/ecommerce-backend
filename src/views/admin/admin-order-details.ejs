@@ -29,6 +29,11 @@
                 <% const isReturned = order.orderStatus === 'returned'; %>
                 <% const isPartiallyReturned = order.orderStatus === 'partially_returned'; %>
                 <% const isStatusLocked = isDelivered || isCancelled || isReturned || isPartiallyReturned || allItemsCancelled; %>
+                <% const STATUS_FLOW = {
+                    pending: ['shipped'],
+                    shipped: ['delivered']
+                }; %>
+                <% const LOCKED_ITEM_STATUSES = ['cancelled', 'returned', 'return_requested', 'return_rejected']; %>
                 <% const address = order.shippingAddress || {}; %>
                 <% const getStatusClasses = (status) => {
                     const normalizedStatus = String(status || '').toLowerCase();
@@ -136,6 +141,27 @@
                                                                     <%= item.status %>
                                                                 </span>
 
+                                                                <% const itemStatus = String(item.status || '').toLowerCase(); %>
+                                                                <% const nextStatuses = STATUS_FLOW[itemStatus] || []; %>
+                                                                <% const isItemStatusLocked = LOCKED_ITEM_STATUSES.includes(itemStatus); %>
+                                                                <% const nextStatus = nextStatuses[0] || ''; %>
+                                                                <% const itemActionLabel = nextStatus === 'shipped' ? 'Mark as Shipped' : (nextStatus === 'delivered' ? 'Mark as Delivered' : ''); %>
+                                                                <% const itemActionClasses = nextStatus === 'shipped'
+                                                                    ? 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200'
+                                                                    : 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'; %>
+
+                                                                <% if (!isItemStatusLocked && item.itemId && nextStatus) { %>
+                                                                    <button
+                                                                        type="button"
+                                                                        data-item-status-action
+                                                                        data-order-id="<%= order.orderId %>"
+                                                                        data-item-id="<%= item.itemId %>"
+                                                                        data-next-status="<%= nextStatus %>"
+                                                                        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition <%= itemActionClasses %>">
+                                                                        <%= itemActionLabel %>
+                                                                    </button>
+                                                                <% } %>
+
                                                                 <% if (
                                                                     (item.status === 'cancelled' && item.cancellationReason && item.cancellationReason.trim())
                                                                     || ((item.status === 'return_requested' || item.status === 'returned') && item.returnReason && item.returnReason.trim())
@@ -149,21 +175,6 @@
                                                                     </button>
                                                                 <% } %>
                                                             </div>
-
-                                                            <% if ((item.status === 'pending' || item.status === 'shipped') && item.itemId) { %>
-                                                                <select
-                                                                    data-item-status-select
-                                                                    data-order-id="<%= order.orderId %>"
-                                                                    data-item-id="<%= item.itemId %>"
-                                                                    class="mt-2 form-input rounded-lg border border-[#BCA6DB] bg-white px-3 py-2 text-sm text-[#1F1F1F] focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
-                                                                    <% if (item.status === 'pending') { %>
-                                                                        <option value="shipped">shipped</option>
-                                                                    <% } %>
-                                                                    <% if (item.status === 'shipped') { %>
-                                                                        <option value="delivered">delivered</option>
-                                                                    <% } %>
-                                                                </select>
-                                                            <% } %>
 
                                                             <% if (item.status === 'return_requested') { %>
                                                                 <div class="flex gap-2 mt-2">
@@ -479,28 +490,33 @@
                 }
             }
 
-            document.querySelectorAll('[data-item-status-select]').forEach((select) => {
-                select.addEventListener('change', async () => {
-                    if (select.dataset.loading === 'true') {
+            const ITEM_STATUS_FLOW = {
+                pending: ['shipped'],
+                shipped: ['delivered']
+            };
+
+            document.querySelectorAll('[data-item-status-action]').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    if (button.dataset.loading === 'true') {
                         return;
                     }
 
-                    select.dataset.loading = 'true';
+                    button.dataset.loading = 'true';
 
-                    const orderIdValue = select.dataset.orderId;
-                    const itemId = select.dataset.itemId;
-                    const selectedValue = select.value;
-                    const itemRow = select.closest('tr');
+                    const orderIdValue = button.dataset.orderId;
+                    const itemId = button.dataset.itemId;
+                    const selectedValue = button.dataset.nextStatus;
+                    const itemRow = button.closest('tr');
                     const itemStatusBadge = itemRow ? itemRow.querySelector('[data-item-status-badge]') : null;
 
                     if (!orderIdValue || !itemId || !selectedValue) {
-                        select.dataset.loading = 'false';
+                        button.dataset.loading = 'false';
                         await Swal.fire('Error', 'Missing item status details.', 'error');
                         return;
                     }
 
-                    select.disabled = true;
-                    select.classList.add('opacity-50', 'pointer-events-none');
+                    button.disabled = true;
+                    button.classList.add('opacity-50', 'pointer-events-none');
 
                     try {
                         const response = await fetch(`/admin/orders/${orderIdValue}/item/${itemId}/status`, {
@@ -521,12 +537,21 @@
 
                         updateStatusBadge(itemStatusBadge, selectedValue);
 
-                        if (selectedValue === 'delivered') {
-                            select.disabled = true;
-                            select.remove();
+                        const nextStatuses = ITEM_STATUS_FLOW[selectedValue] || [];
+                        const nextStatus = nextStatuses[0] || '';
+
+                        if (!nextStatus) {
+                            button.remove();
                         } else {
-                            select.disabled = false;
-                            select.classList.remove('opacity-50', 'pointer-events-none');
+                            button.dataset.nextStatus = nextStatus;
+                            button.textContent = nextStatus === 'shipped' ? 'Mark as Shipped' : 'Mark as Delivered';
+                            button.className = `inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                                nextStatus === 'shipped'
+                                    ? 'bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200'
+                                    : 'bg-green-100 text-green-700 border-green-200 hover:bg-green-200'
+                            }`;
+                            button.disabled = false;
+                            button.classList.remove('opacity-50', 'pointer-events-none');
                         }
 
                         syncOrderStatusFromItems();
@@ -539,12 +564,12 @@
                             showConfirmButton: false
                         });
                     } catch (error) {
-                        select.disabled = false;
-                        select.classList.remove('opacity-50', 'pointer-events-none');
+                        button.disabled = false;
+                        button.classList.remove('opacity-50', 'pointer-events-none');
 
                         await Swal.fire('Error', error.message || 'Failed to update item status', 'error');
                     } finally {
-                        select.dataset.loading = 'false';
+                        button.dataset.loading = 'false';
                     }
                 });
             });
