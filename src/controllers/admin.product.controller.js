@@ -141,6 +141,7 @@ async function buildVariantsFromRequest(req, existingVariants = []) {
         }
 
         variants.push({
+            _id: row._id || undefined,
             colorName,
             colorCode,
             stockCount,
@@ -598,7 +599,38 @@ const updateProduct = async (req, res) => {
         product.metaTitle = metaTitle || '';
         product.metaDescription = metaDescription || '';
         product.badges = badges ? (Array.isArray(badges) ? badges : [badges]) : [];
-        product.variants = variants;
+        const updatedVariants = [];
+        const processedVariantIds = new Set();
+        variants.forEach((incomingVariant) => {
+            if (incomingVariant._id) {
+                const variantId = String(incomingVariant._id);
+                if (processedVariantIds.has(variantId)) {
+                    return;
+                }
+
+                const existingVariant = product.variants.id(incomingVariant._id);
+
+                if (existingVariant) {
+                    existingVariant.colorName = incomingVariant.colorName;
+                    existingVariant.colorCode = incomingVariant.colorCode;
+                    existingVariant.stockCount = incomingVariant.stockCount;
+                    existingVariant.images = incomingVariant.images;
+
+                    processedVariantIds.add(variantId);
+                    updatedVariants.push(existingVariant);
+                    return;
+                }
+            }
+
+            updatedVariants.push({
+                colorName: incomingVariant.colorName,
+                colorCode: incomingVariant.colorCode,
+                stockCount: incomingVariant.stockCount,
+                images: incomingVariant.images
+            });
+        });
+
+        product.variants = updatedVariants;
         product.markModified('variants');
 
         await product.save();

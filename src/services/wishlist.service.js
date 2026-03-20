@@ -36,18 +36,27 @@ const isMatchingItem = (item, productId, variantId) => (
 
 const formatWishlistItem = (item) => {
     const product = item.productId;
+    let variant = product && Array.isArray(product.variants)
+        ? product.variants.find((entry) => String(entry._id) === String(item.variantId))
+        : null;
+    const fallbackVariant = !variant && product && Array.isArray(product.variants) && product.variants.length > 0
+        ? product.variants[0]
+        : null;
+
+    if (!variant && fallbackVariant) {
+        variant = fallbackVariant;
+    }
+
+    const currentPrice = product ? product.price : 0;
+    const savedPrice = Number(item.savedPrice || currentPrice);
+    const priceChange = currentPrice - savedPrice;
     let images = [];
 
     if (product) {
-        if (Array.isArray(product.images) && product.images.length) {
+        if (variant && Array.isArray(variant.images) && variant.images.length) {
+            images = variant.images;
+        } else if (Array.isArray(product.images) && product.images.length) {
             images = product.images;
-        } else if (
-            Array.isArray(product.variants) &&
-            product.variants.length &&
-            Array.isArray(product.variants[0].images) &&
-            product.variants[0].images.length
-        ) {
-            images = product.variants[0].images;
         }
     }
 
@@ -56,10 +65,13 @@ const formatWishlistItem = (item) => {
             _id: product._id,
             name: product.title,
             price: product.price,
-            images
+            images,
+            variantName: variant ? variant.colorName : '',
+            priceChange
         } : null,
         productId: product ? product._id : item.productId,
         variantId: item.variantId,
+        savedPrice,
         addedAt: item.addedAt
     };
 };
@@ -88,7 +100,7 @@ const buildWishlistResponse = async (userId) => {
 const getWishlist = async (userId) => buildWishlistResponse(userId);
 
 const addToWishlist = async (userId, productId, variantId) => {
-    await getValidatedProductAndVariant(productId, variantId);
+    const { product } = await getValidatedProductAndVariant(productId, variantId);
 
     let wishlist = await Wishlist.findOne({ user: userId });
 
@@ -104,7 +116,8 @@ const addToWishlist = async (userId, productId, variantId) => {
     if (!alreadyExists) {
         wishlist.items.push({
             productId,
-            variantId
+            variantId,
+            savedPrice: product.price
         });
 
         await wishlist.save();

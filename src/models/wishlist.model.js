@@ -10,6 +10,10 @@ const wishlistItemSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true
     },
+    savedPrice: {
+        type: Number,
+        default: null
+    },
     addedAt: {
         type: Date,
         default: Date.now

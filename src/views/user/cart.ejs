@@ -54,11 +54,6 @@
         }, 0);
     const gst = typeof cartData.gst === 'number' ? cartData.gst : subtotal * 0.18;
     const totalPrice = typeof cartData.total === 'number' ? cartData.total : subtotal + gst;
-    const hasInvalidItems = cartItems.some((item) => {
-        const product = item.product || {};
-        const variant = item.variant || {};
-        return product.isListed === false || product.isDeleted === true || Number(variant.stockCount || 0) === 0;
-    });
 %>
 
 <%- include('../partials/user/navbar') %>
@@ -91,11 +86,6 @@
 
         <div class="grid grid-cols-1 gap-5 xl:gap-6 lg:grid-cols-12">
             <section class="lg:col-span-9">
-                <div id="cart-feedback" class="hidden mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600"></div>
-                <div id="cart-validation-message" class="<%= hasInvalidItems ? '' : 'hidden' %> mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    Some items in your cart are unavailable or out of stock. Please update your cart.
-                </div>
-
                 <div id="cart-empty-state" class="<%= cartItems.length ? 'hidden' : '' %> rounded-xl border border-primary-light/45 bg-white px-6 py-12 text-center shadow-sm">
                     <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-light/25 text-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 256 256">
@@ -114,7 +104,10 @@
                         const product = item.product || {};
                         const variant = item.variant || {};
                         const quantity = Number(item.quantity || 0);
-                        const isUnavailable = product.isListed === false || product.isDeleted === true;
+                        const isOutOfStock = item.isOutOfStock === true;
+                        const isUnlisted = item.isUnlisted === true;
+                        const isUnavailable = isOutOfStock || isUnlisted;
+                        const priceChange = Number(item.priceChange || 0);
                         const originalPrice = Number(product.originalPrice || 0) || (typeof product.price === 'number' ? product.price : Number(item.priceSnapshot || 0));
                         const discountedPrice = typeof product.price === 'number'
                             ? product.price
@@ -130,7 +123,7 @@
                             || Number(item.quantity || 0) >= 5
                             || Number(item.quantity || 0) >= Number(variant.stockCount || 0);
                     %>
-                        <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md <%= isUnavailable ? 'opacity-60' : '' %>" data-product-id="<%= product._id || '' %>" data-variant-id="<%= variant._id || '' %>">
+                        <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md <%= isUnavailable ? 'opacity-60' : '' %>" data-product-id="<%= item.productId || '' %>" data-variant-id="<%= item.variantId || '' %>">
                             <div class="flex flex-col gap-4 sm:flex-row">
                                 <div class="cart-product-media">
                                     <img src="<%= productImageUrl %>" alt="<%= product.title || 'Cart product image' %>" onerror="this.onerror=null;this.src='<%= placeholderImage %>';">
@@ -142,10 +135,21 @@
                                             <h2 class="text-lg font-bold text-primary"><%= product.title || 'Product unavailable' %></h2>
                                             <p class="mt-1 text-sm text-gray-500">Variant: <span class="font-medium text-primary"><%= variantLabel %></span></p>
                                             <p class="mt-1 text-sm text-gray-500">Available stock: <span class="font-medium text-primary"><%= typeof variant.stockCount === 'number' ? variant.stockCount : 0 %></span></p>
-                                            <% if (item.hasPriceChanged) { %>
-                                                <p class="mt-2 text-xs font-medium text-primary">Price updated from <%= formatCurrency(item.priceSnapshot) %></p>
+                                            <% if (priceChange > 0) { %>
+                                                <p class="mt-2 text-xs font-medium text-red-600">↑ Price increased by <%= formatCurrency(Math.abs(priceChange)) %></p>
                                             <% } %>
-                                            <% if (product.isListed === false || product.isDeleted === true) { %>
+                                            <% if (priceChange < 0) { %>
+                                                <p class="mt-2 text-xs font-medium text-green-600">↓ Price dropped by <%= formatCurrency(Math.abs(priceChange)) %></p>
+                                            <% } %>
+                                            <div class="mt-2 flex flex-wrap gap-2">
+                                                <% if (isOutOfStock) { %>
+                                                    <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">Out of Stock</span>
+                                                <% } %>
+                                                <% if (isUnlisted) { %>
+                                                    <span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">Unavailable</span>
+                                                <% } %>
+                                            </div>
+                                            <% if (isUnlisted) { %>
                                                 <p class="mt-2 text-xs font-medium text-red-600">This product is currently unavailable.</p>
                                             <% } %>
                                         </div>
@@ -297,11 +301,9 @@
                         <span id="summary-grand-total" class="text-lg font-bold text-primary"><%= formatCurrency(totalPrice) %></span>
                     </div>
 
-                    <a id="checkout-button" href="<%= hasInvalidItems ? '#' : '/checkout' %>" class="theme-primary-btn mt-6 flex h-12 w-full items-center justify-center rounded-lg px-5 text-sm font-bold transition <%= hasInvalidItems ? 'pointer-events-none opacity-50' : '' %>" aria-disabled="<%= hasInvalidItems ? 'true' : 'false' %>" title="<%= hasInvalidItems ? 'Remove unavailable or out-of-stock items to continue.' : 'Proceed to checkout' %>">
+                    <a id="checkout-button" href="/checkout" class="theme-primary-btn mt-6 flex h-12 w-full items-center justify-center rounded-lg px-5 text-sm font-bold transition" aria-disabled="false" title="Proceed to checkout">
                         Proceed to Checkout
                     </a>
-                    <p id="checkout-feedback" class="mt-2 text-xs text-red-600 <%= hasInvalidItems ? '' : 'hidden' %>">Remove unavailable or out-of-stock items to continue.</p>
-
                     <a href="/products" class="theme-secondary-btn mt-3 flex h-11 w-full items-center justify-center rounded-lg px-5 text-sm font-medium transition">
                         Continue Shopping
                     </a>
@@ -336,15 +338,12 @@
 
         const cartItemsContainer = document.getElementById('cart-items');
         const emptyState = document.getElementById('cart-empty-state');
-        const feedback = document.getElementById('cart-feedback');
-        const validationMessage = document.getElementById('cart-validation-message');
         const headerCount = document.getElementById('cart-header-count');
         const summaryTotalItems = document.getElementById('summary-total-items');
         const summarySubtotal = document.getElementById('summary-subtotal');
         const summaryGst = document.getElementById('summary-gst');
         const summaryGrandTotal = document.getElementById('summary-grand-total');
         const checkoutButton = document.getElementById('checkout-button');
-        const checkoutFeedback = document.getElementById('checkout-feedback');
 
         if (error) {
             const normalizedError = error.toLowerCase();
@@ -392,11 +391,7 @@
         };
 
         const getTotalItems = () => cartState.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        const hasInvalidItems = () => cartState.items.some((item) => {
-            const product = item.product || {};
-            const variant = item.variant || {};
-            return product.isListed === false || product.isDeleted === true || Number(variant.stockCount || 0) === 0;
-        });
+        const hasInvalidItems = () => cartState.items.some((item) => item && (item.isOutOfStock === true || item.isUnlisted === true));
         const escapeHtml = (value) => String(value || '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -404,15 +399,13 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#39;');
 
-        const showFeedback = (message) => {
-            if (!feedback) return;
-            if (!message) {
-                feedback.classList.add('hidden');
-                feedback.textContent = '';
-                return;
-            }
-            feedback.textContent = message;
-            feedback.classList.remove('hidden');
+        const showFeedback = async (message) => {
+            if (!message) return;
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: message
+            });
         };
 
         const syncNavbarCartCount = (count) => {
@@ -425,8 +418,6 @@
             const subtotal = Number(cartState.subtotal || 0);
             const gst = Number(cartState.gst || 0);
             const totalPrice = Number(cartState.total || 0);
-            const invalidItemsPresent = hasInvalidItems();
-
             if (headerCount) headerCount.textContent = String(totalItems);
             if (summaryTotalItems) summaryTotalItems.textContent = String(totalItems);
             if (summarySubtotal) summarySubtotal.textContent = formatCurrency(subtotal);
@@ -437,19 +428,6 @@
 
             if (emptyState) emptyState.classList.toggle('hidden', totalItems > 0);
             if (cartItemsContainer) cartItemsContainer.classList.toggle('hidden', totalItems === 0);
-            if (validationMessage) {
-                validationMessage.classList.toggle('hidden', !invalidItemsPresent || totalItems === 0);
-            }
-            if (checkoutButton) {
-                checkoutButton.setAttribute('href', invalidItemsPresent ? '#' : '/checkout');
-                checkoutButton.setAttribute('aria-disabled', invalidItemsPresent ? 'true' : 'false');
-                checkoutButton.setAttribute('title', invalidItemsPresent ? 'Remove unavailable or out-of-stock items to continue.' : 'Proceed to checkout');
-                checkoutButton.classList.toggle('pointer-events-none', invalidItemsPresent);
-                checkoutButton.classList.toggle('opacity-50', invalidItemsPresent);
-            }
-            if (checkoutFeedback) {
-                checkoutFeedback.classList.toggle('hidden', !invalidItemsPresent);
-            }
         };
 
         const renderItems = () => {
@@ -469,18 +447,27 @@
                 const variantImages = Array.isArray(variant.images) ? variant.images : [];
                 const variantImage = variantImages[0];
                 const productImageUrl = variantImage && variantImage.url ? variantImage.url : placeholderImage;
-                const isUnavailable = product.isListed === false || product.isDeleted === true;
+                const isOutOfStock = item.isOutOfStock === true;
+                const isUnlisted = item.isUnlisted === true;
+                const isUnavailable = isOutOfStock || isUnlisted;
                 const decrementDisabled = isUnavailable || quantity <= 1;
                 const incrementDisabled = isUnavailable || quantity >= 5 || quantity >= Number(variant.stockCount || 0);
-                const priceNote = item.hasPriceChanged
-                    ? `<p class="mt-2 text-xs font-medium text-primary">Price updated from ${formatCurrency(item.priceSnapshot)}</p>`
-                    : '';
-                const unavailableNote = isUnavailable
+                const priceChange = Number(item.priceChange || 0);
+                const priceNote = priceChange > 0
+                    ? `<p class="mt-2 text-xs font-medium text-red-600">↑ Price increased by ${formatCurrency(Math.abs(priceChange))}</p>`
+                    : (priceChange < 0
+                        ? `<p class="mt-2 text-xs font-medium text-green-600">↓ Price dropped by ${formatCurrency(Math.abs(priceChange))}</p>`
+                        : '');
+                const statusBadges = [
+                    isOutOfStock ? '<span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">Out of Stock</span>' : '',
+                    isUnlisted ? '<span class="inline-flex items-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">Unavailable</span>' : ''
+                ].filter(Boolean).join('');
+                const unavailableNote = isUnlisted
                     ? '<p class="mt-2 text-xs font-medium text-red-600">This product is currently unavailable.</p>'
                     : '';
 
                 return `
-                    <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md ${isUnavailable ? 'opacity-60' : ''}" data-product-id="${product._id || ''}" data-variant-id="${variant._id || ''}">
+                    <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md ${isUnavailable ? 'opacity-60' : ''}" data-product-id="${item.productId || ''}" data-variant-id="${item.variantId || ''}">
                         <div class="flex flex-col gap-4 sm:flex-row">
                             <div class="cart-product-media">
                                 <img src="${productImageUrl}" alt="${safeTitle || 'Cart product image'}" onerror="this.onerror=null;this.src='${placeholderImage}';">
@@ -492,6 +479,7 @@
                                         <p class="mt-1 text-sm text-gray-500">Variant: <span class="font-medium text-primary">${variantLabel}</span></p>
                                         <p class="mt-1 text-sm text-gray-500">Available stock: <span class="font-medium text-primary">${typeof variant.stockCount === 'number' ? variant.stockCount : 0}</span></p>
                                         ${priceNote}
+                                        <div class="mt-2 flex flex-wrap gap-2">${statusBadges}</div>
                                         ${unavailableNote}
                                     </div>
                                     <button type="button" class="remove-item theme-danger-btn inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm">Remove</button>
@@ -556,6 +544,23 @@
             return result.data;
         };
 
+        const fetchLatestCart = async () => {
+            const response = await fetch('/api/cart', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const result = await response.json().catch(() => null);
+
+            if (!response.ok || !result || result.success !== true) {
+                throw new Error(result && result.message ? result.message : 'Unable to validate cart');
+            }
+
+            return result.data;
+        };
+
         if (cartItemsContainer) {
             cartItemsContainer.addEventListener('click', (event) => {
                 if (event.target.closest('.remove-item') || event.target.closest('.quantity-btn') || event.target.closest('.quantity-value')) {
@@ -569,6 +574,38 @@
                 if (!productId) return;
 
                 window.location.href = `/product/${productId}`;
+            });
+        }
+
+        if (checkoutButton) {
+            checkoutButton.addEventListener('click', async (event) => {
+                event.preventDefault();
+
+                try {
+                    const latestCart = await fetchLatestCart();
+                    replaceCart(latestCart);
+
+                    const invalidItemsPresent = Array.isArray(latestCart && latestCart.items)
+                        ? latestCart.items.some((item) => item && (item.isOutOfStock === true || item.isUnlisted === true))
+                        : false;
+
+                    if (invalidItemsPresent) {
+                        await Swal.fire({
+                            icon: 'warning',
+                            title: 'Checkout Blocked',
+                            text: 'Some items in your cart are no longer available. Please review your cart.'
+                        });
+                        return;
+                    }
+
+                    window.location.href = '/checkout';
+                } catch (error) {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: error.message || 'Unable to validate cart'
+                    });
+                }
             });
         }
 
@@ -670,15 +707,46 @@
 
                 if (removeButton) {
                     removeButton.disabled = true;
-                    const updatedCart = await sendCartRequest('/api/cart/remove', 'DELETE', {
-                        productId,
-                        variantId
+                    const result = await Swal.fire({
+                        title: 'Remove item?',
+                        text: 'Are you sure you want to remove this item from your cart?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#6b7280',
+                        confirmButtonText: 'Yes, remove it'
                     });
-                    replaceCart(updatedCart);
+
+                    if (!result.isConfirmed) {
+                        removeButton.disabled = false;
+                        return;
+                    }
+
+                    try {
+                        const updatedCart = await sendCartRequest('/api/cart/remove', 'DELETE', {
+                            productId,
+                            variantId
+                        });
+                        replaceCart(updatedCart);
+                        await Swal.fire({
+                            title: 'Removed!',
+                            text: 'Item removed from cart',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    } catch (error) {
+                        await Swal.fire({
+                            title: 'Error',
+                            text: 'Failed to remove item',
+                            icon: 'error'
+                        });
+                        return;
+                    }
                 }
-                showFeedback('');
+                await showFeedback('');
             } catch (error) {
-                showFeedback(error.message);
+                await showFeedback(error.message);
             } finally {
                 isUpdating = false;
                 if (quantityButton) quantityButton.disabled = false;

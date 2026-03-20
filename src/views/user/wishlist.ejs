@@ -68,38 +68,45 @@
                 const variantId = item.variantId || '';
             %>
                 <article
-                    class="wishlist-card overflow-hidden rounded-2xl border border-primary-light/40 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+                    class="wishlist-card overflow-hidden rounded-2xl border border-primary-light/40 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-md"
                     data-product-id="<%= productId %>"
                     data-variant-id="<%= variantId %>">
-                    <div class="aspect-[4/3] overflow-hidden bg-background-soft/40">
-                        <img
-                            src="<%= image %>"
-                            alt="<%= product.title || product.name || 'Wishlist product image' %>"
-                            class="h-full w-full object-cover"
-                            onerror="this.onerror=null;this.src='/images/placeholder.png';">
-                    </div>
+                    <a href="/product/<%= productId %>" class="block">
+                        <div class="aspect-square flex items-center justify-center bg-gray-100 rounded-lg">
+                            <img
+                                src="<%= image %>"
+                                alt="<%= product.title || product.name || 'Wishlist product image' %>"
+                                class="max-h-full max-w-full object-contain"
+                                onerror="this.onerror=null;this.src='/images/placeholder.png';">
+                        </div>
 
-                    <div class="space-y-4 p-5">
-                        <div>
+                        <div class="p-5">
                             <h2 class="line-clamp-2 text-lg font-bold text-primary"><%= product.name || 'Untitled Product' %></h2>
                             <p class="mt-2 text-xl font-semibold text-primary">₹<%= product.price || 0 %></p>
+                            <% if ((product.priceChange || 0) > 0) { %>
+                                <p class="mt-2 text-sm font-medium text-red-600">↑ Price increased by ₹<%= Math.abs(product.priceChange || 0) %></p>
+                            <% } %>
+                            <% if ((product.priceChange || 0) < 0) { %>
+                                <p class="mt-2 text-sm font-medium text-green-600">↓ Price dropped by ₹<%= Math.abs(product.priceChange || 0) %></p>
+                            <% } %>
+                        </div>
+                    </a>
+
+                    <div class="px-5 pb-5">
+                        <div class="flex gap-2 mt-3">
                             <button
                                 type="button"
                                 data-move-to-cart
                                 data-product-id="<%= product._id %>"
                                 data-variant-id="<%= item.variantId %>"
-                                class="theme-primary-btn mt-2 w-full">
+                                class="theme-primary-btn h-9 px-3 text-sm rounded-lg flex-1">
                                 Move to Cart
-                            </button>
-                        </div>
-
-                        <div class="flex gap-3">
-                            <button
+                            </button><button
                                 type="button"
                                 data-remove-wishlist
                                 data-product-id="<%= productId %>"
                                 data-variant-id="<%= variantId %>"
-                                class="rounded-xl border border-primary-light/50 px-4 py-3 text-sm font-semibold text-primary transition hover:bg-primary/5">
+                                class="theme-secondary-btn h-9 px-3 text-sm rounded-lg flex-1">
                                 Remove
                             </button>
                         </div>

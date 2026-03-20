@@ -78,9 +78,25 @@ const buildCartResponse = async (userId) => {
 
     const items = cart.items.map((item) => {
         const product = item.productId;
-        const variant = product ? product.variants.id(item.variantId) : null;
+        let variant = product ? product.variants.id(item.variantId) : null;
+        const fallbackVariant = !variant && product && Array.isArray(product.variants) && product.variants.length > 0
+            ? product.variants[0]
+            : null;
+
+        if (!variant && fallbackVariant) {
+            variant = fallbackVariant;
+        }
+
+        const currentPrice = typeof (product && product.price) === 'number' ? product.price : 0;
+        const savedPrice = Number(item.savedPrice || item.priceSnapshot || currentPrice);
+        const priceChange = currentPrice - savedPrice;
+        const isUnlisted = !product || product.isListed !== true || product.isDeleted === true;
+        const isOutOfStock = !variant || Number(variant.stockCount || 0) <= 0;
+        const isVariantRecovered = !product?.variants.id(item.variantId) && Boolean(fallbackVariant);
 
         return {
+            productId: item.productId && item.productId._id ? String(item.productId._id) : String(item.productId),
+            variantId: String(item.variantId),
             product: product ? {
                 _id: product._id,
                 title: product.title,
@@ -109,7 +125,11 @@ const buildCartResponse = async (userId) => {
             },
             quantity: item.quantity,
             priceSnapshot: item.priceSnapshot,
-            hasPriceChanged: Boolean(product && item.priceSnapshot !== product.price)
+            hasPriceChanged: Boolean(product && savedPrice !== currentPrice),
+            priceChange,
+            isOutOfStock,
+            isUnlisted,
+            isVariantRecovered
         };
     });
 
@@ -165,7 +185,8 @@ const addToCart = async (userId, productId, variantId, quantity) => {
             productId,
             variantId,
             quantity,
-            priceSnapshot: product.price
+            priceSnapshot: product.price,
+            savedPrice: product.price
         });
     }
 

@@ -19,6 +19,11 @@ const cartItemSchema = new mongoose.Schema({
         type: Number,
         required: true,
         min: 0
+    },
+    savedPrice: {
+        type: Number,
+        default: null,
+        min: 0
     }
 }, {
     _id: false
