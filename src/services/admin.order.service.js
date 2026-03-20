@@ -140,6 +140,18 @@ const updateOrderStatus = async (orderId, newStatus) => {
         throw new Error('Order not found');
     }
 
+    const allItemsCancelled = Array.isArray(order.items) && order.items.length > 0
+        ? order.items.every((item) => item.status === 'cancelled')
+        : false;
+
+    if (allItemsCancelled) {
+        throw new Error('Cannot update a fully cancelled order');
+    }
+
+    if (order.orderStatus === 'cancelled') {
+        throw new Error('Cancelled orders cannot be updated');
+    }
+
     if (order.orderStatus === 'delivered') {
         throw new Error('Delivered orders cannot be updated');
     }

@@ -23,7 +23,10 @@
 
             <section class="flex-1 px-4 md:px-6 lg:px-8 xl:px-10 py-5 overflow-x-hidden">
                 <% const statusOptions = ['pending', 'shipped', 'delivered', 'cancelled']; %>
+                <% const allItemsCancelled = Array.isArray(order.items) && order.items.length > 0 ? order.items.every((item) => item.status === 'cancelled') : false; %>
                 <% const isDelivered = order.orderStatus === 'delivered'; %>
+                <% const isCancelled = order.orderStatus === 'cancelled'; %>
+                <% const isStatusLocked = isDelivered || isCancelled || allItemsCancelled; %>
                 <% const address = order.shippingAddress || {}; %>
 
                 <div class="w-full">
@@ -124,13 +127,17 @@
                                     <label for="orderStatusSelect" class="block text-sm text-primary font-semibold mb-2">Order Status</label>
                                     <select id="orderStatusSelect"
                                         class="form-input w-full rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB] disabled:bg-gray-100 disabled:text-gray-400"
-                                        <%= isDelivered ? 'disabled' : '' %>>
+                                        <%= isStatusLocked ? 'disabled' : '' %>>
                                         <% statusOptions.forEach((status) => { %>
                                             <option value="<%= status %>" <%= order.orderStatus === status ? 'selected' : '' %>><%= status %></option>
                                         <% }) %>
                                     </select>
                                     <% if (isDelivered) { %>
                                         <p class="text-xs text-red-600 mt-2">Delivered orders cannot be updated.</p>
+                                    <% } else if (isCancelled) { %>
+                                        <p class="text-xs text-red-600 mt-2">Cancelled orders cannot be updated.</p>
+                                    <% } else if (allItemsCancelled) { %>
+                                        <p class="text-xs text-red-600 mt-2">Fully cancelled orders cannot be updated.</p>
                                     <% } %>
                                 </div>
 

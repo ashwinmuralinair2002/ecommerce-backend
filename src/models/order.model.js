@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const orderItemSchema = new mongoose.Schema({
+    itemId: {
+        type: String,
+        trim: true,
+        default: null
+    },
     productId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Product',
@@ -140,6 +145,7 @@ const orderSchema = new mongoose.Schema({
     },
     orderStatus: {
         type: String,
+        enum: ['pending', 'shipped', 'delivered', 'cancelled', 'partially_cancelled'],
         default: 'pending',
         trim: true
     },

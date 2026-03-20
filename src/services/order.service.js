@@ -1,9 +1,11 @@
+const mongoose = require('mongoose');
 const Cart = require('../models/cart.model');
 const Order = require('../models/order.model');
 const Product = require('../models/Product');
 const checkoutService = require('./checkout.service');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+const generateOrderItemId = () => `ITEM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const buildShippingAddress = (address) => {
     return {
@@ -49,8 +51,10 @@ const placeOrder = async (userId) => {
             const imageUrl = (variantImage && variantImage.url)
                 ? variantImage.url
                 : '/images/placeholder.png';
+            const generatedItemId = generateOrderItemId();
 
             orderItems.push({
+                itemId: generatedItemId,
                 productId: product._id,
                 productName: product.title,
                 variantId: variant._id,
@@ -90,6 +94,89 @@ const placeOrder = async (userId) => {
     }
 };
 
+const cancelOrderItem = async (userId, orderId, itemId) => {
+    const session = await mongoose.startSession();
+
+    try {
+        let result = null;
+
+        await session.withTransaction(async () => {
+            const order = await Order.findOne({
+                orderId,
+                user: userId,
+                deleted: { $ne: true }
+            }).session(session);
+
+            if (!order) {
+                throw new Error('Order not found');
+            }
+
+            const hasStableItemIds = Array.isArray(order.items) && order.items.every((item) => item && item.itemId);
+
+            if (!hasStableItemIds) {
+                throw new Error('Cancellation not supported for this order');
+            }
+
+            const item = Array.isArray(order.items)
+                ? order.items.find((orderItem) => orderItem.itemId === itemId)
+                : null;
+
+            if (!item) {
+                throw new Error('Item not found');
+            }
+
+            if (item.status !== 'pending') {
+                throw new Error('Item cannot be cancelled');
+            }
+
+            const product = await Product.findById(item.productId).session(session);
+
+            if (!product) {
+                throw new Error('Product not found');
+            }
+
+            const variant = product.variants.id(item.variantId);
+
+            if (!variant) {
+                throw new Error('Product variant not found');
+            }
+
+            variant.stockCount += Number(item.quantity || 0);
+            await product.save({ session });
+
+            item.status = 'cancelled';
+
+            const allItemsCancelled = Array.isArray(order.items) && order.items.length > 0
+                ? order.items.every((orderItem) => orderItem.status === 'cancelled')
+                : false;
+            const someItemsCancelled = Array.isArray(order.items)
+                ? order.items.some((orderItem) => orderItem.status === 'cancelled')
+                : false;
+
+            if (allItemsCancelled) {
+                order.orderStatus = 'cancelled';
+            } else if (someItemsCancelled) {
+                order.orderStatus = 'partially_cancelled';
+            }
+
+            await order.save({ session });
+
+            result = {
+                success: true,
+                message: 'Item cancelled successfully',
+                updatedOrderStatus: order.orderStatus
+            };
+        });
+
+        return result;
+    } catch (error) {
+        throw error;
+    } finally {
+        await session.endSession();
+    }
+};
+
 module.exports = {
-    placeOrder
+    placeOrder,
+    cancelOrderItem
 };
