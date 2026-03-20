@@ -18,6 +18,9 @@
 <body>
 <%
     const orderList = Array.isArray(orders) ? orders : [];
+    const currentSearch = typeof search === 'string' ? search : '';
+    const currentSort = typeof sort === 'string' && sort ? sort : 'newest';
+    const currentDate = typeof date === 'string' ? date : '';
 
     const formatCurrency = (value) => `₹ ${Number(value || 0).toLocaleString('en-IN')}`;
     const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', {
@@ -98,10 +101,55 @@
                     </div>
                 </section>
 
+                <section class="mb-6 rounded-2xl border border-primary-light/40 bg-white px-6 py-6 shadow-sm">
+                    <form action="/orders" method="GET" class="flex flex-col gap-4 lg:flex-row lg:items-center">
+                        <div class="relative flex-1">
+                            <input
+                                type="text"
+                                name="search"
+                                placeholder="Search orders..."
+                                value="<%= currentSearch %>"
+                                class="w-full rounded-xl border border-primary-light/50 bg-white px-4 py-3 text-sm text-primary placeholder:text-primary/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        </div>
+
+                        <button
+                            type="button"
+                            id="clear-search-btn"
+                            class="inline-flex h-[50px] items-center justify-center rounded-xl border border-primary-light/50 bg-white px-5 text-sm font-semibold text-primary transition hover:bg-primary/5">
+                            Clear
+                        </button>
+
+                        <select
+                            name="date"
+                            onchange="this.form.submit()"
+                            class="rounded-xl border border-primary-light/50 bg-white px-4 py-3 text-sm text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            <option value="" <%= currentDate === '' ? 'selected' : '' %>>All</option>
+                            <option value="7d" <%= currentDate === '7d' ? 'selected' : '' %>>Last 7 days</option>
+                            <option value="30d" <%= currentDate === '30d' ? 'selected' : '' %>>Last 30 days</option>
+                            <option value="6m" <%= currentDate === '6m' ? 'selected' : '' %>>Last 6 months</option>
+                            <option value="1y" <%= currentDate === '1y' ? 'selected' : '' %>>Last 1 year</option>
+                        </select>
+
+                        <select
+                            name="sort"
+                            onchange="this.form.submit()"
+                            class="rounded-xl border border-primary-light/50 bg-white px-4 py-3 text-sm text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            <option value="newest" <%= currentSort === 'newest' ? 'selected' : '' %>>Newest First</option>
+                            <option value="oldest" <%= currentSort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+                        </select>
+
+                        <button
+                            type="submit"
+                            class="inline-flex h-[50px] items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:opacity-90">
+                            Apply
+                        </button>
+                    </form>
+                </section>
+
                 <% if (orderList.length === 0) { %>
                     <section class="rounded-2xl border border-dashed border-primary-light/50 bg-white px-6 py-14 text-center shadow-sm">
-                        <h2 class="text-2xl font-bold text-primary">No orders yet</h2>
-                        <p class="mt-2 text-sm text-gray-500">Once you place an order, it will appear here with status and amount details.</p>
+                        <h2 class="text-2xl font-bold text-primary">No orders found</h2>
+                        <p class="mt-2 text-sm text-gray-500">Try changing your search, date filter, or sort selection. Once you place an order, it will appear here with status and amount details.</p>
                         <a href="/products" class="theme-primary-btn mt-6 inline-flex h-11 items-center justify-center rounded-lg px-5 text-sm font-bold transition">
                             Start Shopping
                         </a>
@@ -147,6 +195,15 @@
             </section>
         </main>
     </div>
+    <script>
+        const clearSearchButton = document.getElementById('clear-search-btn');
+
+        if (clearSearchButton) {
+            clearSearchButton.addEventListener('click', () => {
+                window.location.href = '/orders';
+            });
+        }
+    </script>
 </body>
 
 </html>

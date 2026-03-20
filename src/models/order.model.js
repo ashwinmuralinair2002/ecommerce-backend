@@ -1,5 +1,26 @@
 const mongoose = require('mongoose');
 
+const ORDER_ITEM_STATUSES = [
+    'pending',
+    'shipped',
+    'delivered',
+    'cancelled',
+    'partially_cancelled',
+    'return_requested',
+    'return_rejected',
+    'returned'
+];
+
+const ORDER_STATUSES = [
+    'pending',
+    'shipped',
+    'delivered',
+    'cancelled',
+    'partially_cancelled',
+    'partially_returned',
+    'returned'
+];
+
 const orderItemSchema = new mongoose.Schema({
     itemId: {
         type: String,
@@ -14,6 +35,11 @@ const orderItemSchema = new mongoose.Schema({
     productName: {
         type: String,
         required: true,
+        trim: true
+    },
+    brandName: {
+        type: String,
+        default: '',
         trim: true
     },
     variantId: {
@@ -48,6 +74,17 @@ const orderItemSchema = new mongoose.Schema({
     status: {
         type: String,
         default: 'pending',
+        enum: ORDER_ITEM_STATUSES,
+        trim: true
+    },
+    returnReason: {
+        type: String,
+        default: '',
+        trim: true
+    },
+    cancellationReason: {
+        type: String,
+        default: '',
         trim: true
     }
 }, {
@@ -145,7 +182,7 @@ const orderSchema = new mongoose.Schema({
     },
     orderStatus: {
         type: String,
-        enum: ['pending', 'shipped', 'delivered', 'cancelled', 'partially_cancelled'],
+        enum: ORDER_STATUSES,
         default: 'pending',
         trim: true
     },

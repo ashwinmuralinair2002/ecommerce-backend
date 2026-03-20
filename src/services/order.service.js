@@ -26,7 +26,8 @@ const placeOrder = async (userId) => {
         const orderItems = [];
 
         for (const item of checkoutData.items) {
-            const product = await Product.findById(item.product && item.product._id);
+            const product = await Product.findById(item.product && item.product._id)
+                .populate('brand', 'name');
 
             if (!product || product.isListed === false || product.isDeleted === true) {
                 throw new Error('Invalid cart items present');
@@ -52,11 +53,15 @@ const placeOrder = async (userId) => {
                 ? variantImage.url
                 : '/images/placeholder.png';
             const generatedItemId = generateOrderItemId();
+            const brandName = product && product.brand && product.brand.name
+                ? product.brand.name
+                : '';
 
             orderItems.push({
                 itemId: generatedItemId,
                 productId: product._id,
                 productName: product.title,
+                brandName,
                 variantId: variant._id,
                 colorName: variant.colorName || '',
                 quantity,
@@ -94,7 +99,7 @@ const placeOrder = async (userId) => {
     }
 };
 
-const cancelOrderItem = async (userId, orderId, itemId) => {
+const cancelOrderItem = async (userId, orderId, itemId, reason) => {
     const session = await mongoose.startSession();
 
     try {
@@ -145,6 +150,9 @@ const cancelOrderItem = async (userId, orderId, itemId) => {
             await product.save({ session });
 
             item.status = 'cancelled';
+            item.cancellationReason = typeof reason === 'string'
+                ? reason.trim().slice(0, 1000)
+                : '';
 
             const allItemsCancelled = Array.isArray(order.items) && order.items.length > 0
                 ? order.items.every((orderItem) => orderItem.status === 'cancelled')
@@ -176,7 +184,50 @@ const cancelOrderItem = async (userId, orderId, itemId) => {
     }
 };
 
+const requestReturn = async (userId, orderId, itemId, reason) => {
+    const order = await Order.findOne({
+        orderId,
+        user: userId,
+        deleted: { $ne: true }
+    });
+
+    if (!order) {
+        throw new Error('Order not found');
+    }
+
+    const item = Array.isArray(order.items)
+        ? order.items.find((orderItem) => orderItem.itemId === itemId)
+        : null;
+
+    if (!item) {
+        throw new Error('Item not found');
+    }
+
+    if (['return_requested', 'returned', 'return_rejected'].includes(item.status)) {
+        throw new Error('Return already processed for this item');
+    }
+
+    if (item.status !== 'delivered') {
+        throw new Error('Return allowed only for delivered items');
+    }
+
+    if (!reason || typeof reason !== 'string' || !reason.trim()) {
+        throw new Error('Return reason is required');
+    }
+
+    item.status = 'return_requested';
+    item.returnReason = reason.trim().slice(0, 1000);
+
+    await order.save();
+
+    return {
+        success: true,
+        message: 'Return request submitted successfully'
+    };
+};
+
 module.exports = {
     placeOrder,
-    cancelOrderItem
+    cancelOrderItem,
+    requestReturn
 };

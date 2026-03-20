@@ -2,12 +2,12 @@ const adminOrderService = require('../services/admin.order.service');
 
 const getOrders = async (req, res) => {
     try {
-        const { search, status, sort, payment, price } = req.query;
-        const orders = await adminOrderService.getAllOrders({ search, status, sort, payment, price });
+        const { search, status, sort, payment, price, page } = req.query;
+        const data = await adminOrderService.getAllOrders({ search, status, sort, payment, price, page });
 
         return res.json({
             success: true,
-            data: orders
+            data
         });
     } catch (error) {
         return res.status(500).json({
@@ -20,10 +20,21 @@ const getOrders = async (req, res) => {
 const renderOrdersPage = async (req, res) => {
     try {
         const { search, status, sort, payment, price } = req.query;
-        const data = await adminOrderService.getAllOrders({ search, status, sort, payment, price });
+        const page = parseInt(req.query.page, 10) || 1;
+        const { orders, totalOrders, currentPage, totalPages } = await adminOrderService.getAllOrders({
+            search,
+            status,
+            sort,
+            payment,
+            price,
+            page
+        });
 
         return res.render('admin/admin-orders', {
-            orders: data,
+            orders,
+            currentPage,
+            totalPages,
+            totalOrders,
             filters: {
                 search: search || '',
                 status: status || '',
@@ -116,11 +127,51 @@ const bulkUpdateStatus = async (req, res) => {
     }
 };
 
+const processReturn = async (req, res) => {
+    try {
+        const result = await adminOrderService.processReturn(
+            req.params.orderId,
+            req.params.itemId,
+            req.body.action
+        );
+
+        return res.json(result);
+    } catch (error) {
+        const statusCode = error.message === 'Order not found' ? 404 : 400;
+
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+const updateItemStatus = async (req, res) => {
+    try {
+        const result = await adminOrderService.processItemStatusUpdate(
+            req.params.orderId,
+            req.params.itemId,
+            req.body.status
+        );
+
+        return res.json(result);
+    } catch (error) {
+        const statusCode = error.message === 'Order not found' ? 404 : 400;
+
+        return res.status(statusCode).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     getOrders,
     renderOrdersPage,
     renderOrderDetailsPage,
     getOrderDetails,
     updateStatus,
-    bulkUpdateStatus
+    bulkUpdateStatus,
+    processReturn,
+    updateItemStatus
 };

@@ -2,9 +2,23 @@ const userOrderService = require('../services/user.order.service');
 
 const getUserOrdersPage = async (req, res, next) => {
     try {
-        const orders = await userOrderService.getUserOrders(req.session.userId);
+        const {
+            search = '',
+            sort = 'newest',
+            date = ''
+        } = req.query;
+        const orders = await userOrderService.getUserOrders(req.session.userId, {
+            search,
+            sort,
+            dateFilter: date
+        });
 
-        return res.render('user/orders', { orders });
+        return res.render('user/orders', {
+            orders,
+            search,
+            sort,
+            date
+        });
     } catch (error) {
         return next(error);
     }

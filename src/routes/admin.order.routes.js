@@ -12,5 +12,7 @@ router.get('/orders/:orderId/page', adminOrderController.renderOrderDetailsPage)
 router.get('/orders/:orderId', adminOrderController.getOrderDetails);
 router.patch('/orders/bulk-status', adminOrderController.bulkUpdateStatus);
 router.patch('/orders/:orderId/status', adminOrderController.updateStatus);
+router.patch('/orders/:orderId/item/:itemId/status', adminOrderController.updateItemStatus);
+router.patch('/orders/:orderId/item/:itemId/return', adminOrderController.processReturn);
 
 module.exports = router;

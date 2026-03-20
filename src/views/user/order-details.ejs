@@ -64,6 +64,18 @@
             return 'bg-orange-100 text-orange-700 border-orange-200';
         }
 
+        if (normalizedStatus === 'return_requested') {
+            return 'bg-orange-100 text-orange-700 border-orange-200';
+        }
+
+        if (normalizedStatus === 'return_rejected') {
+            return 'bg-red-100 text-red-700 border-red-200';
+        }
+
+        if (normalizedStatus === 'returned') {
+            return 'bg-green-100 text-green-800 border-green-200';
+        }
+
         return 'bg-gray-100 text-gray-700 border-gray-200';
     };
 %>
@@ -204,6 +216,17 @@
                                                             Cancel Item
                                                         </button>
                                                     <% } %>
+
+                                                    <% if (item.status === 'delivered' && item.itemId) { %>
+                                                        <button
+                                                            type="button"
+                                                            data-return-item-btn
+                                                            data-order-id="<%= orderData.orderId %>"
+                                                            data-item-id="<%= item.itemId %>"
+                                                            class="theme-secondary-btn inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-medium transition">
+                                                            Return Item
+                                                        </button>
+                                                    <% } %>
                                                 </div>
                                             </div>
                                         </article>
@@ -270,7 +293,10 @@
             shipped: 'bg-blue-100 text-blue-800 border-blue-200',
             delivered: 'bg-green-100 text-green-800 border-green-200',
             cancelled: 'bg-red-100 text-red-700 border-red-200',
-            partially_cancelled: 'bg-orange-100 text-orange-700 border-orange-200'
+            partially_cancelled: 'bg-orange-100 text-orange-700 border-orange-200',
+            return_requested: 'bg-orange-100 text-orange-700 border-orange-200',
+            return_rejected: 'bg-red-100 text-red-700 border-red-200',
+            returned: 'bg-green-100 text-green-800 border-green-200'
         };
 
         function formatStatusLabel(status) {
@@ -310,9 +336,122 @@
             window.open(`/api/invoice/${orderId}`, '_blank');
         }
 
+        function getCancellationReasonModalHtml() {
+            return `
+                <div class="space-y-3 text-left">
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="cancel-reason" value="Found a better price" class="h-4 w-4">
+                        <span>Found a better price</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="cancel-reason" value="Ordered by mistake" class="h-4 w-4">
+                        <span>Ordered by mistake</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="cancel-reason" value="Delivery taking too long" class="h-4 w-4">
+                        <span>Delivery taking too long</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="cancel-reason" value="Changed my mind" class="h-4 w-4">
+                        <span>Changed my mind</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="cancel-reason" value="Other" class="h-4 w-4">
+                        <span>Other</span>
+                    </label>
+                    <textarea
+                        id="cancel-reason-other"
+                        maxlength="1000"
+                        placeholder="Tell us the reason"
+                        class="hidden w-full rounded-lg border border-primary-light/40 px-3 py-2 text-sm text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"></textarea>
+                </div>
+            `;
+        }
+
+        function bindCancellationReasonInteractions() {
+            const radioButtons = document.querySelectorAll('input[name="cancel-reason"]');
+            const otherInput = document.getElementById('cancel-reason-other');
+
+            if (!radioButtons.length || !otherInput) {
+                return;
+            }
+
+            radioButtons.forEach((radio) => {
+                radio.addEventListener('change', () => {
+                    const showOtherInput = radio.checked && radio.value === 'Other';
+                    otherInput.classList.toggle('hidden', !showOtherInput);
+
+                    if (showOtherInput) {
+                        otherInput.focus();
+                    } else {
+                        otherInput.value = '';
+                    }
+                });
+            });
+        }
+
+        function getReturnReasonModalHtml() {
+            return `
+                <div class="space-y-3 text-left">
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="return-reason" value="Damaged or defective product" class="h-4 w-4">
+                        <span>Damaged or defective product</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="return-reason" value="Product not as described" class="h-4 w-4">
+                        <span>Product not as described</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="return-reason" value="Wrong item received" class="h-4 w-4">
+                        <span>Wrong item received</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="return-reason" value="Poor quality" class="h-4 w-4">
+                        <span>Poor quality</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="return-reason" value="No longer needed" class="h-4 w-4">
+                        <span>No longer needed</span>
+                    </label>
+                    <label class="flex items-center gap-3 rounded-lg border border-primary-light/30 px-3 py-2">
+                        <input type="radio" name="return-reason" value="Other" class="h-4 w-4">
+                        <span>Other</span>
+                    </label>
+                    <textarea
+                        id="return-reason-other"
+                        maxlength="1000"
+                        placeholder="Tell us the reason"
+                        class="hidden w-full rounded-lg border border-primary-light/40 px-3 py-2 text-sm text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"></textarea>
+                </div>
+            `;
+        }
+
+        function bindReturnReasonInteractions() {
+            const radioButtons = document.querySelectorAll('input[name="return-reason"]');
+            const otherInput = document.getElementById('return-reason-other');
+
+            if (!radioButtons.length || !otherInput) {
+                return;
+            }
+
+            radioButtons.forEach((radio) => {
+                radio.addEventListener('change', () => {
+                    const showOtherInput = radio.checked && radio.value === 'Other';
+                    otherInput.classList.toggle('hidden', !showOtherInput);
+
+                    if (showOtherInput) {
+                        otherInput.focus();
+                    } else {
+                        otherInput.value = '';
+                    }
+                });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const orderStatusBadge = document.getElementById('order-status-badge');
             const cancelButtons = document.querySelectorAll('[data-cancel-item-btn]');
+            const returnButtons = document.querySelectorAll('[data-return-item-btn]');
 
             cancelButtons.forEach((button) => {
                 button.addEventListener('click', async (event) => {
@@ -336,11 +475,36 @@
 
                     const confirmation = await Swal.fire({
                         title: 'Cancel this item?',
-                        text: 'Are you sure you want to cancel this item?',
-                        icon: 'warning',
+                        html: getCancellationReasonModalHtml(),
                         showCancelButton: true,
-                        confirmButtonText: 'Yes, cancel it',
-                        cancelButtonText: 'No'
+                        confirmButtonText: 'Cancel Item',
+                        cancelButtonText: 'Back',
+                        focusConfirm: false,
+                        didOpen: () => {
+                            bindCancellationReasonInteractions();
+                        },
+                        preConfirm: () => {
+                            const selectedOption = document.querySelector('input[name="cancel-reason"]:checked');
+                            const otherInput = document.getElementById('cancel-reason-other');
+
+                            if (!selectedOption) {
+                                Swal.showValidationMessage('Please select a cancellation reason.');
+                                return false;
+                            }
+
+                            if (selectedOption.value === 'Other') {
+                                const otherReason = otherInput ? otherInput.value.trim() : '';
+
+                                if (!otherReason) {
+                                    Swal.showValidationMessage('Please enter a reason for "Other".');
+                                    return false;
+                                }
+
+                                return otherReason;
+                            }
+
+                            return selectedOption.value;
+                        }
                     });
 
                     if (!confirmation.isConfirmed) {
@@ -351,11 +515,15 @@
                     }
 
                     try {
+                        const selectedReason = confirmation.value;
                         const response = await fetch(`/api/order/${encodeURIComponent(orderId)}/item/${encodeURIComponent(itemId)}/cancel`, {
                             method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json'
-                            }
+                            },
+                            body: JSON.stringify({
+                                reason: selectedReason
+                            })
                         });
 
                         const data = await response.json().catch(() => null);
@@ -393,6 +561,109 @@
                         button.dataset.loading = 'false';
 
                         await Swal.fire('Error', error.message || 'Failed to cancel item', 'error');
+                    }
+                });
+            });
+
+            returnButtons.forEach((button) => {
+                button.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    if (button.dataset.loading === 'true') return;
+                    button.dataset.loading = 'true';
+
+                    const orderId = button.dataset.orderId;
+                    const itemId = button.dataset.itemId;
+
+                    if (!orderId || !itemId) {
+                        button.dataset.loading = 'false';
+                        await Swal.fire('Error', 'Missing return details for this item.', 'error');
+                        return;
+                    }
+
+                    button.disabled = true;
+                    button.classList.add('opacity-50', 'pointer-events-none');
+
+                    const confirmation = await Swal.fire({
+                        title: 'Request Return',
+                        html: getReturnReasonModalHtml(),
+                        showCancelButton: true,
+                        confirmButtonText: 'Request Return',
+                        cancelButtonText: 'Back',
+                        focusConfirm: false,
+                        didOpen: () => {
+                            bindReturnReasonInteractions();
+                        },
+                        preConfirm: () => {
+                            const selectedOption = document.querySelector('input[name="return-reason"]:checked');
+                            const otherInput = document.getElementById('return-reason-other');
+
+                            if (!selectedOption) {
+                                Swal.showValidationMessage('Please select a return reason.');
+                                return false;
+                            }
+
+                            if (selectedOption.value === 'Other') {
+                                const otherReason = otherInput ? otherInput.value.trim() : '';
+
+                                if (!otherReason) {
+                                    Swal.showValidationMessage('Please enter a reason for "Other".');
+                                    return false;
+                                }
+
+                                return otherReason;
+                            }
+
+                            return selectedOption.value;
+                        }
+                    });
+
+                    if (!confirmation.isConfirmed) {
+                        button.disabled = false;
+                        button.classList.remove('opacity-50', 'pointer-events-none');
+                        button.dataset.loading = 'false';
+                        return;
+                    }
+
+                    try {
+                        const selectedReason = confirmation.value;
+                        const response = await fetch(`/api/order/${orderId}/item/${itemId}/return`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                reason: selectedReason
+                            })
+                        });
+
+                        const data = await response.json().catch(() => null);
+
+                        if (!response.ok || !data || !data.success) {
+                            throw new Error(data?.message || 'Failed to request return');
+                        }
+
+                        const itemCard = button.closest('article');
+                        const itemStatusBadge = itemCard ? itemCard.querySelector('[data-item-status-badge]') : null;
+
+                        updateStatusBadge(itemStatusBadge, 'return_requested');
+                        button.remove();
+                        button.dataset.loading = 'false';
+
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Return Requested',
+                            text: data.message || 'Return request submitted successfully',
+                            timer: 1600,
+                            showConfirmButton: false
+                        });
+                    } catch (error) {
+                        button.disabled = false;
+                        button.classList.remove('opacity-50', 'pointer-events-none');
+                        button.dataset.loading = 'false';
+
+                        await Swal.fire('Error', error.message || 'Failed to request return', 'error');
                     }
                 });
             });

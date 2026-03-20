@@ -10,12 +10,59 @@ const mapOrderSummary = (order) => ({
     createdAt: order.createdAt
 });
 
-const getUserOrders = async (userId) => {
-    const orders = await Order.find({
+const getDateThreshold = (dateFilter) => {
+    if (!dateFilter) {
+        return null;
+    }
+
+    const now = new Date();
+
+    if (dateFilter === '7d') {
+        now.setDate(now.getDate() - 7);
+        return now;
+    }
+
+    if (dateFilter === '30d') {
+        now.setDate(now.getDate() - 30);
+        return now;
+    }
+
+    if (dateFilter === '6m') {
+        now.setMonth(now.getMonth() - 6);
+        return now;
+    }
+
+    if (dateFilter === '1y') {
+        now.setFullYear(now.getFullYear() - 1);
+        return now;
+    }
+
+    return null;
+};
+
+const getUserOrders = async (userId, options = {}) => {
+    const { search = '', sort = 'newest', dateFilter = '' } = options;
+    const query = {
         user: userId,
         deleted: { $ne: true }
-    })
-        .sort({ createdAt: -1 })
+    };
+
+    if (search && search.trim()) {
+        query.$or = [
+            { 'items.productName': { $regex: search.trim(), $options: 'i' } },
+            { 'items.brandName': { $regex: search.trim(), $options: 'i' } }
+        ];
+    }
+
+    const dateThreshold = getDateThreshold(dateFilter);
+    if (dateThreshold) {
+        query.createdAt = { $gte: dateThreshold };
+    }
+
+    const sortOption = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
+
+    const orders = await Order.find(query)
+        .sort(sortOption)
         .lean();
 
     return orders.map(mapOrderSummary);

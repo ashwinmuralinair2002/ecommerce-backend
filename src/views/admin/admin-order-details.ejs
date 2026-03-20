@@ -26,8 +26,35 @@
                 <% const allItemsCancelled = Array.isArray(order.items) && order.items.length > 0 ? order.items.every((item) => item.status === 'cancelled') : false; %>
                 <% const isDelivered = order.orderStatus === 'delivered'; %>
                 <% const isCancelled = order.orderStatus === 'cancelled'; %>
-                <% const isStatusLocked = isDelivered || isCancelled || allItemsCancelled; %>
+                <% const isReturned = order.orderStatus === 'returned'; %>
+                <% const isPartiallyReturned = order.orderStatus === 'partially_returned'; %>
+                <% const isStatusLocked = isDelivered || isCancelled || isReturned || isPartiallyReturned || allItemsCancelled; %>
                 <% const address = order.shippingAddress || {}; %>
+                <% const getStatusClasses = (status) => {
+                    const normalizedStatus = String(status || '').toLowerCase();
+
+                    if (normalizedStatus === 'pending') {
+                        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                    }
+
+                    if (normalizedStatus === 'shipped') {
+                        return 'bg-blue-100 text-blue-800 border-blue-200';
+                    }
+
+                    if (normalizedStatus === 'delivered' || normalizedStatus === 'returned') {
+                        return 'bg-green-100 text-green-800 border-green-200';
+                    }
+
+                    if (normalizedStatus === 'cancelled' || normalizedStatus === 'return_rejected') {
+                        return 'bg-red-100 text-red-700 border-red-200';
+                    }
+
+                    if (normalizedStatus === 'return_requested' || normalizedStatus === 'partially_cancelled') {
+                        return 'bg-orange-100 text-orange-700 border-orange-200';
+                    }
+
+                    return 'bg-gray-100 text-gray-700 border-gray-200';
+                }; %>
 
                 <div class="w-full">
                     <nav class="flex text-sm text-gray-500 mb-3" aria-label="Breadcrumb">
@@ -99,8 +126,84 @@
                                                     <td class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal"><%= item.quantity %></td>
                                                     <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">₹<%= Number(item.price || 0).toLocaleString('en-IN') %></td>
                                                     <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">₹<%= Number(item.totalPrice || 0).toLocaleString('en-IN') %></td>
-                                                    <td class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal"><%= item.status %></td>
+                                                    <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
+                                                        <div class="flex flex-col items-start">
+                                                            <div class="flex items-center gap-2">
+                                                                <span
+                                                                    data-item-status-badge
+                                                                    data-status="<%= item.status %>"
+                                                                    class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold capitalize <%= getStatusClasses(item.status) %>">
+                                                                    <%= item.status %>
+                                                                </span>
+
+                                                                <% if (
+                                                                    (item.status === 'cancelled' && item.cancellationReason && item.cancellationReason.trim())
+                                                                    || ((item.status === 'return_requested' || item.status === 'returned') && item.returnReason && item.returnReason.trim())
+                                                                ) { %>
+                                                                    <button
+                                                                        type="button"
+                                                                        data-toggle-reason
+                                                                        data-item-id="<%= item.itemId %>"
+                                                                        class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200 transition">
+                                                                        View Reason
+                                                                    </button>
+                                                                <% } %>
+                                                            </div>
+
+                                                            <% if ((item.status === 'pending' || item.status === 'shipped') && item.itemId) { %>
+                                                                <select
+                                                                    data-item-status-select
+                                                                    data-order-id="<%= order.orderId %>"
+                                                                    data-item-id="<%= item.itemId %>"
+                                                                    class="mt-2 form-input rounded-lg border border-[#BCA6DB] bg-white px-3 py-2 text-sm text-[#1F1F1F] focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                                                                    <% if (item.status === 'pending') { %>
+                                                                        <option value="shipped">shipped</option>
+                                                                    <% } %>
+                                                                    <% if (item.status === 'shipped') { %>
+                                                                        <option value="delivered">delivered</option>
+                                                                    <% } %>
+                                                                </select>
+                                                            <% } %>
+
+                                                            <% if (item.status === 'return_requested') { %>
+                                                                <div class="flex gap-2 mt-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        data-return-approve
+                                                                        data-order-id="<%= order.orderId %>"
+                                                                        data-item-id="<%= item.itemId %>"
+                                                                        class="theme-primary-btn px-3 py-1 text-sm rounded">
+                                                                        Approve
+                                                                    </button><button
+                                                                    type="button"
+                                                                    data-return-reject
+                                                                    data-order-id="<%= order.orderId %>"
+                                                                    data-item-id="<%= item.itemId %>"
+                                                                    class="theme-secondary-btn px-3 py-1 text-sm rounded">
+                                                                    Reject
+                                                                </button>
+
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                    </td>
                                                 </tr>
+                                                <% if (
+                                                    (item.status === 'cancelled' && item.cancellationReason && item.cancellationReason.trim())
+                                                    || ((item.status === 'return_requested' || item.status === 'returned') && item.returnReason && item.returnReason.trim())
+                                                ) { %>
+                                                    <tr id="reason-<%= item.itemId %>" class="hidden border-t border-t-[#BCA6DB] bg-gray-50/60">
+                                                        <td colspan="7" class="px-4 py-2">
+                                                            <div class="mt-2 p-3 bg-gray-50 border rounded max-h-32 overflow-y-auto text-sm text-gray-700">
+                                                                <% if (item.status === 'cancelled') { %>
+                                                                    <%= item.cancellationReason %>
+                                                                <% } else { %>
+                                                                    <%= item.returnReason %>
+                                                                <% } %>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                <% } %>
                                             <% }) %>
                                         </tbody>
                                     </table>
@@ -116,7 +219,15 @@
                                 </div>
 
                                 <div class="space-y-2 text-sm text-primary">
-                                    <p><span class="font-semibold">Current Status:</span> <span id="currentOrderStatus"><%= order.orderStatus %></span></p>
+                                    <p>
+                                        <span class="font-semibold">Current Status:</span>
+                                        <span
+                                            id="currentOrderStatus"
+                                            data-status="<%= order.orderStatus %>"
+                                            class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold capitalize <%= getStatusClasses(order.orderStatus) %>">
+                                            <%= order.orderStatus %>
+                                        </span>
+                                    </p>
                                     <% if (order.user) { %>
                                         <p><span class="font-semibold">Customer Email:</span> <%= order.user.email || 'N/A' %></p>
                                         <p><span class="font-semibold">Customer Phone:</span> <%= order.user.phone || 'N/A' %></p>
@@ -126,7 +237,8 @@
                                 <div>
                                     <label for="orderStatusSelect" class="block text-sm text-primary font-semibold mb-2">Order Status</label>
                                     <select id="orderStatusSelect"
-                                        class="form-input w-full rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB] disabled:bg-gray-100 disabled:text-gray-400"
+                                        value="<%= order.orderStatus %>"
+                                        class="form-input w-full rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB] disabled:bg-gray-100 disabled:text-gray-400 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed <%= isStatusLocked ? 'opacity-50 pointer-events-none cursor-not-allowed bg-gray-100 text-gray-400' : '' %>"
                                         <%= isStatusLocked ? 'disabled' : '' %>>
                                         <% statusOptions.forEach((status) => { %>
                                             <option value="<%= status %>" <%= order.orderStatus === status ? 'selected' : '' %>><%= status %></option>
@@ -136,6 +248,10 @@
                                         <p class="text-xs text-red-600 mt-2">Delivered orders cannot be updated.</p>
                                     <% } else if (isCancelled) { %>
                                         <p class="text-xs text-red-600 mt-2">Cancelled orders cannot be updated.</p>
+                                    <% } else if (isReturned) { %>
+                                        <p class="text-xs text-red-600 mt-2">Returned orders cannot be updated.</p>
+                                    <% } else if (isPartiallyReturned) { %>
+                                        <p class="text-xs text-red-600 mt-2">Partially returned orders cannot be updated.</p>
                                     <% } else if (allItemsCancelled) { %>
                                         <p class="text-xs text-red-600 mt-2">Fully cancelled orders cannot be updated.</p>
                                     <% } %>
@@ -161,59 +277,297 @@
             const orderId = <%- JSON.stringify(order.orderId) %>;
             const statusSelect = document.getElementById('orderStatusSelect');
             const currentOrderStatus = document.getElementById('currentOrderStatus');
+            const ORDER_STATUS_STYLES = {
+                pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                shipped: 'bg-blue-100 text-blue-800 border-blue-200',
+                delivered: 'bg-green-100 text-green-800 border-green-200',
+                returned: 'bg-green-100 text-green-800 border-green-200',
+                cancelled: 'bg-red-100 text-red-700 border-red-200',
+                return_rejected: 'bg-red-100 text-red-700 border-red-200',
+                return_requested: 'bg-orange-100 text-orange-700 border-orange-200',
+                partially_cancelled: 'bg-orange-100 text-orange-700 border-orange-200',
+                partially_returned: 'bg-orange-100 text-orange-700 border-orange-200'
+            };
 
-            if (!statusSelect || statusSelect.disabled) {
-                return;
+            function formatStatusLabel(status) {
+                const normalizedStatus = String(status || '').toLowerCase();
+
+                return normalizedStatus
+                    .split('_')
+                    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join(' ');
             }
 
-            let previousValue = statusSelect.value;
+            function updateStatusBadge(element, status) {
+                if (!element) {
+                    return;
+                }
 
-            statusSelect.addEventListener('change', async function () {
-                const selectedValue = statusSelect.value;
+                const normalizedStatus = String(status || '').toLowerCase();
+                const allStatusClasses = Object.values(ORDER_STATUS_STYLES).join(' ').split(' ');
+                const nextClasses = ORDER_STATUS_STYLES[normalizedStatus] || 'bg-gray-100 text-gray-700 border-gray-200';
 
-                statusSelect.disabled = true;
+                element.classList.remove(...allStatusClasses);
+                element.classList.add(...nextClasses.split(' '));
+                element.dataset.status = normalizedStatus;
+                element.textContent = formatStatusLabel(normalizedStatus);
+            }
+
+            function syncOrderStatusFromItems() {
+                const itemBadges = Array.from(document.querySelectorAll('[data-item-status-badge]'));
+
+                if (itemBadges.length === 0) {
+                    return;
+                }
+
+                const allItemsCompleted = itemBadges.every((badge) => {
+                    const status = String(badge.dataset.status || '').toLowerCase();
+                    return ['delivered', 'cancelled', 'returned'].includes(status);
+                });
+
+                if (allItemsCompleted && currentOrderStatus) {
+                    updateStatusBadge(currentOrderStatus, 'delivered');
+                }
+            }
+
+            if (statusSelect && !statusSelect.disabled) {
+                let previousValue = statusSelect.value;
+
+                statusSelect.addEventListener('change', async function () {
+                    const selectedValue = statusSelect.value;
+
+                    statusSelect.disabled = true;
+                    statusSelect.classList.add('opacity-50', 'pointer-events-none');
+
+                    try {
+                        const response = await fetch(`/admin/orders/${orderId}/status`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                status: selectedValue
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.message || 'Failed to update order status');
+                        }
+
+                        previousValue = selectedValue;
+                        if (currentOrderStatus) {
+                            updateStatusBadge(
+                                currentOrderStatus,
+                                data.data && data.data.orderStatus ? data.data.orderStatus : selectedValue
+                            );
+                        }
+
+                        if (selectedValue === 'delivered') {
+                            document.querySelectorAll('[data-item-status-badge]').forEach((badge) => {
+                                if (String(badge.dataset.status || '').toLowerCase() !== 'cancelled') {
+                                    updateStatusBadge(badge, 'delivered');
+                                }
+                            });
+                        }
+
+                        if (selectedValue === 'delivered') {
+                            statusSelect.disabled = true;
+                        } else {
+                            statusSelect.disabled = false;
+                            statusSelect.classList.remove('opacity-50', 'pointer-events-none');
+                        }
+
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Updated',
+                            text: 'Order status updated successfully',
+                            timer: 1400,
+                            showConfirmButton: false
+                        });
+                    } catch (error) {
+                        statusSelect.value = previousValue;
+                        statusSelect.disabled = false;
+                        statusSelect.classList.remove('opacity-50', 'pointer-events-none');
+
+                        Swal.fire('Error', error.message || 'Failed to update order status', 'error');
+                    }
+                });
+            }
+
+            async function handleReturnAction(button, action) {
+                if (!button || button.dataset.loading === 'true') {
+                    return;
+                }
+
+                button.dataset.loading = 'true';
+
+                const actionButtons = Array.from(button.parentElement ? button.parentElement.querySelectorAll('button') : [button]);
+                const orderIdValue = button.dataset.orderId;
+                const itemId = button.dataset.itemId;
+                const itemRow = button.closest('tr');
+                const itemStatusBadge = itemRow ? itemRow.querySelector('[data-item-status-badge]') : null;
+
+                if (!orderIdValue || !itemId) {
+                    button.dataset.loading = 'false';
+                    await Swal.fire('Error', 'Missing return details for this item.', 'error');
+                    return;
+                }
+
+                actionButtons.forEach((actionButton) => {
+                    actionButton.disabled = true;
+                    actionButton.classList.add('opacity-50', 'pointer-events-none');
+                });
+
+                const confirmation = await Swal.fire({
+                    title: action === 'approve' ? 'Approve this return request?' : 'Reject this return request?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: action === 'approve' ? 'Approve' : 'Reject',
+                    cancelButtonText: 'Cancel'
+                });
+
+                if (!confirmation.isConfirmed) {
+                    actionButtons.forEach((actionButton) => {
+                        actionButton.disabled = false;
+                        actionButton.classList.remove('opacity-50', 'pointer-events-none');
+                    });
+                    button.dataset.loading = 'false';
+                    return;
+                }
 
                 try {
-                    const response = await fetch(`/admin/orders/${orderId}/status`, {
+                    const response = await fetch(`/admin/orders/${orderIdValue}/item/${itemId}/return`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            status: selectedValue
+                            action
                         })
                     });
 
-                    const data = await response.json();
+                    const data = await response.json().catch(() => null);
 
-                    if (!response.ok || !data.success) {
-                        throw new Error(data.message || 'Failed to update order status');
+                    if (!response.ok || !data || !data.success) {
+                        throw new Error(data?.message || 'Failed to process return');
                     }
 
-                    previousValue = selectedValue;
-                    if (currentOrderStatus) {
-                        currentOrderStatus.textContent = data.data && data.data.orderStatus ? data.data.orderStatus : selectedValue;
-                    }
+                    updateStatusBadge(itemStatusBadge, action === 'approve' ? 'returned' : 'return_rejected');
 
-                    if (selectedValue === 'delivered') {
-                        statusSelect.disabled = true;
-                    } else {
-                        statusSelect.disabled = false;
+                    if (button.parentElement) {
+                        button.parentElement.remove();
                     }
 
                     await Swal.fire({
                         icon: 'success',
-                        title: 'Updated',
-                        text: 'Order status updated successfully',
+                        title: action === 'approve' ? 'Return Approved' : 'Return Rejected',
+                        text: data.message || (action === 'approve' ? 'Return approved' : 'Return rejected'),
                         timer: 1400,
                         showConfirmButton: false
                     });
                 } catch (error) {
-                    statusSelect.value = previousValue;
-                    statusSelect.disabled = false;
+                    actionButtons.forEach((actionButton) => {
+                        actionButton.disabled = false;
+                        actionButton.classList.remove('opacity-50', 'pointer-events-none');
+                    });
 
-                    Swal.fire('Error', error.message || 'Failed to update order status', 'error');
+                    await Swal.fire('Error', error.message || 'Failed to process return', 'error');
+                } finally {
+                    button.dataset.loading = 'false';
                 }
+            }
+
+            document.querySelectorAll('[data-item-status-select]').forEach((select) => {
+                select.addEventListener('change', async () => {
+                    if (select.dataset.loading === 'true') {
+                        return;
+                    }
+
+                    select.dataset.loading = 'true';
+
+                    const orderIdValue = select.dataset.orderId;
+                    const itemId = select.dataset.itemId;
+                    const selectedValue = select.value;
+                    const itemRow = select.closest('tr');
+                    const itemStatusBadge = itemRow ? itemRow.querySelector('[data-item-status-badge]') : null;
+
+                    if (!orderIdValue || !itemId || !selectedValue) {
+                        select.dataset.loading = 'false';
+                        await Swal.fire('Error', 'Missing item status details.', 'error');
+                        return;
+                    }
+
+                    select.disabled = true;
+                    select.classList.add('opacity-50', 'pointer-events-none');
+
+                    try {
+                        const response = await fetch(`/admin/orders/${orderIdValue}/item/${itemId}/status`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                status: selectedValue
+                            })
+                        });
+
+                        const data = await response.json().catch(() => null);
+
+                        if (!response.ok || !data || !data.success) {
+                            throw new Error(data?.message || 'Failed to update item status');
+                        }
+
+                        updateStatusBadge(itemStatusBadge, selectedValue);
+
+                        if (selectedValue === 'delivered') {
+                            select.disabled = true;
+                            select.remove();
+                        } else {
+                            select.disabled = false;
+                            select.classList.remove('opacity-50', 'pointer-events-none');
+                        }
+
+                        syncOrderStatusFromItems();
+
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Updated',
+                            text: data.message || 'Item status updated successfully',
+                            timer: 1400,
+                            showConfirmButton: false
+                        });
+                    } catch (error) {
+                        select.disabled = false;
+                        select.classList.remove('opacity-50', 'pointer-events-none');
+
+                        await Swal.fire('Error', error.message || 'Failed to update item status', 'error');
+                    } finally {
+                        select.dataset.loading = 'false';
+                    }
+                });
+            });
+
+            document.querySelectorAll('[data-return-approve]').forEach((button) => {
+                button.addEventListener('click', () => handleReturnAction(button, 'approve'));
+            });
+
+            document.querySelectorAll('[data-return-reject]').forEach((button) => {
+                button.addEventListener('click', () => handleReturnAction(button, 'reject'));
+            });
+
+            document.querySelectorAll('[data-toggle-reason]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const itemId = button.dataset.itemId;
+                    const reasonRow = itemId ? document.getElementById(`reason-${itemId}`) : null;
+
+                    if (!reasonRow) {
+                        return;
+                    }
+
+                    reasonRow.classList.toggle('hidden');
+                });
             });
         });
     </script>
