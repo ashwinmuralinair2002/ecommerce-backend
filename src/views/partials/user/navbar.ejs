@@ -73,7 +73,9 @@
         </div>
 
         <% if (locals.user) { %>
-            <button class="theme-nav-hover h-10 w-10 rounded-lg text-white">❤️</button>
+            <a href="/wishlist" class="theme-nav-hover flex h-10 w-10 items-center justify-center rounded-lg text-white" aria-label="Open wishlist">
+                <span aria-hidden="true">❤️</span>
+            </a>
             <a href="/cart" class="theme-nav-hover relative flex h-10 w-10 items-center justify-center rounded-lg text-white" aria-label="Open cart">
                 <span aria-hidden="true">🛒</span>
                 <span data-cart-count class="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-black">

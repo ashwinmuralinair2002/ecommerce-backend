@@ -10,6 +10,7 @@
     </title>
     <link rel="icon" type="image/x-icon" href="/images/favicon.svg" /> <!-- Fixed favicon path -->
     <%- include('../partials/user/theme-config') %>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 </head>
 
@@ -36,6 +37,7 @@
                         return String(image.url).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(x)) + ',y_' + Math.max(0, Math.round(y)) + ',w_' + Math.round(width) + ',h_' + Math.round(height) + '/');
                         };
                         const selectedVariant = hasVariants ? product.variants[0] : null;
+                        const selectedVariantId = selectedVariant && selectedVariant._id ? String(selectedVariant._id) : '';
                         const variantImages = selectedVariant && Array.isArray(selectedVariant.images) ? selectedVariant.images : [];
                         const allImages = variantImages;
                         const heroImage=allImages.find(img=> img.isHero) || allImages[0];
@@ -400,6 +402,10 @@
                                                 Buy Now
                                             </button>
                                             <button
+                                                type="button"
+                                                data-add-to-wishlist
+                                                data-product-id="<%= product._id %>"
+                                                data-variant-id="<%= selectedVariantId %>"
                                                 class="w-full flex items-center justify-center gap-2 rounded-lg h-10 border border-primary-light/45 text-primary hover:bg-primary-light/35">
                                                 <span>❤️</span>
                                                 <span>Add to Wishlist</span>
@@ -524,6 +530,7 @@
                         const decrementQuantityButton = document.getElementById("decrementQuantityButton");
                         const incrementQuantityButton = document.getElementById("incrementQuantityButton");
                         const productQuantityValue = document.getElementById("productQuantityValue");
+                        const wishlistButtons = Array.from(document.querySelectorAll('[data-add-to-wishlist]'));
                         const colorChips = Array.from(document.querySelectorAll(".variant-chip"));
                         const thumbnailStrip = document.querySelector(".thumbnail-image")?.parentElement || null;
                         const isProductUnavailable = <%- JSON.stringify(product.isListed === false || product.isDeleted === true) %>;
@@ -537,16 +544,9 @@
 
                         function showAddToCartFeedback(message, type) {
                             if (!addToCartFeedback) return;
-                            if (!message) {
-                                addToCartFeedback.classList.add('hidden');
-                                addToCartFeedback.textContent = '';
-                                addToCartFeedback.classList.remove('text-red-600', 'text-green-700');
-                                return;
-                            }
-
-                            addToCartFeedback.textContent = message;
-                            addToCartFeedback.classList.remove('hidden', 'text-red-600', 'text-green-700');
-                            addToCartFeedback.classList.add(type === 'error' ? 'text-red-600' : 'text-green-700');
+                            addToCartFeedback.classList.add('hidden');
+                            addToCartFeedback.textContent = '';
+                            addToCartFeedback.classList.remove('text-red-600', 'text-green-700');
                         }
 
                         function updateQuantityControls() {
@@ -670,6 +670,11 @@
                             }
                             updateQuantityControls();
                             updateAddToCartState();
+                            const activeVariant = variants[currentVariantIndex] || variants[0] || {};
+                            const activeVariantId = activeVariant && activeVariant._id ? String(activeVariant._id) : '';
+                            wishlistButtons.forEach((button) => {
+                                button.dataset.variantId = activeVariantId;
+                            });
                         }
 
                         function updateAddToCartState() {
@@ -791,7 +796,11 @@
                                 const variantId = activeVariant && activeVariant._id ? String(activeVariant._id) : '';
 
                                 if (!productId || !variantId) {
-                                    showAddToCartFeedback('Unable to identify the selected product variant.', 'error');
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: 'Unable to identify the selected product variant.'
+                                    });
                                     return;
                                 }
 
@@ -823,15 +832,67 @@
                                         ? result.data.totalItems
                                         : 0;
                                     syncNavbarCartCount(totalItems);
-                                    showAddToCartFeedback('Item added to cart.', 'success');
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Added to Cart',
+                                        text: 'Item has been added to your cart',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    });
                                 } catch (error) {
-                                    showAddToCartFeedback(error.message || 'Unable to add item to cart', 'error');
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: error.message || 'Failed to add item to cart'
+                                    });
                                 } finally {
                                     isAddingToCart = false;
                                     updateAddToCartState();
                                 }
                             });
                         }
+
+                        wishlistButtons.forEach((button) => {
+                            button.addEventListener('click', async () => {
+                                const activeVariant = variants[currentVariantIndex] || variants[0] || {};
+                                const activeVariantId = activeVariant && activeVariant._id ? String(activeVariant._id) : '';
+                                const variantId = activeVariantId || button.dataset.variantId;
+
+                                button.dataset.variantId = variantId;
+
+                                const currentProductId = button.dataset.productId;
+
+                                try {
+                                    button.disabled = true;
+
+                                    const res = await fetch('/wishlist/add', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ productId: currentProductId, variantId })
+                                    });
+
+                                    const data = await res.json();
+
+                                    if (!data.success) throw new Error(data.message);
+
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Success',
+                                        text: 'Added to wishlist',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    });
+                                } catch (err) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: err.message || 'Something went wrong'
+                                    });
+                                } finally {
+                                    button.disabled = false;
+                                }
+                            });
+                        });
 
                         // Amazon-style Zoom Logic
                         if (container && zoomBox) {
