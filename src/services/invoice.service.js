@@ -4,6 +4,11 @@ const Order = require('../models/order.model');
 const Product = require('../models/Product');
 
 const formatCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+const formatStatusLabel = (status) => String(status || 'pending')
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 
 const buildLocationLine = (address = {}) => [address.city, address.state, address.pincode].filter(Boolean).join(', ');
 
@@ -107,17 +112,32 @@ const generateInvoice = async (orderId, userId, res) => {
     drawDivider(doc, doc.y);
     doc.moveDown(0.7);
 
+    const lineItems = Array.isArray(order.items)
+        ? order.items.map((item) => ({
+            name: item.productName || 'Product',
+            price: Number(item.price || 0),
+            quantity: Number(item.quantity || 0),
+            total: Number(item.totalPrice || 0),
+            status: item.status || 'pending',
+            colorName: item.colorName || 'Default',
+            imageUrl: item.imageUrl || '',
+            productId: item.productId,
+            variantId: item.variantId
+        }))
+        : [];
+
     const headerY = doc.y;
     doc.fontSize(10).fillColor('#6B7280');
     doc.text('Item', 40, headerY);
-    doc.text('Price', 340, headerY, { width: 60, align: 'right' });
-    doc.text('Qty', 410, headerY, { width: 40, align: 'right' });
-    doc.text('Amount', 470, headerY, { width: 85, align: 'right' });
+    doc.text('Price', 290, headerY, { width: 60, align: 'right' });
+    doc.text('Qty', 360, headerY, { width: 35, align: 'right' });
+    doc.text('Amount', 405, headerY, { width: 70, align: 'right' });
+    doc.text('Status', 485, headerY, { width: 70, align: 'right' });
     doc.moveDown(0.7);
     drawDivider(doc, doc.y);
     doc.moveDown(0.6);
 
-    for (const item of order.items || []) {
+    for (const item of lineItems) {
         ensurePageSpace(doc, 82);
 
         const rowTop = doc.y;
@@ -132,12 +152,13 @@ const generateInvoice = async (orderId, userId, res) => {
             }
         }
 
-        doc.fontSize(11).fillColor('#111827').text(item.productName || 'Product', 96, rowTop, { width: 220 });
-        doc.fontSize(9).fillColor('#6B7280').text(`Color: ${item.colorName || 'Default'}`, 96, doc.y + 2, { width: 220 });
+        doc.fontSize(11).fillColor('#111827').text(item.name, 96, rowTop, { width: 170 });
+        doc.fontSize(9).fillColor('#6B7280').text(`Color: ${item.colorName}`, 96, doc.y + 2, { width: 170 });
 
-        doc.fontSize(10).fillColor('#111827').text(formatCurrency(item.price), 340, rowTop, { width: 60, align: 'right' });
-        doc.text(String(Number(item.quantity || 0)), 410, rowTop, { width: 40, align: 'right' });
-        doc.text(formatCurrency(item.totalPrice), 470, rowTop, { width: 85, align: 'right' });
+        doc.fontSize(10).fillColor('#111827').text(formatCurrency(item.price), 290, rowTop, { width: 60, align: 'right' });
+        doc.text(String(item.quantity), 360, rowTop, { width: 35, align: 'right' });
+        doc.text(formatCurrency(item.total), 405, rowTop, { width: 70, align: 'right' });
+        doc.text(formatStatusLabel(item.status), 485, rowTop, { width: 70, align: 'right' });
 
         doc.y = Math.max(doc.y, rowTop + 56);
         drawDivider(doc, doc.y);

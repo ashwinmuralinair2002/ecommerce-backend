@@ -16,6 +16,7 @@ router.get('/products', userProductController.getAllProducts);
 
 router.get('/cart', ensureAuthenticated, cartPageController.getCartPage);
 router.get('/wishlist', ensureAuthenticated, wishlistController.getWishlistPage);
+router.get('/wishlist/count', ensureAuthenticated, wishlistController.getWishlistCount);
 router.get('/checkout', ensureAuthenticated, checkoutController.getCheckoutPage);
 router.get('/order-success', ensureAuthenticated, orderPageController.getOrderSuccessPage);
 router.get('/orders', ensureAuthenticated, userOrderController.getUserOrdersPage);

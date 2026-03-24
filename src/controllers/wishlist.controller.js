@@ -15,6 +15,23 @@ const getWishlistPage = async (req, res) => {
     }
 };
 
+const getWishlistCount = async (req, res) => {
+    try {
+        const userId = req.session.userId;
+        const count = await wishlistService.getWishlistCount(userId);
+
+        res.json({
+            success: true,
+            count
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to load wishlist count'
+        });
+    }
+};
+
 const addToWishlist = async (req, res) => {
     const userId = req.session.userId;
     const { productId, variantId } = req.body;
@@ -62,6 +79,7 @@ const moveToCart = async (req, res) => {
 
 module.exports = {
     getWishlistPage,
+    getWishlistCount,
     addToWishlist,
     removeFromWishlist,
     moveToCart

@@ -1,20 +1,27 @@
 const User = require('../models/user.model');
 const Cart = require('../models/cart.model');
+const Wishlist = require('../models/wishlist.model');
 
 const attachSessionUser = async (req, res, next) => {
     try {
         res.locals.cartCount = 0;
+        res.locals.wishlistCount = 0;
 
         if (req.session && req.session.userId) {
             // Fetch user to populate res.locals.user for Navbar
-            const [user, cart] = await Promise.all([
+            const [user, cart, wishlist] = await Promise.all([
                 User.findById(req.session.userId).select('name email role profileImage isBlocked phone addresses'),
-                Cart.findOne({ userId: req.session.userId }).select('items.quantity')
+                Cart.findOne({ userId: req.session.userId }).select('items.quantity'),
+                Wishlist.findOne({ user: req.session.userId }).select('items.variantId')
             ]);
             console.log("MIDDLEWARE → DB user fetched:", user?.name, user?.phone);
 
             if (cart && Array.isArray(cart.items)) {
                 res.locals.cartCount = cart.items.reduce((total, item) => total + (Number(item.quantity) || 0), 0);
+            }
+
+            if (wishlist && Array.isArray(wishlist.items)) {
+                res.locals.wishlistCount = wishlist.items.length;
             }
 
             if (user) {
@@ -54,12 +61,14 @@ const attachSessionUser = async (req, res, next) => {
             res.locals.user = null;
             res.locals.role = null;
             res.locals.cartCount = 0;
+            res.locals.wishlistCount = 0;
         }
     } catch (err) {
         console.error('Session User Fetch Error:', err);
         res.locals.user = null;
         res.locals.role = null;
         res.locals.cartCount = 0;
+        res.locals.wishlistCount = 0;
     }
     next();
 };

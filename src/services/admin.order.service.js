@@ -124,6 +124,9 @@ const getAllOrders = async (filters = {}) => {
             : 0,
         paymentMethod: order.paymentMethod,
         orderStatus: order.orderStatus,
+        hasReturnRequested: Array.isArray(order.items)
+            ? order.items.some((item) => item && item.status === 'return_requested')
+            : false,
         createdAt: order.createdAt,
         userName: order.user && order.user.name ? order.user.name : 'Unknown User',
         email: order.user && order.user.email ? order.user.email : ''

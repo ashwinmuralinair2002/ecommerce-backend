@@ -395,7 +395,11 @@
                                     <% } else { %>
                                         <% orders.forEach(order => { %>
                                             <% let statusClasses = 'bg-gray-100 text-gray-700'; %>
-                                            <% if (order.orderStatus === 'pending') { %>
+                                            <% let statusLabel = order.orderStatus; %>
+                                            <% if (order.hasReturnRequested) { %>
+                                                <% statusClasses = 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]'; %>
+                                                <% statusLabel = 'Return Requested'; %>
+                                            <% } else if (order.orderStatus === 'pending') { %>
                                                 <% statusClasses = 'bg-[#fff7d6] text-[#9a6700] hover:bg-[#fff1b8]'; %>
                                             <% } else if (order.orderStatus === 'shipped') { %>
                                                 <% statusClasses = 'bg-[#ecf3ff] text-[#1d4ed8] hover:bg-[#dbeafe]'; %>
@@ -442,7 +446,7 @@
                                                 <td class="h-[72px] px-4 py-2 w-36 text-sm font-normal leading-normal">
                                                     <span
                                                         class="inline-flex items-center justify-center rounded-lg h-8 px-4 text-xs font-bold transition-colors <%= statusClasses %>">
-                                                        <%= order.orderStatus %>
+                                                        <%= statusLabel %>
                                                     </span>
                                                 </td>
                                             </tr>

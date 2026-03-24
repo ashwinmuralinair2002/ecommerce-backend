@@ -73,8 +73,11 @@
         </div>
 
         <% if (locals.user) { %>
-            <a href="/wishlist" class="theme-nav-hover flex h-10 w-10 items-center justify-center rounded-lg text-white" aria-label="Open wishlist">
+            <a href="/wishlist" class="theme-nav-hover relative flex h-10 w-10 items-center justify-center rounded-lg text-white" aria-label="Open wishlist">
                 <span aria-hidden="true">❤️</span>
+                <span data-wishlist-count class="absolute -right-1 -top-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1.5 py-0.5 text-[10px] font-bold text-black">
+                    <%= typeof wishlistCount === 'number' ? wishlistCount : 0 %>
+                </span>
             </a>
             <a href="/cart" class="theme-nav-hover relative flex h-10 w-10 items-center justify-center rounded-lg text-white" aria-label="Open cart">
                 <span aria-hidden="true">🛒</span>
@@ -102,6 +105,40 @@
 </header>
 <script>
     (() => {
+        window.syncNavbarCartCount = (count) => {
+            const target = document.querySelector('[data-cart-count]');
+            if (target) target.textContent = String(Number(count) || 0);
+        };
+
+        window.syncNavbarWishlistCount = (count) => {
+            const target = document.querySelector('[data-wishlist-count]');
+            if (target) target.textContent = String(Number(count) || 0);
+        };
+
+        window.refreshNavbarWishlistCount = async () => {
+            const target = document.querySelector('[data-wishlist-count]');
+            if (!target) return 0;
+
+            try {
+                const response = await fetch('/wishlist/count', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await response.json().catch(() => ({}));
+
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || 'Failed to load wishlist count');
+                }
+
+                const count = Number(data.count || 0);
+                window.syncNavbarWishlistCount(count);
+                return count;
+            } catch (error) {
+                return Number(target.textContent || 0);
+            }
+        };
+
         const input = document.getElementById('live-search-input');
         const dropdown = document.getElementById('live-search-results');
         const searchForm = input ? input.closest('form') : null;

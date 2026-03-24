@@ -408,7 +408,7 @@
                                                 data-variant-id="<%= selectedVariantId %>"
                                                 class="w-full flex items-center justify-center gap-2 rounded-lg h-10 border border-primary-light/45 text-primary hover:bg-primary-light/35">
                                                 <span>❤️</span>
-                                                <span>Add to Wishlist</span>
+                                                <span data-wishlist-label>Add to Wishlist</span>
                                             </button>
                                         </div>
 
@@ -531,15 +531,44 @@
                         const incrementQuantityButton = document.getElementById("incrementQuantityButton");
                         const productQuantityValue = document.getElementById("productQuantityValue");
                         const wishlistButtons = Array.from(document.querySelectorAll('[data-add-to-wishlist]'));
+                        const wishlistVariantIds = new Set(<%- JSON.stringify(Array.isArray(wishlistVariantIds) ? wishlistVariantIds.map(String) : []) %>);
                         const colorChips = Array.from(document.querySelectorAll(".variant-chip"));
                         const thumbnailStrip = document.querySelector(".thumbnail-image")?.parentElement || null;
                         const isProductUnavailable = <%- JSON.stringify(product.isListed === false || product.isDeleted === true) %>;
                         const MAX_QUANTITY = 5;
 
                         function syncNavbarCartCount(count) {
+                            if (typeof window.syncNavbarCartCount === 'function') {
+                                window.syncNavbarCartCount(count);
+                                return;
+                            }
                             const cartCountElement = document.querySelector('[data-cart-count]');
                             if (!cartCountElement) return;
                             cartCountElement.textContent = String(Number(count) || 0);
+                        }
+
+                        function setWishlistButtonState(button, isAdded) {
+                            if (!button) return;
+
+                            const label = button.querySelector('[data-wishlist-label]');
+                            if (label) {
+                                label.textContent = isAdded ? 'Added' : 'Add to Wishlist';
+                            }
+
+                            button.disabled = isAdded;
+                            button.classList.toggle('opacity-60', isAdded);
+                            button.classList.toggle('cursor-not-allowed', isAdded);
+                            button.classList.toggle('hover:bg-primary-light/35', !isAdded);
+                        }
+
+                        function syncWishlistButtons() {
+                            const activeVariant = variants[currentVariantIndex] || variants[0] || {};
+                            const activeVariantId = activeVariant && activeVariant._id ? String(activeVariant._id) : '';
+
+                            wishlistButtons.forEach((button) => {
+                                button.dataset.variantId = activeVariantId;
+                                setWishlistButtonState(button, wishlistVariantIds.has(activeVariantId));
+                            });
                         }
 
                         function showAddToCartFeedback(message, type) {
@@ -670,11 +699,7 @@
                             }
                             updateQuantityControls();
                             updateAddToCartState();
-                            const activeVariant = variants[currentVariantIndex] || variants[0] || {};
-                            const activeVariantId = activeVariant && activeVariant._id ? String(activeVariant._id) : '';
-                            wishlistButtons.forEach((button) => {
-                                button.dataset.variantId = activeVariantId;
-                            });
+                            syncWishlistButtons();
                         }
 
                         function updateAddToCartState() {
@@ -862,6 +887,20 @@
 
                                 const currentProductId = button.dataset.productId;
 
+                                if (!variantId) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: 'Unable to identify the selected product variant.'
+                                    });
+                                    return;
+                                }
+
+                                if (wishlistVariantIds.has(variantId)) {
+                                    setWishlistButtonState(button, true);
+                                    return;
+                                }
+
                                 try {
                                     button.disabled = true;
 
@@ -875,10 +914,18 @@
 
                                     if (!data.success) throw new Error(data.message);
 
+                                    wishlistVariantIds.add(variantId);
+                                    syncWishlistButtons();
+                                    if (typeof data.wishlistCount === 'number' && typeof window.syncNavbarWishlistCount === 'function') {
+                                        window.syncNavbarWishlistCount(data.wishlistCount);
+                                    } else if (typeof window.refreshNavbarWishlistCount === 'function') {
+                                        window.refreshNavbarWishlistCount();
+                                    }
+
                                     Swal.fire({
                                         icon: 'success',
                                         title: 'Success',
-                                        text: 'Added to wishlist',
+                                        text: data.alreadyExists ? 'Already in wishlist' : 'Added to wishlist',
                                         timer: 1500,
                                         showConfirmButton: false
                                     });
@@ -889,7 +936,7 @@
                                         text: err.message || 'Something went wrong'
                                     });
                                 } finally {
-                                    button.disabled = false;
+                                    syncWishlistButtons();
                                 }
                             });
                         });

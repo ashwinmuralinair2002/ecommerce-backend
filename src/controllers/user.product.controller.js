@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
+const wishlistService = require('../services/wishlist.service');
 
 function asQueryArray(value) {
     if (Array.isArray(value)) return value.filter(Boolean);
@@ -400,6 +401,17 @@ exports.getProductDetails = async (req, res) => {
         }
 
         await migrateLegacyProductImages(product);
+        let wishlistVariantIds = [];
+
+        if (req.session && req.session.userId) {
+            const wishlist = await wishlistService.getWishlist(req.session.userId);
+            wishlistVariantIds = Array.isArray(wishlist && wishlist.items)
+                ? wishlist.items
+                    .filter((item) => String(item.productId || '') === String(product._id))
+                    .map((item) => String(item.variantId || ''))
+                    .filter(Boolean)
+                : [];
+        }
 
         // Get Similar Products (Same connection type, excluding current)
         const relatedDocs = await Product.find({
@@ -431,6 +443,7 @@ exports.getProductDetails = async (req, res) => {
         res.render('user/product-details', {
             title: product.title,
             product: product.toObject(),
+            wishlistVariantIds,
             relatedProducts,
             alsoBought
         });
@@ -485,4 +498,3 @@ exports.liveSearch = async (req, res) => {
         return res.json([]);
     }
 };
-

@@ -99,33 +99,78 @@ const buildWishlistResponse = async (userId) => {
 
 const getWishlist = async (userId) => buildWishlistResponse(userId);
 
+const getWishlistCount = async (userId) => {
+    const wishlist = await Wishlist.findOne({ user: userId }).select('items.variantId').lean();
+    return Array.isArray(wishlist && wishlist.items) ? wishlist.items.length : 0;
+};
+
 const addToWishlist = async (userId, productId, variantId) => {
     const { product } = await getValidatedProductAndVariant(productId, variantId);
+    const wishlistItem = {
+        productId,
+        variantId,
+        savedPrice: product.price
+    };
 
-    let wishlist = await Wishlist.findOne({ user: userId });
+    let alreadyExists = false;
+    let wasInserted = false;
+    let wishlist = await Wishlist.findOneAndUpdate(
+        {
+            user: userId,
+            items: {
+                $not: {
+                    $elemMatch: {
+                        productId,
+                        variantId
+                    }
+                }
+            }
+        },
+        {
+            $push: {
+                items: wishlistItem
+            }
+        },
+        {
+            new: true
+        }
+    );
+    wasInserted = Boolean(wishlist);
 
     if (!wishlist) {
-        wishlist = new Wishlist({
-            user: userId,
-            items: []
-        });
-    }
+        wishlist = await Wishlist.findOne({ user: userId });
 
-    const alreadyExists = wishlist.items.some((item) => isMatchingItem(item, productId, variantId));
+        if (!wishlist) {
+            try {
+                wishlist = await Wishlist.create({
+                    user: userId,
+                    items: [wishlistItem]
+                });
+                wasInserted = true;
+            } catch (error) {
+                if (error && error.code !== 11000) {
+                    throw error;
+                }
 
-    if (!alreadyExists) {
-        wishlist.items.push({
-            productId,
-            variantId,
-            savedPrice: product.price
-        });
+                wishlist = await Wishlist.findOne({ user: userId });
+            }
+        }
 
-        await wishlist.save();
+        alreadyExists = !wasInserted && Array.isArray(wishlist.items)
+            ? wishlist.items.some((item) => isMatchingItem(item, productId, variantId))
+            : false;
+
+        if (!alreadyExists) {
+            wishlist.items.push(wishlistItem);
+            await wishlist.save();
+        }
     }
 
     return {
         success: true,
-        message: 'Added to wishlist'
+        alreadyExists,
+        wishlistCount: await getWishlistCount(userId),
+        message: alreadyExists ? 'Already in wishlist' : 'Added to wishlist'
     };
 };
 
@@ -146,6 +191,7 @@ const removeFromWishlist = async (userId, productId, variantId) => {
 
     return {
         success: true,
+        wishlistCount: await getWishlistCount(userId),
         message: 'Wishlist updated'
     };
 };
@@ -157,12 +203,14 @@ const moveToCart = async (userId, productId, variantId) => {
 
     return {
         success: true,
+        wishlistCount: await getWishlistCount(userId),
         message: 'Item moved to cart'
     };
 };
 
 module.exports = {
     getWishlist,
+    getWishlistCount,
     addToWishlist,
     removeFromWishlist,
     moveToCart

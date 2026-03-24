@@ -143,6 +143,10 @@
                     wishlistCount.textContent = String(remainingCards);
                 }
 
+                if (typeof window.syncNavbarWishlistCount === 'function') {
+                    window.syncNavbarWishlistCount(remainingCards);
+                }
+
                 if (remainingCards === 0) {
                     wishlistGrid.classList.add('hidden');
                     emptyState.classList.remove('hidden');
