@@ -47,19 +47,7 @@
         } %>
 
         <% if (heroBanners && heroBanners.length > 0) { %>
-            <section class="w-full relative overflow-hidden" style="height: calc(100vh - 64px);">
-                <div id="hero-slider" class="relative w-full h-full">
-                    <% heroBanners.forEach((banner, index) => { %>
-                        <img src="<%= banner.image.url %>"
-                            class="hero-slide absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-                            style="object-position: center top; opacity: <%= index === 0 ? 1 : 0 %>;"
-                            data-index="<%= index %>" />
-                    <% }) %>
-                </div>
-
-                <div id="hero-left" class="absolute left-0 top-0 h-full w-1/2 cursor-pointer z-10"></div>
-                <div id="hero-right" class="absolute right-0 top-0 h-full w-1/2 cursor-pointer z-10"></div>
-            </section>
+            <%- include('../partials/user/hero-slider', { banners: heroBanners }) %>
         <% } %>
 
         <!-- ================= CONTENT ================= -->
@@ -237,63 +225,7 @@
                 </footer>
             </div>
         </footer>
-    <script>
-        (() => {
-            const slides = document.querySelectorAll('.hero-slide');
-            const leftZone = document.getElementById('hero-left');
-            const rightZone = document.getElementById('hero-right');
-
-            if (!slides.length) return;
-
-            let currentIndex = 0;
-            let intervalId = null;
-
-            function showSlide(index) {
-                slides.forEach((slide) => {
-                    slide.style.opacity = '0';
-                });
-                slides[index].style.opacity = '1';
-                currentIndex = index;
-            }
-
-            function nextSlide() {
-                showSlide((currentIndex + 1) % slides.length);
-            }
-
-            function prevSlide() {
-                showSlide((currentIndex - 1 + slides.length) % slides.length);
-            }
-
-            function startAuto() {
-                if (slides.length <= 1) return;
-                intervalId = setInterval(nextSlide, 5000);
-            }
-
-            function resetAuto() {
-                if (slides.length <= 1) return;
-                if (intervalId) clearInterval(intervalId);
-                startAuto();
-            }
-
-            if (rightZone) {
-                rightZone.addEventListener('click', () => {
-                    nextSlide();
-                    resetAuto();
-                });
-            }
-
-            if (leftZone) {
-                leftZone.addEventListener('click', () => {
-                    prevSlide();
-                    resetAuto();
-                });
-            }
-
-            if (slides.length > 1) {
-                startAuto();
-            }
-        })();
-    </script>
+    <%- include('../partials/user/hero-slider-script') %>
 </body>
 
 </html>

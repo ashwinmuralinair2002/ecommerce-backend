@@ -125,6 +125,34 @@
   background: var(--primary-light);
 }
 
+.theme-filter-sidebar a,
+.theme-filter-sidebar .bg-primary-light\/35 {
+  transition: all 0.2s ease;
+}
+
+.theme-filter-sidebar a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #000000;
+  text-decoration: none;
+}
+
+.theme-filter-sidebar a:hover {
+  background-color: color-mix(in srgb, var(--primary-light) 72%, var(--white));
+  color: #000000;
+  transition: all 0.2s ease;
+}
+
+.theme-filter-sidebar .bg-primary-light\/35 {
+  background-color: color-mix(in srgb, var(--primary) 70%, var(--primary-light)) !important;
+  color: var(--white) !important;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: block;
+  font-weight: 600;
+}
+
 .theme-auth-shell {
   background: linear-gradient(140deg, var(--primary), var(--primary-light));
 }

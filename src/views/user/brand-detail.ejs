@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <meta charset="UTF-8" />
+    <title>SoundWave | <%= brand && brand.name ? brand.name : 'Brand' %> Products</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap" />
+
+    <%- include('../partials/user/theme-config') %>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        function submitForm() {
+            const minPriceInput = document.querySelector('input[name="minPrice"]');
+            const maxPriceInput = document.querySelector('input[name="maxPrice"]');
+
+            if (minPriceInput && maxPriceInput && minPriceInput.value && maxPriceInput.value) {
+                if (parseInt(maxPriceInput.value, 10) < parseInt(minPriceInput.value, 10)) {
+                    const container = minPriceInput.closest('.space-y-3');
+                    let errorMsg = container.querySelector('.price-error');
+                    if (!errorMsg) {
+                        errorMsg = document.createElement('p');
+                        errorMsg.className = 'price-error text-red-500 text-xs mt-1';
+                        container.appendChild(errorMsg);
+                    }
+                    errorMsg.textContent = 'Max price must be greater than or equal to Min price';
+                    return;
+                } else {
+                    const container = minPriceInput.closest('.space-y-3');
+                    const errorMsg = container.querySelector('.price-error');
+                    if (errorMsg) errorMsg.remove();
+                }
+            }
+
+            const mainFilterForm = document.getElementById('filter-form');
+            const advancedFiltersForm = document.getElementById('advancedFiltersForm');
+            if (!mainFilterForm) return;
+
+            if (advancedFiltersForm) {
+                const queryParams = new URLSearchParams();
+                const appendFormData = (formElement) => {
+                    const formData = new FormData(formElement);
+                    for (const [key, value] of formData.entries()) {
+                        if (value !== null && String(value).trim() !== '') {
+                            queryParams.append(key, value);
+                        }
+                    }
+                };
+                appendFormData(mainFilterForm);
+                appendFormData(advancedFiltersForm);
+                window.location.href = `/brand/<%= brand && brand._id ? brand._id : '' %>?${queryParams.toString()}`;
+                return;
+            }
+
+            mainFilterForm.submit();
+        }
+    </script>
+</head>
+
+<body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+
+    <%- include('../partials/user/navbar') %>
+    <%- include('../partials/user/hero-slider', { banners: heroBanners }) %>
+
+    <%
+        const currentBrandId = brand && brand._id ? String(brand._id) : '';
+        const searchValue = typeof search === 'string' ? search : (query.search || '');
+        const brandLogoUrl = brand && brand.logoUrl ? brand.logoUrl : '/images/placeholder.png';
+        const totalResults = pagination && typeof pagination.totalItems === 'number' ? pagination.totalItems : (products ? products.length : 0);
+    %>
+
+    <div class="w-full px-4 md:px-6 lg:px-8 xl:px-10 py-6 lg:py-8">
+        <div class="mb-8 bg-white rounded-2xl p-6 lg:p-8 border border-primary-light/45 shadow-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5 lg:gap-6">
+                <a href="/brand/<%= currentBrandId %>" class="h-24 w-24 lg:h-28 lg:w-28 flex items-center justify-center overflow-hidden rounded-2xl bg-primary-light/20 p-4 border border-primary-light/45 shadow-sm">
+                    <img src="<%= brandLogoUrl %>" alt="<%= brand && brand.name ? brand.name : 'Brand logo' %>"
+                        class="max-w-full max-h-full object-contain" loading="lazy" />
+                </a>
+                <div class="min-w-0 flex-1">
+                    <nav class="flex text-sm text-gray-500 mb-4" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                            <li class="inline-flex items-center">
+                                <a href="/" class="inline-flex items-center text-gray-500 hover:text-primary">
+                                    Home
+                                </a>
+                            </li>
+                            <li>
+                                <div class="flex items-center">
+                                    <span class="mx-2 text-gray-400">/</span>
+                                    <a href="/brands" class="text-gray-500 hover:text-primary">Brands</a>
+                                </div>
+                            </li>
+                            <li aria-current="page">
+                                <div class="flex items-center">
+                                    <span class="mx-2 text-gray-400">/</span>
+                                    <span class="text-primary font-medium"><%= brand && brand.name ? brand.name : 'Brand' %></span>
+                                </div>
+                            </li>
+                        </ol>
+                    </nav>
+
+                    <a href="/brand/<%= currentBrandId %>" class="block">
+                        <h1 class="text-3xl lg:text-4xl font-bold text-primary leading-tight tracking-tight">
+                            <%= brand && brand.name ? brand.name : 'Brand' %>
+                        </h1>
+                    </a>
+                    <p class="text-sm text-gray-500 mt-2">
+                        Showing <span class="font-bold text-primary"><%= totalResults %></span> results
+                    </p>
+                    <% if (brand && brand.website) { %>
+                        <a href="<%= brand.website %>" target="_blank" rel="noopener noreferrer" title="<%= brand.website %>"
+                            class="mt-4 inline-flex items-center justify-center rounded-xl border border-primary-light/45 bg-white px-4 py-2.5 text-sm font-medium text-primary shadow-sm hover:bg-primary-light/35 hover:shadow transition-all duration-200">
+                            Visit Website
+                        </a>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="w-full px-4 md:px-6 lg:px-8 xl:px-10 py-5">
+        <form id="filter-form" action="/brand/<%= currentBrandId %>" method="GET" class="flex gap-6 items-start">
+            <input type="hidden" name="search" value="<%= searchValue %>">
+
+            <aside
+                class="w-60 flex-shrink-0 space-y-7 sticky top-24 hidden lg:block bg-primary-light p-4 rounded-xl border border-primary-light/45">
+
+                <div>
+                    <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Sort</h3>
+                    <select name="sort" onchange="submitForm()"
+                        class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary">
+                        <option value="newest" <%=query.sort==='newest' ? 'selected' : '' %>>Newest</option>
+                        <option value="price_asc" <%=query.sort==='price_asc' ? 'selected' : '' %>>Price: Low to
+                            High
+                        </option>
+                        <option value="price_desc" <%=query.sort==='price_desc' ? 'selected' : '' %>>Price: High to
+                            Low
+                        </option>
+                        <option value="az" <%=query.sort==='az' ? 'selected' : '' %>>Name: A to Z</option>
+                        <option value="za" <%=query.sort==='za' ? 'selected' : '' %>>Name: Z to A</option>
+                    </select>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Price Range</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-2">
+                            <input type="number" name="minPrice" placeholder="Min"
+                                value="<%= query.minPrice || '' %>" min="0" onchange="submitForm()"
+                                class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary px-3 py-2" />
+                            <span class="text-gray-400">-</span>
+                            <input type="number" name="maxPrice" placeholder="Max"
+                                value="<%= query.maxPrice || '' %>" min="0" onchange="submitForm()"
+                                class="w-full text-sm border-gray-200 rounded-lg focus:border-primary focus:ring-primary px-3 py-2" />
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Category</h3>
+                    <div class="space-y-2">
+                        <% categories.forEach(cat=> { %>
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" name="category" value="<%= cat._id %>"
+                                    onchange="submitForm()" <%=(Array.isArray(query.category) ?
+                                    query.category.includes(String(cat._id)) : query.category===String(cat._id))
+                                    ? 'checked' : '' %>
+                                    class="rounded border-gray-300 text-primary focus:ring-primary" />
+                                <span class="text-sm text-gray-600 group-hover:text-primary">
+                                    <%= cat.name %>
+                                </span>
+                            </label>
+                        <% }) %>
+                    </div>
+                </div>
+
+                <% const selectedConnection = Array.isArray(query.connection) ? query.connection[0] : query.connection; %>
+                <div>
+                    <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Connection</h3>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="radio" name="connection" value="" onchange="submitForm()"
+                                <%= !selectedConnection ? 'checked' : '' %>
+                            class="border-gray-300 text-primary focus:ring-primary" />
+                            <span class="text-sm text-gray-600 group-hover:text-primary">All</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="radio" name="connection" value="Wired" onchange="submitForm()"
+                                <%= selectedConnection==='Wired' ? 'checked' : '' %>
+                            class="rounded border-gray-300 text-primary focus:ring-primary" />
+                            <span class="text-sm text-gray-600 group-hover:text-primary">Wired</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer group">
+                            <input type="radio" name="connection" value="Wireless" onchange="submitForm()"
+                                <%= selectedConnection==='Wireless' ? 'checked' : '' %>
+                            class="rounded border-gray-300 text-primary focus:ring-primary" />
+                            <span class="text-sm text-gray-600 group-hover:text-primary">Wireless</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-primary mb-3 text-sm uppercase tracking-wide">Brand</h3>
+                    <div class="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar pointer-events-none opacity-80">
+                        <label class="flex items-center gap-2 cursor-default group">
+                            <input type="checkbox" checked disabled
+                                class="rounded border-gray-300 text-primary focus:ring-primary" />
+                            <span class="text-sm text-gray-600">
+                                <%= brand && brand.name ? brand.name : 'Selected Brand' %>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <button id="openAdvancedFilters" type="button" class="w-full bg-black text-white py-2 rounded">
+                    Show All Filters
+                </button>
+
+                <a href="/brand/<%= currentBrandId %>"
+                    class="w-full mt-4 flex items-center justify-center px-4 py-2 border border-primary-light/45 rounded-lg shadow-sm text-sm font-medium text-primary bg-white hover:bg-primary-light/35 transition-colors">
+                    Clear Filters
+                </a>
+
+            </aside>
+
+            <section class="flex-1 bg-white rounded-xl p-5 lg:p-6 min-h-screen">
+                <div class="mb-5 border-b border-gray-100 pb-4">
+                    <nav class="flex text-sm text-gray-500 mb-3" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                            <li class="inline-flex items-center">
+                                <a href="/" class="inline-flex items-center text-gray-500 hover:text-primary">
+                                    Home
+                                </a>
+                            </li>
+                            <li>
+                                <div class="flex items-center">
+                                    <span class="mx-2 text-gray-400">/</span>
+                                    <a href="/brands" class="text-gray-500 hover:text-primary">Brands</a>
+                                </div>
+                            </li>
+                            <li aria-current="page">
+                                <div class="flex items-center">
+                                    <span class="mx-2 text-gray-400">/</span>
+                                    <span class="text-primary font-medium">Products</span>
+                                </div>
+                            </li>
+                        </ol>
+                    </nav>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-end gap-3">
+                        <div>
+                            <h2 class="text-3xl font-bold text-primary">Products</h2>
+                            <% if (searchValue) { %>
+                                <div class="text-sm text-primary mt-1">
+                                    Showing results for "<%= searchValue %>"
+                                </div>
+                            <% } %>
+                            <p class="text-sm text-gray-500 mt-1">
+                                Showing <span class="font-bold text-primary">
+                                    <%= products.length %>
+                                </span> results
+                            </p>
+                        </div>
+                    </div>
+
+                    <% if (typeof error !== 'undefined' && error) { %>
+                        <p class="text-red-500 text-sm mt-3"><%= error %></p>
+                    <% } %>
+
+                    <% if (products && products.length > 0) { %>
+                        <% const getCroppedImageUrl = (image) => {
+                            if (!image || !image.url) return '/images/placeholder.png';
+                            const crop = image.crop;
+                            if (!crop) return image.url;
+                            const x = Number(crop.x);
+                            const y = Number(crop.y);
+                            const width = Number(crop.width);
+                            const height = Number(crop.height);
+                            if (![x, y, width, height].every(Number.isFinite)) return image.url;
+                            if (width <= 0 || height <= 0) return image.url;
+                            if (!String(image.url).includes('/upload/')) return image.url;
+                            return String(image.url).replace('/upload/', '/upload/c_crop,x_' + Math.max(0, Math.round(x)) + ',y_' + Math.max(0, Math.round(y)) + ',w_' + Math.round(width) + ',h_' + Math.round(height) + '/');
+                        }; %>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-5">
+                            <% products.forEach(product=> { %>
+                                <%- include('../partials/user/product-card', { product, getCroppedImageUrl }) %>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <div class="flex flex-col items-center justify-center py-20 text-center">
+                            <div class="bg-primary-light/20 p-4 rounded-full mb-4">
+                                <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4">
+                                    </path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-primary">No products found</h3>
+                            <p class="text-sm text-gray-500 mt-1">Try adjusting your filters.</p>
+                            <a href="/brand/<%= currentBrandId %>"
+                                class="mt-4 text-primary font-bold text-sm hover:underline">Clear
+                                all
+                                filters</a>
+                        </div>
+                    <% } %>
+
+                    <% if (pagination) { %>
+                        <%
+                            const qp = [];
+                            const appendParam = (key, value) => {
+                                if (Array.isArray(value)) {
+                                    value.forEach((v) => {
+                                        if (v !== undefined && v !== null && String(v).trim() !== '') {
+                                            qp.push(key + '=' + encodeURIComponent(v));
+                                        }
+                                    });
+                                    return;
+                                }
+                                if (value !== undefined && value !== null && String(value).trim() !== '') {
+                                    qp.push(key + '=' + encodeURIComponent(value));
+                                }
+                            };
+                            appendParam('search', search);
+                            appendParam('category', filters && filters.category);
+                            appendParam('connection', filters && filters.connection);
+                            appendParam('connectionType', filters && filters.connectionType);
+                            if (currentSort && currentSort !== 'newest') appendParam('sort', currentSort);
+
+                            if (query) {
+                                Object.keys(query).forEach((key) => {
+                                    if (key === 'page' || key === 'search' || key === 'category' || key === 'brand' || key === 'connection' || key === 'connectionType' || key === 'sort') return;
+                                    appendParam(key, query[key]);
+                                });
+                            }
+
+                            const queryString = qp.length ? '&' + qp.join('&') : '';
+                        %>
+                        <div class="flex justify-center items-center gap-2 mt-8">
+                            <% if (pagination.hasPrevPage) { %>
+                                <a href="?page=<%= pagination.currentPage - 1 %><%= queryString %>"
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    &laquo; Previous
+                                </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                    &laquo; Previous
+                                </span>
+                            <% } %>
+
+                            <div class="flex gap-1">
+                                <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+                                    <% if (i === pagination.currentPage) { %>
+                                        <span class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold">
+                                            <%= i %>
+                                        </span>
+                                    <% } else { %>
+                                        <a href="?page=<%= i %><%= queryString %>"
+                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                            <%= i %>
+                                        </a>
+                                    <% } %>
+                                <% } %>
+                            </div>
+
+                            <% if (pagination.hasNextPage) { %>
+                                <a href="?page=<%= pagination.currentPage + 1 %><%= queryString %>"
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    Next &raquo;
+                                </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                    Next &raquo;
+                                </span>
+                            <% } %>
+                        </div>
+                    <% } %>
+                </div>
+            </section>
+        </form>
+    </main>
+
+    <footer class="flex justify-center border-t border-primary-light/45 mt-10 bg-white">
+        <div class="flex max-w-[960px] flex-1 flex-col">
+            <footer class="flex flex-col gap-6 px-5 py-10 text-center @container">
+                <div class="flex flex-wrap items-center justify-center gap-6 @[480px]:flex-row @[480px]:justify-around">
+                    <a class="text-primary text-base font-normal leading-normal min-w-40" href="#">About</a>
+                    <a class="text-primary text-base font-normal leading-normal min-w-40" href="#">Support</a>
+                    <a class="text-primary text-base font-normal leading-normal min-w-40" href="#">Contact</a>
+                    <a class="text-primary text-base font-normal leading-normal min-w-40" href="#">Privacy Policy</a>
+                    <a class="text-primary text-base font-normal leading-normal min-w-40" href="#">Terms of Service</a>
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="#" class="text-primary hover:text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                            <path
+                                d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
+                        </svg>
+                    </a>
+                    <a href="#" class="text-primary hover:text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                            <path
+                                d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                        </svg>
+                    </a>
+                    <a href="#" class="text-primary hover:text-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                            <path
+                                d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
+                        </svg>
+                    </a>
+                </div>
+
+                <p class="text-primary text-base font-normal leading-normal">
+                    ©2024 SoundWave. All rights reserved.
+                </p>
+            </footer>
+        </div>
+    </footer>
+    <div id="advancedFiltersModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-white w-[90%] max-w-4xl mx-auto mt-20 p-6 rounded-lg overflow-y-auto max-h-[80vh]">
+
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Advanced Filters</h2>
+                <button id="closeAdvancedFilters">✕</button>
+            </div>
+
+            <div id="advancedFiltersContent">
+                <% const selectedDiscountRangeModal = Array.isArray(query.discountRange) ? query.discountRange[0] : query.discountRange; %>
+                <% const selectedNewArrivalsModal = Array.isArray(query.newArrivals) ? query.newArrivals[0] : query.newArrivals; %>
+                <% const selectedFormFactorModal = Array.isArray(query.formFactor) ? query.formFactor[0] : query.formFactor; %>
+                <% const selectedEarpieceShapeModal = Array.isArray(query.earpieceShape) ? query.earpieceShape[0] : query.earpieceShape; %>
+                <% const selectedImpedanceRangeModal = Array.isArray(query.impedanceRange) ? query.impedanceRange[0] : query.impedanceRange; %>
+                <% const selectedSensitivityRangeModal = Array.isArray(query.sensitivityRange) ? query.sensitivityRange[0] : query.sensitivityRange; %>
+                <% const selectedConnectionModal = Array.isArray(query.connection) ? query.connection[0] : query.connection; %>
+                <% const selectedNoiseTypes = Array.isArray(query.noiseControlTypes) ? query.noiseControlTypes : (query.noiseControlTypes ? [query.noiseControlTypes] : []); %>
+                <% const selectedControlMethods = Array.isArray(query.controlMethods) ? query.controlMethods : (query.controlMethods ? [query.controlMethods] : []); %>
+                <% const selectedSmartFeatures = Array.isArray(query.smartFeatures) ? query.smartFeatures : (query.smartFeatures ? [query.smartFeatures] : []); %>
+                <% const selectedCableFeatures = Array.isArray(query.cableFeatures) ? query.cableFeatures : (query.cableFeatures ? [query.cableFeatures] : []); %>
+                <% const selectedCompatibleDevices = Array.isArray(query.compatibleDevices) ? query.compatibleDevices : (query.compatibleDevices ? [query.compatibleDevices] : []); %>
+                <% const selectedMaterials = Array.isArray(query.materials) ? query.materials : (query.materials ? [query.materials] : []); %>
+                <% const selectedDriverTypes = Array.isArray(query.audioDriverTypes) ? query.audioDriverTypes : (query.audioDriverTypes ? [query.audioDriverTypes] : []); %>
+                <% const selectedColors = Array.isArray(query.colors) ? query.colors : (query.colors ? [query.colors] : []); %>
+                <% const selectedMic = Array.isArray(query.hasMicrophone) ? query.hasMicrophone.includes('true') : query.hasMicrophone === 'true'; %>
+                <% const selectedAmbient = Array.isArray(query.ambientModeAvailable) ? query.ambientModeAvailable.includes('true') : query.ambientModeAvailable === 'true'; %>
+                <% const allFormFactors = filterOptions && filterOptions.formFactor ? filterOptions.formFactor : []; %>
+                <% const formFactorOptions = filterOptions && filterOptions.formFactorsByConnection && selectedConnectionModal && filterOptions.formFactorsByConnection[selectedConnectionModal]
+                    ? filterOptions.formFactorsByConnection[selectedConnectionModal].filter(function(opt) { return allFormFactors.includes(opt); })
+                    : allFormFactors; %>
+
+                <form id="advancedFiltersForm" class="columns-1 md:columns-2 gap-6">
+                    <% if (filterOptions && filterOptions.discountRanges && filterOptions.discountRanges.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Discount Range</h3>
+                            <% filterOptions.discountRanges.forEach(function(range) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="discount-range-checkbox rounded border-gray-300 text-primary focus:ring-primary" name="discountRange" value="<%= range.value %>"
+                                        <%= selectedDiscountRangeModal===String(range.value) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= range.label %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.newArrivals && filterOptions.newArrivals.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">New Arrivals</h3>
+                            <% filterOptions.newArrivals.forEach(function(days) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="newArrivals" value="<%= days %>"
+                                        <%= selectedNewArrivalsModal===String(days) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700">Last <%= days %> Days</span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.noiseControlTypes && filterOptions.noiseControlTypes.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Noise Cancellation Types</h3>
+                            <% filterOptions.noiseControlTypes.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="noiseControlTypes" value="<%= opt %>"
+                                        <%= selectedNoiseTypes.includes(String(opt)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <div class="break-inside-avoid mb-6 space-y-2">
+                        <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Device Capabilities</h3>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="ambientModeAvailable" value="true"
+                                <%= selectedAmbient ? 'checked' : '' %> />
+                            <span class="text-sm text-gray-700">Ambient Mode</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="hasMicrophone" value="true"
+                                <%= selectedMic ? 'checked' : '' %> />
+                            <span class="text-sm text-gray-700">Microphone</span>
+                        </label>
+                    </div>
+
+                    <% if (formFactorOptions && formFactorOptions.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Form Factor</h3>
+                            <% formFactorOptions.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="formFactor" value="<%= opt %>"
+                                        <%= selectedFormFactorModal===String(opt) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.controlMethods && filterOptions.controlMethods.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Control Methods</h3>
+                            <% filterOptions.controlMethods.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="controlMethods" value="<%= opt %>"
+                                        <%= selectedControlMethods.includes(String(opt)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.smartFeatures && filterOptions.smartFeatures.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Smart Features</h3>
+                            <% filterOptions.smartFeatures.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="smartFeatures" value="<%= opt %>"
+                                        <%= selectedSmartFeatures.includes(String(opt)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.cableFeatures && filterOptions.cableFeatures.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Cable Features</h3>
+                            <% filterOptions.cableFeatures.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="cableFeatures" value="<%= opt %>"
+                                        <%= selectedCableFeatures.includes(String(opt)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.compatibleDevices && filterOptions.compatibleDevices.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Compatible Devices</h3>
+                            <% filterOptions.compatibleDevices.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="compatibleDevices" value="<%= opt %>"
+                                        <%= selectedCompatibleDevices.includes(String(opt)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.materials && filterOptions.materials.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Materials</h3>
+                            <% filterOptions.materials.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="materials" value="<%= opt %>"
+                                        <%= selectedMaterials.includes(String(opt)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.audioDriverTypes && filterOptions.audioDriverTypes.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Audio Driver Type</h3>
+                            <% filterOptions.audioDriverTypes.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="audioDriverTypes" value="<%= opt %>"
+                                        <%= selectedDriverTypes.includes(String(opt)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.earpieceShape && filterOptions.earpieceShape.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Earpiece Shape</h3>
+                            <% filterOptions.earpieceShape.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="earpieceShape" value="<%= opt %>"
+                                        <%= selectedEarpieceShapeModal===String(opt) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.impedanceRange && filterOptions.impedanceRange.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Impedance Range</h3>
+                            <% filterOptions.impedanceRange.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="impedanceRange" value="<%= opt %>"
+                                        <%= selectedImpedanceRangeModal===String(opt) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.sensitivityRange && filterOptions.sensitivityRange.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Sensitivity Range</h3>
+                            <% filterOptions.sensitivityRange.forEach(function(opt) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" class="border-gray-300 text-primary focus:ring-primary" name="sensitivityRange" value="<%= opt %>"
+                                        <%= selectedSensitivityRangeModal===String(opt) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= opt %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+
+                    <% if (filterOptions && filterOptions.variantColors && filterOptions.variantColors.length) { %>
+                        <div class="break-inside-avoid mb-6 space-y-2">
+                            <h3 class="font-semibold text-sm uppercase tracking-wide text-primary">Colors</h3>
+                            <% filterOptions.variantColors.forEach(function(color) { %>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" name="colors" value="<%= color %>"
+                                        <%= selectedColors.includes(String(color)) ? 'checked' : '' %> />
+                                    <span class="text-sm text-gray-700"><%= color %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                    <% } %>
+                </form>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button id="resetAdvancedFilters" type="button" class="border px-4 py-2 rounded">Reset</button>
+                <button id="applyAdvancedFilters" type="button" class="bg-black text-white px-4 py-2 rounded">Show Products</button>
+            </div>
+
+        </div>
+    </div>
+    <script>
+        const openAdvancedFiltersBtn = document.getElementById('openAdvancedFilters');
+        const closeAdvancedFiltersBtn = document.getElementById('closeAdvancedFilters');
+        const advancedFiltersModal = document.getElementById('advancedFiltersModal');
+        const resetAdvancedFiltersBtn = document.getElementById('resetAdvancedFilters');
+        const applyAdvancedFiltersBtn = document.getElementById('applyAdvancedFilters');
+        const advancedFiltersForm = document.getElementById('advancedFiltersForm');
+        const mainFilterForm = document.getElementById('filter-form');
+
+        if (openAdvancedFiltersBtn && advancedFiltersModal) {
+            openAdvancedFiltersBtn.addEventListener('click', () => {
+                advancedFiltersModal.classList.remove('hidden');
+            });
+        }
+
+        if (closeAdvancedFiltersBtn && advancedFiltersModal) {
+            closeAdvancedFiltersBtn.addEventListener('click', () => {
+                advancedFiltersModal.classList.add('hidden');
+            });
+        }
+
+        if (advancedFiltersForm) {
+            const discountCheckboxes = advancedFiltersForm.querySelectorAll('.discount-range-checkbox');
+            discountCheckboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    if (!checkbox.checked) return;
+                    discountCheckboxes.forEach((otherCheckbox) => {
+                        if (otherCheckbox !== checkbox) otherCheckbox.checked = false;
+                    });
+                });
+            });
+        }
+
+        if (resetAdvancedFiltersBtn && advancedFiltersForm) {
+            resetAdvancedFiltersBtn.addEventListener('click', () => {
+                advancedFiltersForm.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach((input) => {
+                    input.checked = false;
+                });
+            });
+        }
+
+        if (applyAdvancedFiltersBtn && mainFilterForm) {
+            applyAdvancedFiltersBtn.addEventListener('click', () => {
+                const queryParams = new URLSearchParams();
+                const appendFormData = (formElement) => {
+                    if (!formElement) return;
+                    const formData = new FormData(formElement);
+                    for (const [key, value] of formData.entries()) {
+                        if (value !== null && String(value).trim() !== '') {
+                            queryParams.append(key, value);
+                        }
+                    }
+                };
+
+                appendFormData(mainFilterForm);
+                appendFormData(advancedFiltersForm);
+                window.location.href = `/brand/<%= currentBrandId %>?${queryParams.toString()}`;
+            });
+        }
+    </script>
+
+    <%- include('../partials/user/hero-slider-script') %>
+</body>
+
+</html>

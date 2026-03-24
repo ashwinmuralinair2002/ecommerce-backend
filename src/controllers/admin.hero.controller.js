@@ -4,8 +4,8 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
 
-const MAX_ACTIVE_HERO_BANNERS = 5;
-const MAX_ACTIVE_ERROR = 'Maximum 5 active hero banners allowed. Please unlist one before activating another.';
+const MAX_ACTIVE_HERO_BANNERS = 10;
+const MAX_ACTIVE_ERROR = 'Maximum 10 active hero banners allowed. Please unlist one before activating another.';
 const HERO_TYPES = ['product', 'category', 'brand', 'custom'];
 
 function parseBoolean(value, defaultValue = false) {
@@ -118,7 +118,7 @@ exports.getAllHeroes = async (req, res) => {
         const skip = (page - 1) * limit;
 
         const [heroes, activeCount, totalHeroes] = await Promise.all([
-            HeroBanner.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+            HeroBanner.find({}).populate('refId', 'title name').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
             HeroBanner.countDocuments({ isActive: true }),
             HeroBanner.countDocuments({})
         ]);

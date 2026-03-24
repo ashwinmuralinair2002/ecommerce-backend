@@ -345,21 +345,17 @@
                                         </div>
 
                                         <div>
-                                            <% const initialVariantStock = selectedVariant ? (parseInt(selectedVariant.stockCount, 10) || 0) : 0; %>
-                                            <% const reorderThreshold = parseInt(product.reorderThreshold, 10) || 0; %>
+                                            <% const stock = selectedVariant ? (parseInt(selectedVariant.stockCount, 10) || 0) : 0; %>
+                                            <% const threshold = parseInt(product.reorderThreshold, 10) || 5; %>
                                             <% const isProductUnavailable = product.isListed === false || product.isDeleted === true; %>
-                                            <% const canAddToCartInitially = !isProductUnavailable && initialVariantStock > 0; %>
-                                            <% let initialStockText = 'Out of Stock'; %>
-                                            <% let initialStockClass = 'text-red-600'; %>
-                                            <% if (initialVariantStock > 0 && initialVariantStock <= reorderThreshold) { %>
-                                                <% initialStockText = `⚠ Low Stock (${initialVariantStock} pieces remaining)`; %>
-                                            <% } else if (initialVariantStock > reorderThreshold) { %>
-                                                <% initialStockText = `In Stock (${initialVariantStock} pieces remaining)`; %>
-                                                <% initialStockClass = 'text-green-700'; %>
+                                            <% const canAddToCartInitially = !isProductUnavailable && stock > 0; %>
+                                            <% if (stock === 0) { %>
+                                                <span id="variantStockLabel" class="text-red-600 font-semibold">Out of Stock</span>
+                                            <% } else if (stock <= threshold) { %>
+                                                <span id="variantStockLabel" class="text-orange-600 font-semibold">Low Stock (<%= stock %> left)</span>
+                                            <% } else { %>
+                                                <span id="variantStockLabel" class="text-green-700 font-semibold">In Stock</span>
                                             <% } %>
-                                            <span id="variantStockLabel" class="<%= initialStockClass %> font-semibold">
-                                                <%= initialStockText %>
-                                            </span>
                                         </div>
 
                                         <% if (hasVariants) { %>
@@ -446,8 +442,10 @@
                                                 <a href="/product/<%= relProduct._id %>" class="block">
                                                     <div
                                                         class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white cursor-pointer transition hover:shadow-lg hover:scale-[1.02]">
-                                                        <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
-                                                            style='background-image: url("<%= relImg %>");'></div>
+                                                        <div class="w-full aspect-square overflow-hidden rounded-lg">
+                                                            <img src="<%= relImg %>" alt="<%= relProduct.title %>"
+                                                                class="w-full h-full object-cover">
+                                                        </div>
                                                         <div>
                                                             <p
                                                                 class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
@@ -481,8 +479,10 @@
                                                 <a href="/product/<%= abProduct._id %>" class="block">
                                                     <div
                                                         class="flex flex-col gap-3 pb-3 border border-primary-light/45 p-2 rounded-lg bg-white cursor-pointer transition hover:shadow-lg hover:scale-[1.02]">
-                                                        <div class="w-full bg-center bg-no-repeat aspect-square bg-cover rounded-lg"
-                                                            style='background-image: url("<%= abImg %>");'></div>
+                                                        <div class="w-full aspect-square overflow-hidden rounded-lg">
+                                                            <img src="<%= abImg %>" alt="<%= abProduct.title %>"
+                                                                class="w-full h-full object-cover">
+                                                        </div>
                                                         <div>
                                                             <p
                                                                 class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
@@ -681,21 +681,22 @@
                             if (stockLabel) {
                                 const activeVariant = variants[currentVariantIndex] || {};
                                 const stockCount = parseInt(activeVariant.stockCount, 10) || 0;
-                                const reorderThreshold = <%- JSON.stringify(parseInt(product.reorderThreshold, 10) || 0) %>;
+                                const reorderThreshold = <%- JSON.stringify(parseInt(product.reorderThreshold, 10) || 5) %>;
 
                                 let stockText = 'Out of Stock';
-                                let isInStock = false;
+                                let stockClass = 'text-red-600';
 
                                 if (stockCount > 0 && stockCount <= reorderThreshold) {
-                                    stockText = `⚠ Low Stock (${stockCount} pieces remaining)`;
+                                    stockText = `Low Stock (${stockCount} left)`;
+                                    stockClass = 'text-orange-600';
                                 } else if (stockCount > reorderThreshold) {
-                                    stockText = `In Stock (${stockCount} pieces remaining)`;
-                                    isInStock = true;
+                                    stockText = 'In Stock';
+                                    stockClass = 'text-green-700';
                                 }
 
                                 stockLabel.textContent = stockText;
-                                stockLabel.classList.toggle('text-green-700', isInStock);
-                                stockLabel.classList.toggle('text-red-600', !isInStock);
+                                stockLabel.classList.remove('text-green-700', 'text-orange-600', 'text-red-600');
+                                stockLabel.classList.add(stockClass);
                             }
                             updateQuantityControls();
                             updateAddToCartState();

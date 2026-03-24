@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
+const HeroBanner = require('../models/HeroBanner');
 const wishlistService = require('../services/wishlist.service');
 
 function asQueryArray(value) {
@@ -79,6 +80,340 @@ async function migrateLegacyProductImages(product) {
     return product;
 }
 
+async function buildProductListingData(req, forcedFilters = {}) {
+    const mergedQuery = { ...req.query, ...forcedFilters };
+    const {
+        search,
+        category, brand, connection, minPrice, maxPrice, sort,
+        noiseControlTypes, discountRange, hasMicrophone, controlMethods, formFactor,
+        cableFeatures, earpieceShape, smartFeatures, newArrivals, sensitivityRange,
+        compatibleDevices, materials, impedanceRange, audioDriverTypes, ambientModeAvailable, colors
+    } = mergedQuery;
+    const searchTerm = typeof search === 'string' ? search.trim() : '';
+    const page = parseInt(mergedQuery.page, 10) || 1;
+    const limit = 15;
+    const skip = (page - 1) * limit;
+    const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).lean();
+    const allowedCategoryIds = activeCategories.map((c) => c._id);
+    const allowedCategorySet = new Set(allowedCategoryIds.map(String));
+    const filter = {
+        isListed: true,
+        isDeleted: { $ne: true },
+        category: { $in: allowedCategoryIds }
+    };
+
+    const categoryIds = asQueryArray(category)
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id))
+        .filter((id) => allowedCategorySet.has(String(id)));
+    if (asQueryArray(category).length > 0) {
+        if (categoryIds.length > 0) filter.category = { $in: categoryIds };
+        else filter._id = null;
+    }
+
+    const brandIds = asQueryArray(brand)
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+    if (asQueryArray(brand).length > 0) {
+        if (brandIds.length > 0) filter.brand = { $in: brandIds };
+        else filter._id = null;
+    }
+
+    const selectedConnection = asSingleQueryValue(connection);
+    if (selectedConnection && ['Wired', 'Wireless'].includes(selectedConnection)) {
+        filter.connectionType = selectedConnection;
+    } else if (selectedConnection) {
+        filter._id = null;
+    }
+
+    const minPriceNumber = minPrice !== undefined && minPrice !== '' ? Number(minPrice) : null;
+    const maxPriceNumber = maxPrice !== undefined && maxPrice !== '' ? Number(maxPrice) : null;
+    if (minPriceNumber !== null || maxPriceNumber !== null) {
+        filter.price = {};
+        if (minPriceNumber !== null && !Number.isNaN(minPriceNumber)) {
+            filter.price.$gte = minPriceNumber;
+        }
+        if (maxPriceNumber !== null && !Number.isNaN(maxPriceNumber)) {
+            filter.price.$lte = maxPriceNumber;
+        }
+        if (Object.keys(filter.price).length === 0) {
+            delete filter.price;
+        }
+    }
+
+    let sortOption = { createdAt: -1 };
+    switch (sort) {
+        case 'price_asc':
+            sortOption = { price: 1 };
+            break;
+        case 'price_desc':
+            sortOption = { price: -1 };
+            break;
+        case 'az':
+            sortOption = { title: 1 };
+            break;
+        case 'za':
+            sortOption = { title: -1 };
+            break;
+        case 'newest':
+        default:
+            sortOption = { createdAt: -1 };
+            break;
+    }
+
+    const noiseValues = asQueryArray(noiseControlTypes).filter((value) => ENUM_FILTER_OPTIONS.noiseControlTypes.includes(value));
+    if (noiseValues.length > 0) filter.noiseControlTypes = { $in: noiseValues };
+
+    const controlValues = asQueryArray(controlMethods).filter((value) => ENUM_FILTER_OPTIONS.controlMethods.includes(value));
+    if (controlValues.length > 0) filter.controlMethods = { $in: controlValues };
+
+    const cableValues = asQueryArray(cableFeatures).filter((value) => ENUM_FILTER_OPTIONS.cableFeatures.includes(value));
+    if (cableValues.length > 0) filter.cableFeatures = { $in: cableValues };
+
+    const smartValues = asQueryArray(smartFeatures).filter((value) => ENUM_FILTER_OPTIONS.smartFeatures.includes(value));
+    if (smartValues.length > 0) filter.smartFeatures = { $in: smartValues };
+
+    const compatibleValues = asQueryArray(compatibleDevices).filter((value) => ENUM_FILTER_OPTIONS.compatibleDevices.includes(value));
+    if (compatibleValues.length > 0) filter.compatibleDevices = { $in: compatibleValues };
+
+    const materialValues = asQueryArray(materials).filter((value) => ENUM_FILTER_OPTIONS.materials.includes(value));
+    if (materialValues.length > 0) filter.materials = { $in: materialValues };
+
+    const driverValues = asQueryArray(audioDriverTypes).filter((value) => ENUM_FILTER_OPTIONS.audioDriverTypes.includes(value));
+    if (driverValues.length > 0) filter.audioDriverTypes = { $in: driverValues };
+
+    const selectedFormFactor = asSingleQueryValue(formFactor);
+    if (selectedFormFactor) {
+        const allowedFormFactors = selectedConnection && FORM_FACTORS_BY_CONNECTION[selectedConnection]
+            ? FORM_FACTORS_BY_CONNECTION[selectedConnection]
+            : ENUM_FILTER_OPTIONS.formFactor;
+        if (allowedFormFactors.includes(selectedFormFactor)) {
+            filter.formFactor = selectedFormFactor;
+        } else {
+            filter._id = null;
+        }
+    }
+
+    const selectedEarpieceShape = asSingleQueryValue(earpieceShape);
+    if (selectedEarpieceShape && ENUM_FILTER_OPTIONS.earpieceShape.includes(selectedEarpieceShape)) {
+        filter.earpieceShape = selectedEarpieceShape;
+    }
+
+    const selectedSensitivityRange = asSingleQueryValue(sensitivityRange);
+    if (selectedSensitivityRange && ENUM_FILTER_OPTIONS.sensitivityRange.includes(selectedSensitivityRange)) {
+        filter.sensitivityRange = selectedSensitivityRange;
+    }
+
+    const selectedImpedanceRange = asSingleQueryValue(impedanceRange);
+    if (selectedImpedanceRange && ENUM_FILTER_OPTIONS.impedanceRange.includes(selectedImpedanceRange)) {
+        filter.impedanceRange = selectedImpedanceRange;
+    }
+
+    const micValues = asQueryArray(hasMicrophone);
+    if (micValues.length > 0) {
+        const micBool = micValues.map((v) => String(v).toLowerCase()).includes('true');
+        if (micBool) filter.hasMicrophone = true;
+    }
+
+    const ambientValues = asQueryArray(ambientModeAvailable);
+    if (ambientValues.length > 0) {
+        const ambientBool = ambientValues.map((v) => String(v).toLowerCase()).includes('true');
+        if (ambientBool) filter.ambientModeAvailable = true;
+    }
+
+    const selectedDiscountRange = asSingleQueryValue(discountRange);
+    const matchedDiscountRange = DISCOUNT_RANGES.find((range) => range.value === selectedDiscountRange);
+    if (matchedDiscountRange) {
+        filter.discountPercentage = { $gte: matchedDiscountRange.min, $lt: matchedDiscountRange.max };
+    }
+
+    const selectedNewArrivalDays = parseInt(asSingleQueryValue(newArrivals), 10);
+    if ([30, 90].includes(selectedNewArrivalDays)) {
+        const since = new Date();
+        since.setDate(since.getDate() - selectedNewArrivalDays);
+        filter.createdAt = { $gte: since };
+    }
+
+    const colorValues = asQueryArray(colors).map((value) => String(value).trim()).filter(Boolean);
+    if (colorValues.length > 0) {
+        filter['variants.colorName'] = { $in: colorValues };
+    }
+
+    if (searchTerm.length >= 2) {
+        const escapedSearch = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedSearch, 'i');
+
+        const [matchingBrands, matchingCategories] = await Promise.all([
+            Brand.find({ name: regex }).select('_id').lean(),
+            Category.find({
+                name: regex,
+                isBlocked: { $ne: true },
+                isDeleted: { $ne: true }
+            }).select('_id').lean()
+        ]);
+
+        filter.$or = [
+            { title: regex },
+            { connectionType: regex },
+            { brand: { $in: matchingBrands.map((b) => b._id) } },
+            { category: { $in: matchingCategories.map((c) => c._id) } }
+        ];
+    }
+
+    const [brands, variantColors] = await Promise.all([
+        Brand.find({ isActive: true, isDeleted: false }).lean(),
+        Product.distinct('variants.colorName', {
+            isListed: true,
+            isDeleted: { $ne: true },
+            category: { $in: allowedCategoryIds }
+        })
+    ]);
+    const normalizedVariantColors = variantColors
+        .map((value) => String(value || '').trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
+    const filterOptions = {
+        ...ENUM_FILTER_OPTIONS,
+        formFactorsByConnection: FORM_FACTORS_BY_CONNECTION,
+        discountRanges: DISCOUNT_RANGES,
+        newArrivals: [30, 90],
+        hasMicrophone: true,
+        hasAmbientMode: true,
+        variantColors: normalizedVariantColors
+    };
+
+    if (
+        minPriceNumber !== null && maxPriceNumber !== null &&
+        !Number.isNaN(minPriceNumber) && !Number.isNaN(maxPriceNumber) &&
+        maxPriceNumber < minPriceNumber
+    ) {
+        return {
+            title: 'Products',
+            products: [],
+            filters: mergedQuery,
+            categories: activeCategories,
+            brands,
+            query: mergedQuery,
+            search: searchTerm,
+            currentSort: sort || 'newest',
+            pagination: {
+                currentPage: page,
+                totalPages: 1,
+                totalItems: 0,
+                hasPrevPage: false,
+                hasNextPage: false
+            },
+            error: 'Maximum price must be greater than or equal to minimum price.',
+            filterOptions
+        };
+    }
+
+    const totalProducts = await Product.countDocuments(filter);
+    const productDocs = await Product.find(filter)
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limit);
+    for (const productDoc of productDocs) {
+        await migrateLegacyProductImages(productDoc);
+    }
+
+    return {
+        title: 'Products',
+        products: productDocs.map((doc) => doc.toObject()),
+        filters: mergedQuery,
+        categories: activeCategories,
+        brands,
+        query: mergedQuery,
+        search: searchTerm,
+        filterOptions,
+        currentSort: sort || 'newest',
+        pagination: {
+            currentPage: page,
+            totalPages: Math.max(1, Math.ceil(totalProducts / limit)),
+            totalItems: totalProducts,
+            hasPrevPage: page > 1,
+            hasNextPage: page < Math.max(1, Math.ceil(totalProducts / limit))
+        }
+    };
+}
+
+/**
+ * @desc    Get brands listing page
+ * @route   GET /brands
+ * @access  Public
+ */
+exports.getBrandsPage = async (req, res) => {
+    try {
+        const [brands, heroBanners] = await Promise.all([
+            Brand.find({
+                isActive: true,
+                isDeleted: { $ne: true }
+            }).sort({ name: 1 }).lean(),
+            HeroBanner.find({
+                isActive: true,
+                type: 'custom'
+            }).sort({ order: 1 }).limit(10).lean()
+        ]);
+
+        res.render('user/brands', {
+            brands,
+            heroBanners
+        });
+    } catch (error) {
+        console.error('Error loading brands page:', error);
+        res.status(500).send('Error loading brands page');
+    }
+};
+
+/**
+ * @desc    Get individual brand page with products
+ * @route   GET /brand/:id
+ * @access  Public
+ */
+exports.getBrandDetailPage = async (req, res) => {
+    try {
+        const brandId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(brandId)) {
+            return res.status(404).send('Brand not found');
+        }
+
+        const brand = await Brand.findOne({
+            _id: brandId,
+            isActive: true,
+            isDeleted: { $ne: true }
+        }).lean();
+
+        if (!brand) {
+            return res.status(404).send('Brand not found');
+        }
+        const data = await buildProductListingData(req, { brand: String(brand._id) });
+
+        let heroBanners = await HeroBanner.find({
+            isActive: true,
+            type: 'brand',
+            refId: brand._id
+        }).sort({ order: 1 }).limit(10).lean();
+
+        if (heroBanners.length === 0) {
+            heroBanners = await HeroBanner.find({
+                isActive: true,
+                type: 'custom'
+            }).sort({ order: 1 }).limit(10).lean();
+        }
+
+        res.render('user/brand-detail', {
+            ...data,
+            brand,
+            heroBanners,
+            error: null
+        });
+    } catch (error) {
+        console.error('Error loading brand detail page:', error);
+        res.status(500).send('Error loading brand page');
+    }
+};
+
 /**
  * @desc    Get all listed products with filtering and sorting (Catalog Page)
  * @route   GET /products
@@ -86,290 +421,12 @@ async function migrateLegacyProductImages(product) {
  */
 exports.getAllProducts = async (req, res) => {
     try {
-        const {
-            search,
-            category, brand, connection, minPrice, maxPrice, sort,
-            noiseControlTypes, discountRange, hasMicrophone, controlMethods, formFactor,
-            cableFeatures, earpieceShape, smartFeatures, newArrivals, sensitivityRange,
-            compatibleDevices, materials, impedanceRange, audioDriverTypes, ambientModeAvailable, colors
-        } = req.query;
-        const searchTerm = typeof search === 'string' ? search.trim() : '';
-        const page = parseInt(req.query.page, 10) || 1;
-        const limit = 15;
-        const skip = (page - 1) * limit;
-        const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).lean();
-        const allowedCategoryIds = activeCategories.map(c => c._id);
-        const allowedCategorySet = new Set(allowedCategoryIds.map(String));
-        const filter = {
-            isListed: true,
-            isDeleted: { $ne: true },
-            category: { $in: allowedCategoryIds }
-        };
-
-        const categoryIds = asQueryArray(category)
-            .filter(id => mongoose.Types.ObjectId.isValid(id))
-            .map(id => new mongoose.Types.ObjectId(id))
-            .filter(id => allowedCategorySet.has(String(id)));
-        if (asQueryArray(category).length > 0) {
-            if (categoryIds.length > 0) filter.category = { $in: categoryIds };
-            else filter._id = null;
-        }
-
-        const brandIds = asQueryArray(brand)
-            .filter(id => mongoose.Types.ObjectId.isValid(id))
-            .map(id => new mongoose.Types.ObjectId(id));
-        if (asQueryArray(brand).length > 0) {
-            if (brandIds.length > 0) filter.brand = { $in: brandIds };
-            else filter._id = null;
-        }
-
-        const selectedConnection = asSingleQueryValue(connection);
-        if (selectedConnection && ['Wired', 'Wireless'].includes(selectedConnection)) {
-            filter.connectionType = selectedConnection;
-        } else if (selectedConnection) {
-            filter._id = null;
-        }
-
-        const minPriceNumber = minPrice !== undefined && minPrice !== '' ? Number(minPrice) : null;
-        const maxPriceNumber = maxPrice !== undefined && maxPrice !== '' ? Number(maxPrice) : null;
-        if (minPriceNumber !== null || maxPriceNumber !== null) {
-            filter.price = {};
-            if (minPriceNumber !== null && !Number.isNaN(minPriceNumber)) {
-                filter.price.$gte = minPriceNumber;
-            }
-            if (maxPriceNumber !== null && !Number.isNaN(maxPriceNumber)) {
-                filter.price.$lte = maxPriceNumber;
-            }
-            if (Object.keys(filter.price).length === 0) {
-                delete filter.price;
-            }
-        }
-
-        if (
-            minPriceNumber !== null && maxPriceNumber !== null &&
-            !Number.isNaN(minPriceNumber) && !Number.isNaN(maxPriceNumber) &&
-            maxPriceNumber < minPriceNumber
-        ) {
-            const [brands, variantColors] = await Promise.all([
-                Brand.find({ isActive: true, isDeleted: false }).lean(),
-                Product.distinct('variants.colorName', {
-                    isListed: true,
-                    isDeleted: { $ne: true },
-                    category: { $in: allowedCategoryIds }
-                })
-            ]);
-            const normalizedVariantColors = variantColors
-                .map((value) => String(value || '').trim())
-                .filter(Boolean)
-                .sort((a, b) => a.localeCompare(b));
-            return res.render('user/products', {
-                title: 'Products',
-                products: [],
-                filters: req.query,
-                categories: activeCategories,
-                brands,
-                query: req.query,
-                search: searchTerm,
-                currentSort: sort || 'newest',
-                pagination: {
-                    currentPage: page,
-                    totalPages: 1,
-                    totalItems: 0,
-                    hasPrevPage: false,
-                    hasNextPage: false
-                },
-                error: 'Maximum price must be greater than or equal to minimum price.',
-                filterOptions: {
-                    ...ENUM_FILTER_OPTIONS,
-                    formFactorsByConnection: FORM_FACTORS_BY_CONNECTION,
-                    discountRanges: DISCOUNT_RANGES,
-                    newArrivals: [30, 90],
-                    hasMicrophone: true,
-                    hasAmbientMode: true,
-                    variantColors: normalizedVariantColors
-                }
-            });
-        }
-
-        let sortOption = { createdAt: -1 }; // Default: Newest
-
-        switch (sort) {
-            case 'price_asc':
-                sortOption = { price: 1 };
-                break;
-            case 'price_desc':
-                sortOption = { price: -1 };
-                break;
-            case 'az':
-                sortOption = { title: 1 };
-                break;
-            case 'za':
-                sortOption = { title: -1 };
-                break;
-            case 'newest':
-            default:
-                sortOption = { createdAt: -1 };
-                break;
-        }
-
-        const noiseValues = asQueryArray(noiseControlTypes).filter((value) => ENUM_FILTER_OPTIONS.noiseControlTypes.includes(value));
-        if (noiseValues.length > 0) filter.noiseControlTypes = { $in: noiseValues };
-
-        const controlValues = asQueryArray(controlMethods).filter((value) => ENUM_FILTER_OPTIONS.controlMethods.includes(value));
-        if (controlValues.length > 0) filter.controlMethods = { $in: controlValues };
-
-        const cableValues = asQueryArray(cableFeatures).filter((value) => ENUM_FILTER_OPTIONS.cableFeatures.includes(value));
-        if (cableValues.length > 0) filter.cableFeatures = { $in: cableValues };
-
-        const smartValues = asQueryArray(smartFeatures).filter((value) => ENUM_FILTER_OPTIONS.smartFeatures.includes(value));
-        if (smartValues.length > 0) filter.smartFeatures = { $in: smartValues };
-
-        const compatibleValues = asQueryArray(compatibleDevices).filter((value) => ENUM_FILTER_OPTIONS.compatibleDevices.includes(value));
-        if (compatibleValues.length > 0) filter.compatibleDevices = { $in: compatibleValues };
-
-        const materialValues = asQueryArray(materials).filter((value) => ENUM_FILTER_OPTIONS.materials.includes(value));
-        if (materialValues.length > 0) filter.materials = { $in: materialValues };
-
-        const driverValues = asQueryArray(audioDriverTypes).filter((value) => ENUM_FILTER_OPTIONS.audioDriverTypes.includes(value));
-        if (driverValues.length > 0) filter.audioDriverTypes = { $in: driverValues };
-
-        const selectedFormFactor = asSingleQueryValue(formFactor);
-        if (selectedFormFactor) {
-            const allowedFormFactors = selectedConnection && FORM_FACTORS_BY_CONNECTION[selectedConnection]
-                ? FORM_FACTORS_BY_CONNECTION[selectedConnection]
-                : ENUM_FILTER_OPTIONS.formFactor;
-            if (allowedFormFactors.includes(selectedFormFactor)) {
-                filter.formFactor = selectedFormFactor;
-            } else {
-                filter._id = null;
-            }
-        }
-
-        const selectedEarpieceShape = asSingleQueryValue(earpieceShape);
-        if (selectedEarpieceShape && ENUM_FILTER_OPTIONS.earpieceShape.includes(selectedEarpieceShape)) {
-            filter.earpieceShape = selectedEarpieceShape;
-        }
-
-        const selectedSensitivityRange = asSingleQueryValue(sensitivityRange);
-        if (selectedSensitivityRange && ENUM_FILTER_OPTIONS.sensitivityRange.includes(selectedSensitivityRange)) {
-            filter.sensitivityRange = selectedSensitivityRange;
-        }
-
-        const selectedImpedanceRange = asSingleQueryValue(impedanceRange);
-        if (selectedImpedanceRange && ENUM_FILTER_OPTIONS.impedanceRange.includes(selectedImpedanceRange)) {
-            filter.impedanceRange = selectedImpedanceRange;
-        }
-
-        const micValues = asQueryArray(hasMicrophone);
-        if (micValues.length > 0) {
-            const micBool = micValues.map((v) => String(v).toLowerCase()).includes('true');
-            if (micBool) filter.hasMicrophone = true;
-        }
-
-        const ambientValues = asQueryArray(ambientModeAvailable);
-        if (ambientValues.length > 0) {
-            const ambientBool = ambientValues.map((v) => String(v).toLowerCase()).includes('true');
-            if (ambientBool) filter.ambientModeAvailable = true;
-        }
-
-        const selectedDiscountRange = asSingleQueryValue(discountRange);
-        const matchedDiscountRange = DISCOUNT_RANGES.find((range) => range.value === selectedDiscountRange);
-        if (matchedDiscountRange) {
-            filter.discountPercentage = { $gte: matchedDiscountRange.min, $lt: matchedDiscountRange.max };
-        }
-
-        const selectedNewArrivalDays = parseInt(asSingleQueryValue(newArrivals), 10);
-        if ([30, 90].includes(selectedNewArrivalDays)) {
-            const since = new Date();
-            since.setDate(since.getDate() - selectedNewArrivalDays);
-            filter.createdAt = { $gte: since };
-        }
-
-        const colorValues = asQueryArray(colors).map((value) => String(value).trim()).filter(Boolean);
-        if (colorValues.length > 0) {
-            filter['variants.colorName'] = { $in: colorValues };
-        }
-
-        if (searchTerm.length >= 2) {
-            const escapedSearch = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(escapedSearch, 'i');
-
-            const [matchingBrands, matchingCategories] = await Promise.all([
-                Brand.find({ name: regex }).select('_id').lean(),
-                Category.find({
-                    name: regex,
-                    isBlocked: { $ne: true },
-                    isDeleted: { $ne: true }
-                }).select('_id').lean()
-            ]);
-
-            filter.$or = [
-                { title: regex },
-                { connectionType: regex },
-                { brand: { $in: matchingBrands.map((b) => b._id) } },
-                { category: { $in: matchingCategories.map((c) => c._id) } }
-            ];
-        }
-
-        const totalProducts = await Product.countDocuments(filter);
-        const productDocs = await Product.find(filter)
-            .sort(sortOption)
-            .skip(skip)
-            .limit(limit);
-        for (const productDoc of productDocs) {
-            await migrateLegacyProductImages(productDoc);
-        }
-        const products = productDocs.map((doc) => doc.toObject());
-        const totalPages = Math.max(1, Math.ceil(totalProducts / limit));
-        const pagination = {
-            currentPage: page,
-            totalPages,
-            totalItems: totalProducts,
-            hasPrevPage: page > 1,
-            hasNextPage: page < totalPages
-        };
-
-        const [brands, variantColors] = await Promise.all([
-            Brand.find({ isActive: true, isDeleted: false }).lean(),
-            Product.distinct('variants.colorName', {
-                isListed: true,
-                isDeleted: { $ne: true },
-                category: { $in: allowedCategoryIds }
-            })
-        ]);
-        const normalizedVariantColors = variantColors
-            .map((value) => String(value || '').trim())
-            .filter(Boolean)
-            .sort((a, b) => a.localeCompare(b));
-        const filterOptions = {
-            ...ENUM_FILTER_OPTIONS,
-            formFactorsByConnection: FORM_FACTORS_BY_CONNECTION,
-            discountRanges: DISCOUNT_RANGES,
-            newArrivals: [30, 90],
-            hasMicrophone: true,
-            hasAmbientMode: true,
-            variantColors: normalizedVariantColors
-        };
-
-        res.render('user/products', {
-            title: 'Products',
-            products,
-            filters: req.query,
-            categories: activeCategories,
-            brands,
-            query: req.query,
-            search: searchTerm,
-            filterOptions,
-            currentSort: sort || 'newest',
-            pagination
-        });
+        const data = await buildProductListingData(req);
+        res.render('user/products', data);
 
     } catch (error) {
         console.error('Error fetching products:', error);
-        res.status(500).render('error', {
-            message: 'Error loading products',
-            user: req.user
-        });
+        res.status(500).send('Error loading products');
     }
 };
 

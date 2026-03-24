@@ -411,7 +411,7 @@ const createProduct = async (req, res) => {
         const {
             title, sku, brand, connectionType, category, shortDescription,
             price, originalPrice, discountPercentage,
-            reservedCount, reorderThreshold,
+            reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
             bluetoothVersion, batteryLife, chargingTime, wirelessRange,
             warrantyDuration, warrantyProvider,
@@ -453,7 +453,6 @@ const createProduct = async (req, res) => {
             originalPrice: originalPrice ? parseFloat(originalPrice) : null,
             discountPercentage: discountPercentage ? parseFloat(discountPercentage) : 0,
             stockCount: totalVariantStock,
-            reservedCount: parseInt(reservedCount) || 0,
             reorderThreshold: parseInt(reorderThreshold) || 5,
             images: [],
             variants,
@@ -519,7 +518,7 @@ const updateProduct = async (req, res) => {
         const {
             title, sku, brand, connectionType, category, shortDescription,
             price, originalPrice, discountPercentage,
-            reservedCount, reorderThreshold,
+            reorderThreshold,
             cableLength, connectorType, impedance, driverSize,
             bluetoothVersion, batteryLife, chargingTime, wirelessRange,
             warrantyDuration, warrantyProvider,
@@ -561,7 +560,6 @@ const updateProduct = async (req, res) => {
         product.originalPrice = originalPrice ? parseFloat(originalPrice) : null;
         product.discountPercentage = discountPercentage ? parseFloat(discountPercentage) : 0;
         product.stockCount = totalVariantStock;
-        product.reservedCount = parseInt(reservedCount) || 0;
         product.reorderThreshold = parseInt(reorderThreshold) || 5;
         product.images = [];
         product.markModified('images');

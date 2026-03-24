@@ -374,17 +374,6 @@
                                                                         <div class="mt-4">
                                                                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                                                                         <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Reserved Count (Initial)
-                                                                            </p>
-                                                                            <input id="reservedCount" name="reservedCount" placeholder="0" type="number" step="1"
-                                                                                min="0"
-                                                                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                                                                value="<%= product.reservedCount %>" />
-                                                                            <p class="field-error" id="reservedCountError">Must be a whole number (0 or more)</p>
-                                                                        </label>
-                                                                    </div>
-                                                                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                                                        <label class="flex flex-col min-w-40 flex-1">
                                                                             <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Reorder Threshold</p>
                                                                             <input id="reorderThreshold" name="reorderThreshold"
                                                                                 placeholder="Minimum stock before reordering" type="number" step="1" min="0"
@@ -1361,7 +1350,6 @@
             // Optional numeric fields
             if (!validateNumber('originalPrice', 'originalPriceError', false)) valid = false;
             if (!validateNumber('discountPercentage', 'discountPercentageError', false)) valid = false;
-            if (!validateNumber('reservedCount', 'reservedCountError', false)) valid = false;
             if (!validateNumber('reorderThreshold', 'reorderThresholdError', false)) valid = false;
             if (!validateNumber('shippingLength', 'shippingLengthError', false)) valid = false;
             if (!validateNumber('shippingWidth', 'shippingWidthError', false)) valid = false;
@@ -1396,7 +1384,7 @@
 
             // Text/select fields
             const fieldNames = ['title', 'sku', 'brand', 'connectionType', 'category', 'shortDescription',
-                'price', 'originalPrice', 'discountPercentage', 'reservedCount', 'reorderThreshold',
+                'price', 'originalPrice', 'discountPercentage', 'reorderThreshold',
                 'cableLength', 'connectorType', 'impedance', 'driverSize',
                 'bluetoothVersion', 'batteryLife', 'chargingTime', 'wirelessRange',
                 'warrantyDuration', 'warrantyProvider',

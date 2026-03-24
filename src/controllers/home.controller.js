@@ -2,6 +2,7 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const HeroBanner = require('../models/HeroBanner');
+const HERO_BANNER_TYPES = ['custom', 'category', 'brand'];
 
 async function migrateLegacyProductImages(product) {
     if (!product) return product;
@@ -47,10 +48,13 @@ exports.getHomePage = async (req, res) => {
             getProductsByBadge('Best seller', categoryIds),
             getProductsByBadge('New', categoryIds),
             getProductsByBadge('Deal', categoryIds),
-            HeroBanner.find({ isActive: true })
+            HeroBanner.find({
+                isActive: true,
+                type: { $in: HERO_BANNER_TYPES }
+            })
                 .select('image type refId order')
                 .sort({ order: 1 })
-                .limit(5)
+                .limit(10)
                 .lean()
         ]);
         res.render('user/home', {
@@ -63,5 +67,30 @@ exports.getHomePage = async (req, res) => {
     } catch (error) {
         console.error('Error loading home page:', error);
         res.render('user/home', { categories: [], bestSellers: [], newArrivals: [], deals: [], heroBanners: [] });
+    }
+};
+
+exports.redirectHeroBanner = async (req, res) => {
+    try {
+        const banner = await HeroBanner.findById(req.params.id).lean();
+
+        if (!banner) {
+            return res.redirect('/');
+        }
+
+        switch (banner.type) {
+            case 'product':
+                return res.redirect(`/product/${banner.refId}`);
+            case 'category':
+                return res.redirect(`/shop?category=${encodeURIComponent(String(banner.refId || ''))}`);
+            case 'brand':
+                return res.redirect(`/shop?brand=${encodeURIComponent(String(banner.refId || ''))}`);
+            case 'custom':
+                return res.redirect(banner.ctaLink || '/');
+            default:
+                return res.redirect('/');
+        }
+    } catch (error) {
+        return res.redirect('/');
     }
 };

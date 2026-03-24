@@ -442,17 +442,6 @@
                                                                         <div class="mt-4">
                                                                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                                                                         <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Reserved Count (Initial)
-                                                                            </p>
-                                                                            <input id="reservedCount" name="reservedCount" placeholder="0" type="number" step="1"
-                                                                                min="0"
-                                                                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                                                                value="" />
-                                                                            <p class="field-error" id="reservedCountError">Must be a whole number (0 or more)</p>
-                                                                        </label>
-                                                                    </div>
-                                                                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                                                        <label class="flex flex-col min-w-40 flex-1">
                                                                             <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Reorder Threshold</p>
                                                                             <input id="reorderThreshold" name="reorderThreshold"
                                                                                 placeholder="Minimum stock before reordering" type="number" step="1" min="0"
@@ -1501,7 +1490,7 @@
 
         // ========== Validation Helpers ==========
         ['productTitle', 'productSku', 'brandSelect', 'connectionType', 'categorySelect', 'shortDescription', 'productPrice',
-            'originalPrice', 'discountPercentage', 'reservedCount', 'reorderThreshold',
+            'originalPrice', 'discountPercentage', 'reorderThreshold',
             'warrantyDuration', 'warrantyProvider', 'shippingLength', 'shippingWidth', 'shippingHeight', 'shippingWeight'
         ].forEach((id) => {
             const el = document.getElementById(id);
@@ -1680,14 +1669,8 @@
                 valid = setFieldError('originalPrice', 'Original price must be greater than or equal to price.') && valid;
             }
 
-            const reserved = getValue('reservedCount');
             const reorder = getValue('reorderThreshold');
-            if (!/^\d+$/.test(reserved)) valid = setFieldError('reservedCount', 'Reserved count is required and must be an integer >= 0.') && valid; else clearFieldError('reservedCount');
             if (!/^\d+$/.test(reorder)) valid = setFieldError('reorderThreshold', 'Reorder threshold is required and must be an integer >= 0.') && valid; else clearFieldError('reorderThreshold');
-            const totalVariantStock = variants.reduce((sum, variant) => sum + (parseInt(variant.stockCount, 10) || 0), 0);
-            if (/^\d+$/.test(reserved) && Number(reserved) > totalVariantStock) {
-                valid = setFieldError('reservedCount', 'Reserved count cannot exceed stock count.') && valid;
-            }
 
             const connType = getValue('connectionType');
             if (connType === 'Wired') {

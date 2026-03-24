@@ -7,12 +7,17 @@ const invoiceController = require('../controllers/invoice.controller');
 const orderPageController = require('../controllers/order.page.controller');
 const userOrderController = require('../controllers/user.order.controller');
 const wishlistController = require('../controllers/wishlist.controller');
+const homeController = require('../controllers/home.controller');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
 
 router.get('/api/search', userProductController.liveSearch);
+router.get('/hero/redirect/:id', homeController.redirectHeroBanner);
 
 // Product Listing
 router.get('/products', userProductController.getAllProducts);
+router.get('/shop', userProductController.getAllProducts);
+router.get('/brands', userProductController.getBrandsPage);
+router.get('/brand/:id', userProductController.getBrandDetailPage);
 
 router.get('/cart', ensureAuthenticated, cartPageController.getCartPage);
 router.get('/wishlist', ensureAuthenticated, wishlistController.getWishlistPage);

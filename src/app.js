@@ -86,7 +86,7 @@ app.use('/account', accountRoutes);
 app.use(authPagesRoutes);
 app.use('/admin', adminWebRoutes);
 app.use('/admin', adminOrderRoutes);
-app.use(adminHeroRoutes);
+app.use('/admin', adminHeroRoutes);
 app.use('/', userRoutes);
 
 const PORT = process.env.PORT || 5000;

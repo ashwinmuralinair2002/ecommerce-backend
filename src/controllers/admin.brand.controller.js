@@ -22,6 +22,16 @@ function normalizeCrop(rawCrop) {
     };
 }
 
+function normalizeOptionalUrl(value) {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return '';
+    try {
+        return new URL(trimmed).toString();
+    } catch {
+        return null;
+    }
+}
+
 // @desc    Get All Brands (with Pagination)
 // @route   GET /admin/brands
 exports.getBrands = async (req, res) => {
@@ -99,16 +109,20 @@ exports.addBrand = async (req, res) => {
         const { name, description, website, contactEmail, isActive } = req.body;
         const logoCrop = normalizeCrop(req.body.logoCrop);
         const errors = {};
+        const normalizedWebsite = normalizeOptionalUrl(website);
 
         // Backend validation
         if (!name || name.trim().length < 2) {
             errors.name = 'Brand name is required (min 2 characters).';
         }
-        if (!req.file && !req.body.logoUrl) {
-            errors.logo = 'Please upload a brand logo or provide a URL.';
+        if (!req.file) {
+            errors.logo = 'Please upload a brand logo.';
         }
         if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
             errors.contactEmail = 'Please enter a valid email address.';
+        }
+        if (normalizedWebsite === null) {
+            errors.website = 'Please enter a valid website URL.';
         }
 
         if (Object.keys(errors).length > 0) {
@@ -129,20 +143,13 @@ exports.addBrand = async (req, res) => {
             });
         }
 
-        let logoUrl = '';
-        if (req.file) {
-            logoUrl = req.file.path;
-        } else if (req.body.logoUrl) {
-            logoUrl = req.body.logoUrl;
-        }
-
         const newBrand = new Brand({
-            name,
-            description,
-            logoUrl,
+            name: String(name || '').trim(),
+            description: String(description || '').trim(),
+            logoUrl: req.file.path,
             logoCrop,
-            website,
-            contactEmail,
+            website: normalizedWebsite || '',
+            contactEmail: String(contactEmail || '').trim(),
             isActive: isActive === 'on',
             productCount: 0
         });
@@ -208,10 +215,11 @@ exports.editBrand = async (req, res) => {
             throw new Error('Request body is missing');
         }
 
-        const { name, description, logoUrl } = req.body;
+        const { name, description, website, contactEmail, isActive } = req.body;
         const logoCrop = normalizeCrop(req.body.logoCrop);
         const brand = await Brand.findById(req.params.id);
         const errors = {};
+        const normalizedWebsite = normalizeOptionalUrl(website);
 
         if (!brand) {
             return res.redirect('/admin/brands');
@@ -219,6 +227,12 @@ exports.editBrand = async (req, res) => {
 
         if (!name || name.trim().length < 2) {
             errors.name = 'Brand name is required (min 2 characters).';
+        }
+        if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+            errors.contactEmail = 'Please enter a valid email address.';
+        }
+        if (normalizedWebsite === null) {
+            errors.website = 'Please enter a valid website URL.';
         }
 
         if (Object.keys(errors).length > 0) {
@@ -230,8 +244,11 @@ exports.editBrand = async (req, res) => {
             });
         }
 
-        brand.name = name || brand.name;
-        brand.description = description || brand.description;
+        brand.name = String(name || '').trim();
+        brand.description = String(description || '').trim();
+        brand.website = normalizedWebsite || '';
+        brand.contactEmail = String(contactEmail || '').trim();
+        brand.isActive = isActive === 'on';
 
         if (req.file) {
             if (brand.logoUrl && brand.logoUrl.includes('cloudinary.com')) {
@@ -246,9 +263,6 @@ exports.editBrand = async (req, res) => {
             }
             brand.logoUrl = req.file.path;
             brand.logoCrop = logoCrop;
-        } else if (logoUrl && logoUrl.trim() !== '') {
-            brand.logoUrl = logoUrl;
-            brand.logoCrop = logoCrop;
         } else if (logoCrop) {
             brand.logoCrop = logoCrop;
         }
@@ -259,7 +273,7 @@ exports.editBrand = async (req, res) => {
         // Re-render with error and preserved input
         const brand = await Brand.findById(req.params.id).catch(() => null);
         res.render('admin/brands/edit-brand', {
-            brand: brand || { _id: req.params.id, name: '', description: '', logoUrl: '' },
+            brand: brand || { _id: req.params.id, name: '', description: '', logoUrl: '', website: '', contactEmail: '', isActive: true },
             error: 'Failed to update brand. Please try again.',
             errors: {},
             oldInput: req.body

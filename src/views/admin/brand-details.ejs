@@ -123,10 +123,14 @@
                     <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Brand Information</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <p class="text-sm text-[#685BCB] mb-1">Website</p>
-                            <p class="text-[#1F1F1F]">
-                                <%= brand.website || '-' %>
-                            </p>
+                            <% if (brand.website) { %>
+                                <a href="<%= brand.website.startsWith('http') ? brand.website : 'https://' + brand.website %>" target="_blank"
+                                    class="inline-block px-4 py-2 bg-[#685BCB] text-white text-sm font-semibold rounded-lg hover:bg-[#5748b5] transition-colors">
+                                    Official Website
+                                </a>
+                            <% } else { %>
+                                <p class="text-[#1F1F1F]">-</p>
+                            <% } %>
                         </div>
                         <div>
                             <p class="text-sm text-[#685BCB] mb-1">Contact Email</p>
