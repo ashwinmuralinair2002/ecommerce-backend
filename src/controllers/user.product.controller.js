@@ -62,6 +62,8 @@ const DISCOUNT_RANGES = [
     { value: '75-99', min: 75, max: 100, label: '75-99%' }
 ];
 
+const LISTING_BADGES = ['Best seller', 'New', 'Deal'];
+
 async function migrateLegacyProductImages(product) {
     if (!product) return product;
     const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -83,7 +85,7 @@ async function migrateLegacyProductImages(product) {
 async function buildProductListingData(req, forcedFilters = {}) {
     const mergedQuery = { ...req.query, ...forcedFilters };
     const {
-        search,
+        search, badge,
         category, brand, connection, minPrice, maxPrice, sort,
         noiseControlTypes, discountRange, hasMicrophone, controlMethods, formFactor,
         cableFeatures, earpieceShape, smartFeatures, newArrivals, sensitivityRange,
@@ -117,6 +119,15 @@ async function buildProductListingData(req, forcedFilters = {}) {
     if (asQueryArray(brand).length > 0) {
         if (brandIds.length > 0) filter.brand = { $in: brandIds };
         else filter._id = null;
+    }
+
+    const selectedBadge = asSingleQueryValue(badge);
+    if (selectedBadge) {
+        if (LISTING_BADGES.includes(selectedBadge)) {
+            filter.badges = selectedBadge;
+        } else {
+            filter._id = null;
+        }
     }
 
     const selectedConnection = asSingleQueryValue(connection);
@@ -389,28 +400,66 @@ exports.getBrandDetailPage = async (req, res) => {
         }
         const data = await buildProductListingData(req, { brand: String(brand._id) });
 
-        let heroBanners = await HeroBanner.find({
+        const heroBanners = await HeroBanner.find({
             isActive: true,
             type: 'brand',
             refId: brand._id
         }).sort({ order: 1 }).limit(10).lean();
 
-        if (heroBanners.length === 0) {
-            heroBanners = await HeroBanner.find({
-                isActive: true,
-                type: 'custom'
-            }).sort({ order: 1 }).limit(10).lean();
-        }
-
         res.render('user/brand-detail', {
             ...data,
             brand,
-            heroBanners,
+            heroBanners: heroBanners || [],
             error: null
         });
     } catch (error) {
         console.error('Error loading brand detail page:', error);
         res.status(500).send('Error loading brand page');
+    }
+};
+
+/**
+ * @desc    Get individual category page with products
+ * @route   GET /category/:id
+ * @access  Public
+ */
+exports.getCategoryDetailPage = async (req, res) => {
+    try {
+        const categoryId = req.params.id;
+
+        if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+            return res.status(404).send('Category not found');
+        }
+
+        const category = await Category.findById(categoryId).lean();
+
+        if (!category) {
+            return res.status(404).send('Category not found');
+        }
+
+        if (category.isBlocked === true || category.isDeleted === true) {
+            return res.status(404).send('Category not available');
+        }
+
+        const data = await buildProductListingData(req, {
+            category: String(category._id)
+        });
+
+        const heroBanners = await HeroBanner.find({
+            isActive: true,
+            type: 'category',
+            refId: category._id
+        }).sort({ order: 1 }).limit(10).lean();
+
+        res.render('user/category-detail', {
+            ...data,
+            category,
+            heroBanners: heroBanners || [],
+            error: null
+        });
+    } catch (error) {
+        console.error('Error loading category page:', error);
+        res.status(500).send('Error loading category page');
     }
 };
 
@@ -422,11 +471,78 @@ exports.getBrandDetailPage = async (req, res) => {
 exports.getAllProducts = async (req, res) => {
     try {
         const data = await buildProductListingData(req);
-        res.render('user/products', data);
+        res.render('user/products', {
+            ...data,
+            pageTitle: 'Products',
+            pageDescription: null,
+            emptyStateMessage: 'Try adjusting your filters.',
+            listingPath: '/products',
+            currentPath: '/products'
+        });
 
     } catch (error) {
         console.error('Error fetching products:', error);
         res.status(500).send('Error loading products');
+    }
+};
+
+exports.getBestSellersPage = async (req, res) => {
+    try {
+        const data = await buildProductListingData(req, {
+            badge: 'Best seller'
+        });
+
+        res.render('user/products', {
+            ...data,
+            pageTitle: 'Best Sellers',
+            pageDescription: 'Top trending products chosen by customers',
+            emptyStateMessage: 'No best-selling products available right now',
+            listingPath: '/best-sellers',
+            currentPath: '/best-sellers'
+        });
+    } catch (error) {
+        console.error('Error loading best sellers:', error);
+        res.status(500).send('Error loading best sellers');
+    }
+};
+
+exports.getNewArrivalsPage = async (req, res) => {
+    try {
+        const data = await buildProductListingData(req, {
+            badge: 'New'
+        });
+
+        res.render('user/products', {
+            ...data,
+            pageTitle: 'New Arrivals',
+            pageDescription: 'Latest products added to our collection',
+            emptyStateMessage: 'No new arrivals at the moment',
+            listingPath: '/new-arrivals',
+            currentPath: '/new-arrivals'
+        });
+    } catch (error) {
+        console.error('Error loading new arrivals:', error);
+        res.status(500).send('Error loading new arrivals');
+    }
+};
+
+exports.getTodaysDealsPage = async (req, res) => {
+    try {
+        const data = await buildProductListingData(req, {
+            badge: 'Deal'
+        });
+
+        res.render('user/products', {
+            ...data,
+            pageTitle: "Today's Deals",
+            pageDescription: 'Limited-time offers and discounted products',
+            emptyStateMessage: 'No deals available right now',
+            listingPath: '/todays-deals',
+            currentPath: '/todays-deals'
+        });
+    } catch (error) {
+        console.error('Error loading deals:', error);
+        res.status(500).send('Error loading deals');
     }
 };
 

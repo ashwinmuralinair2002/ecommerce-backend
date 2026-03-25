@@ -16,8 +16,12 @@ router.get('/hero/redirect/:id', homeController.redirectHeroBanner);
 // Product Listing
 router.get('/products', userProductController.getAllProducts);
 router.get('/shop', userProductController.getAllProducts);
+router.get('/best-sellers', userProductController.getBestSellersPage);
+router.get('/new-arrivals', userProductController.getNewArrivalsPage);
+router.get('/todays-deals', userProductController.getTodaysDealsPage);
 router.get('/brands', userProductController.getBrandsPage);
 router.get('/brand/:id', userProductController.getBrandDetailPage);
+router.get('/category/:id', userProductController.getCategoryDetailPage);
 
 router.get('/cart', ensureAuthenticated, cartPageController.getCartPage);
 router.get('/wishlist', ensureAuthenticated, wishlistController.getWishlistPage);

@@ -4,7 +4,7 @@
 <head>
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <meta charset="UTF-8" />
-    <title>SoundWave | Products</title>
+    <title>SoundWave | <%= pageTitle || 'Products' %></title>
 
     <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
     <link rel="stylesheet"
@@ -13,6 +13,8 @@
     <%- include('../partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script>
+        const listingPath = '<%= listingPath || "/products" %>';
+
         // Auto-submit functionality wrapper
         function submitForm() {
             const minPriceInput = document.querySelector('input[name="minPrice"]');
@@ -55,7 +57,7 @@
                 };
                 appendFormData(mainFilterForm);
                 appendFormData(advancedFiltersForm);
-                window.location.href = `/products?${queryParams.toString()}`;
+                window.location.href = `${listingPath}?${queryParams.toString()}`;
                 return;
             }
 
@@ -70,7 +72,7 @@
 
         <!-- ================= CONTENT ================= -->
         <main class="w-full px-4 md:px-6 lg:px-8 xl:px-10 py-5">
-            <form id="filter-form" action="/products" method="GET" class="flex gap-6 items-start">
+            <form id="filter-form" action="<%= listingPath || '/products' %>" method="GET" class="flex gap-6 items-start">
                 <% const searchValue = typeof search === 'string' ? search : (query.search || ''); %>
                 <input type="hidden" name="search" value="<%= searchValue %>">
 
@@ -185,7 +187,7 @@
                     </button>
 
                     <!-- Clear Filters Button -->
-                    <a href="/products"
+                    <a href="<%= listingPath || '/products' %>"
                         class="w-full mt-4 flex items-center justify-center px-4 py-2 border border-primary-light/45 rounded-lg shadow-sm text-sm font-medium text-primary bg-white hover:bg-primary-light/35 transition-colors">
                         Clear Filters
                     </a>
@@ -208,7 +210,7 @@
                                 <li aria-current="page">
                                     <div class="flex items-center">
                                         <span class="mx-2 text-gray-400">/</span>
-                                        <span class="text-primary font-medium">Products</span>
+                                        <span class="text-primary font-medium"><%= pageTitle || 'Products' %></span>
                                     </div>
                                 </li>
                             </ol>
@@ -216,7 +218,10 @@
 
                         <div class="flex flex-col sm:flex-row justify-between items-end gap-3">
                             <div>
-                                <h1 class="text-3xl font-bold text-primary">Products</h1>
+                                <h1 class="text-3xl font-bold text-primary"><%= pageTitle || 'Products' %></h1>
+                                <% if (pageDescription) { %>
+                                    <p class="text-sm text-gray-500 mt-1"><%= pageDescription %></p>
+                                <% } %>
                                 <% if (searchValue) { %>
                                     <div class="text-sm text-primary mt-1">
                                         Showing results for "<%= searchValue %>"
@@ -262,8 +267,8 @@
                                         </svg>
                                     </div>
                                     <h3 class="text-lg font-bold text-primary">No products found</h3>
-                                    <p class="text-sm text-gray-500 mt-1">Try adjusting your filters.</p>
-                                    <a href="/products"
+                                    <p class="text-sm text-gray-500 mt-1"><%= emptyStateMessage || 'Try adjusting your filters.' %></p>
+                                    <a href="<%= listingPath || '/products' %>"
                                         class="mt-4 text-primary font-bold text-sm hover:underline">Clear
                                         all
                                         filters</a>
@@ -688,7 +693,7 @@
 
                     appendFormData(mainFilterForm);
                     appendFormData(advancedFiltersForm);
-                    window.location.href = `/products?${queryParams.toString()}`;
+                    window.location.href = `${listingPath}?${queryParams.toString()}`;
                 });
             }
 

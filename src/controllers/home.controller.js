@@ -2,7 +2,7 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const HeroBanner = require('../models/HeroBanner');
-const HERO_BANNER_TYPES = ['custom', 'category', 'brand'];
+const HERO_BANNER_TYPES = ['custom', 'product'];
 
 async function migrateLegacyProductImages(product) {
     if (!product) return product;
