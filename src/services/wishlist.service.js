@@ -2,12 +2,14 @@ const mongoose = require('mongoose');
 const Wishlist = require('../models/wishlist.model');
 const Product = require('../models/Product');
 const cartService = require('./cart.service');
+const AppError = require('../utils/AppError');
+const asyncHandler = require('../utils/asyncHandler');
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const ensureValidIds = (productId, variantId) => {
     if (!isValidObjectId(productId) || !isValidObjectId(variantId)) {
-        throw new Error('Invalid product or variant');
+        throw new AppError('Invalid product or variant', 400);
     }
 };
 
@@ -17,13 +19,13 @@ const getValidatedProductAndVariant = async (productId, variantId) => {
     const product = await Product.findById(productId).select('title price images variants');
 
     if (!product) {
-        throw new Error('Product not found');
+        throw new AppError('Product not found', 404);
     }
 
     const variant = product.variants.id(variantId);
 
     if (!variant) {
-        throw new Error('Variant not found');
+        throw new AppError('Variant not found', 404);
     }
 
     return { product, variant };
@@ -97,14 +99,14 @@ const buildWishlistResponse = async (userId) => {
     };
 };
 
-const getWishlist = async (userId) => buildWishlistResponse(userId);
+const getWishlist = asyncHandler(async (userId) => buildWishlistResponse(userId));
 
-const getWishlistCount = async (userId) => {
+const getWishlistCount = asyncHandler(async (userId) => {
     const wishlist = await Wishlist.findOne({ user: userId }).select('items.variantId').lean();
     return Array.isArray(wishlist && wishlist.items) ? wishlist.items.length : 0;
-};
+});
 
-const addToWishlist = async (userId, productId, variantId) => {
+const addToWishlist = asyncHandler(async (userId, productId, variantId) => {
     const { product } = await getValidatedProductAndVariant(productId, variantId);
     const wishlistItem = {
         productId,
@@ -172,9 +174,9 @@ const addToWishlist = async (userId, productId, variantId) => {
         wishlistCount: await getWishlistCount(userId),
         message: alreadyExists ? 'Already in wishlist' : 'Added to wishlist'
     };
-};
+});
 
-const removeFromWishlist = async (userId, productId, variantId) => {
+const removeFromWishlist = asyncHandler(async (userId, productId, variantId) => {
     ensureValidIds(productId, variantId);
 
     const wishlist = await Wishlist.findOne({ user: userId });
@@ -194,9 +196,9 @@ const removeFromWishlist = async (userId, productId, variantId) => {
         wishlistCount: await getWishlistCount(userId),
         message: 'Wishlist updated'
     };
-};
+});
 
-const moveToCart = async (userId, productId, variantId) => {
+const moveToCart = asyncHandler(async (userId, productId, variantId) => {
     ensureValidIds(productId, variantId);
     await cartService.addToCart(userId, productId, variantId, 1);
     await removeFromWishlist(userId, productId, variantId);
@@ -206,7 +208,7 @@ const moveToCart = async (userId, productId, variantId) => {
         wishlistCount: await getWishlistCount(userId),
         message: 'Item moved to cart'
     };
-};
+});
 
 module.exports = {
     getWishlist,

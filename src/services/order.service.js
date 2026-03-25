@@ -3,6 +3,7 @@ const Cart = require('../models/cart.model');
 const Order = require('../models/order.model');
 const Product = require('../models/Product');
 const checkoutService = require('./checkout.service');
+const AppError = require('../utils/AppError');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const generateOrderItemId = () => `ITEM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -19,10 +20,9 @@ const buildShippingAddress = (address) => {
 };
 
 const placeOrder = async (userId) => {
-    const checkoutData = await checkoutService.prepareCheckout(userId);
-    const orderId = `ORD-${Date.now()}`;
-
     try {
+        const checkoutData = await checkoutService.prepareCheckout(userId);
+        const orderId = `ORD-${Date.now()}`;
         const orderItems = [];
 
         for (const item of checkoutData.items) {
@@ -30,18 +30,18 @@ const placeOrder = async (userId) => {
                 .populate('brand', 'name');
 
             if (!product || product.isListed === false || product.isDeleted === true) {
-                throw new Error('Invalid cart items present');
+                throw new AppError('Invalid cart items present', 400);
             }
 
             const variant = product.variants.id(item.variant && item.variant._id);
             const quantity = Number(item.quantity || 0);
 
             if (!variant || Number(variant.stockCount || 0) === 0 || quantity > 5) {
-                throw new Error('Invalid cart items present');
+                throw new AppError('Invalid cart items present', 400);
             }
 
             if (Number(variant.stockCount || 0) < quantity) {
-                throw new Error('Stock changed, please refresh');
+                throw new AppError('Stock changed, please refresh', 409);
             }
 
             const price = Number(item.product && typeof item.product.price === 'number' ? item.product.price : item.priceSnapshot || 0);
@@ -95,7 +95,11 @@ const placeOrder = async (userId) => {
 
         return order.orderId;
     } catch (error) {
-        throw error;
+        if (error instanceof AppError) {
+            throw error;
+        }
+
+        throw new AppError('Order service failed', 500);
     }
 };
 
@@ -113,13 +117,13 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
             }).session(session);
 
             if (!order) {
-                throw new Error('Order not found');
+                throw new AppError('Order not found', 404);
             }
 
             const hasStableItemIds = Array.isArray(order.items) && order.items.every((item) => item && item.itemId);
 
             if (!hasStableItemIds) {
-                throw new Error('Cancellation not supported for this order');
+                throw new AppError('Cancellation not supported for this order', 409);
             }
 
             const item = Array.isArray(order.items)
@@ -127,23 +131,23 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
                 : null;
 
             if (!item) {
-                throw new Error('Item not found');
+                throw new AppError('Item not found', 404);
             }
 
             if (item.status !== 'pending') {
-                throw new Error('Item cannot be cancelled');
+                throw new AppError('Item cannot be cancelled', 409);
             }
 
             const product = await Product.findById(item.productId).session(session);
 
             if (!product) {
-                throw new Error('Product not found');
+                throw new AppError('Product not found', 404);
             }
 
             const variant = product.variants.id(item.variantId);
 
             if (!variant) {
-                throw new Error('Product variant not found');
+                throw new AppError('Product variant not found', 404);
             }
 
             variant.stockCount += Number(item.quantity || 0);
@@ -178,52 +182,64 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
 
         return result;
     } catch (error) {
-        throw error;
+        if (error instanceof AppError) {
+            throw error;
+        }
+
+        throw new AppError('Order service failed', 500);
     } finally {
         await session.endSession();
     }
 };
 
 const requestReturn = async (userId, orderId, itemId, reason) => {
-    const order = await Order.findOne({
-        orderId,
-        user: userId,
-        deleted: { $ne: true }
-    });
+    try {
+        const order = await Order.findOne({
+            orderId,
+            user: userId,
+            deleted: { $ne: true }
+        });
 
-    if (!order) {
-        throw new Error('Order not found');
+        if (!order) {
+            throw new AppError('Order not found', 404);
+        }
+
+        const item = Array.isArray(order.items)
+            ? order.items.find((orderItem) => orderItem.itemId === itemId)
+            : null;
+
+        if (!item) {
+            throw new AppError('Item not found', 404);
+        }
+
+        if (['return_requested', 'returned', 'return_rejected'].includes(item.status)) {
+            throw new AppError('Return already processed for this item', 409);
+        }
+
+        if (item.status !== 'delivered') {
+            throw new AppError('Return allowed only for delivered items', 409);
+        }
+
+        if (!reason || typeof reason !== 'string' || !reason.trim()) {
+            throw new AppError('Return reason is required', 400);
+        }
+
+        item.status = 'return_requested';
+        item.returnReason = reason.trim().slice(0, 1000);
+
+        await order.save();
+
+        return {
+            success: true,
+            message: 'Return request submitted successfully'
+        };
+    } catch (error) {
+        if (error instanceof AppError) {
+            throw error;
+        }
+
+        throw new AppError('Order service failed', 500);
     }
-
-    const item = Array.isArray(order.items)
-        ? order.items.find((orderItem) => orderItem.itemId === itemId)
-        : null;
-
-    if (!item) {
-        throw new Error('Item not found');
-    }
-
-    if (['return_requested', 'returned', 'return_rejected'].includes(item.status)) {
-        throw new Error('Return already processed for this item');
-    }
-
-    if (item.status !== 'delivered') {
-        throw new Error('Return allowed only for delivered items');
-    }
-
-    if (!reason || typeof reason !== 'string' || !reason.trim()) {
-        throw new Error('Return reason is required');
-    }
-
-    item.status = 'return_requested';
-    item.returnReason = reason.trim().slice(0, 1000);
-
-    await order.save();
-
-    return {
-        success: true,
-        message: 'Return request submitted successfully'
-    };
 };
 
 module.exports = {

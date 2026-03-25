@@ -1,5 +1,6 @@
 // Utility service for sending emails via Nodemailer
 const nodemailer = require('nodemailer');
+const AppError = require('../utils/AppError');
 
 // Diagnostic: Log environment variable status (without revealing secrets)
 const logEnvStatus = () => {
@@ -18,6 +19,13 @@ const sendEmail = async (to, subject, text, otp = null) => {
 
     try {
         // Create Transporter (Brevo SMTP)
+
+        console.log("🚨 SMTP CONFIG USED:", {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            user: process.env.SMTP_USER
+        });
+
         console.log('[EMAIL DIAG] Creating Nodemailer transporter...');
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
@@ -28,6 +36,14 @@ const sendEmail = async (to, subject, text, otp = null) => {
                 pass: process.env.SMTP_PASS
             }
         });
+
+        try {
+            await transporter.verify();
+            console.log("✅ SMTP connection successful");
+        } catch (err) {
+            console.error("❌ SMTP connection failed:", err.message);
+        }
+
         console.log('[EMAIL DIAG] Transporter created successfully');
 
         const mailOptions = {
@@ -47,13 +63,10 @@ const sendEmail = async (to, subject, text, otp = null) => {
         console.log(`[EMAIL SUCCESS] Accepted: ${info.accepted}`);
         console.log(`[EMAIL SUCCESS] Rejected: ${info.rejected}`);
 
-        // DEV_OTP_CONSOLE fallback (print anyway on success if enabled)
-        if (process.env.DEV_OTP_CONSOLE === 'true' && otp) {
-            console.log(`\n[DEV OTP FALLBACK] OTP for ${to} is: ${otp}\n`);
-        }
-
         return info;
     } catch (error) {
+        if (error instanceof AppError) throw error;
+
         console.error('[EMAIL ERROR] Full error object:', error);
         console.error('[EMAIL ERROR] Error name:', error.name);
         console.error('[EMAIL ERROR] Error message:', error.message);
@@ -61,12 +74,12 @@ const sendEmail = async (to, subject, text, otp = null) => {
         console.error('[EMAIL ERROR] Error response:', error.response);
         console.error('[EMAIL ERROR] SMTP Response Code:', error.responseCode);
 
-        // DEV_OTP_CONSOLE fallback on error
-        if (otp) {
+        // DEV_OTP_CONSOLE fallback on error ONLY
+        if (process.env.DEV_OTP_CONSOLE === 'true' && otp) {
             console.log(`\n[DEV OTP FALLBACK] Email failed! OTP for ${to} is: ${otp}\n`);
         }
 
-        throw new Error(`Email functionality failed: ${error.message}`);
+        return null;
     }
 };
 

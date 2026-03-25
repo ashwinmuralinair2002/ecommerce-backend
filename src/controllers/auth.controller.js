@@ -1,6 +1,8 @@
 // Authentication controller handling signup, login, and OTP
 const { validationResult } = require('express-validator');
+const passport = require('passport');
 const authService = require('../services/auth.service');
+const AppError = require('../utils/AppError');
 
 
 // @desc    Register a new user
@@ -197,26 +199,45 @@ const logout = (req, res) => {
     });
 };
 
-const handleGoogleAuthCallback = (req, res) => {
-    // Successful authentication, data is in req.user (from passport strategy)
-    req.session.regenerate((err) => {
+const handleGoogleAuthCallback = (req, res, next) => {
+    passport.authenticate('google', { session: false }, (err, user) => {
         if (err) {
-            console.error('Google Auth Session Error:', err);
+            if (
+                (err instanceof AppError && err.statusCode === 403)
+                || err.message === 'User account is blocked'
+            ) {
+                return res.redirect('/login?error=account_unavailable');
+            }
+
+            return next(err);
+        }
+
+        if (!user) {
             return res.redirect('/login');
         }
 
-        // Standardize Session
-        req.session.userId = req.user._id.toString();
-        req.session.role = req.user.role || 'user';
+        req.user = user;
 
-        req.session.save((err) => {
-            if (err) {
-                console.error('Google Auth Session Save Error:', err);
+        // Successful authentication, data is in req.user (from passport strategy)
+        req.session.regenerate((sessionError) => {
+            if (sessionError) {
+                console.error('Google Auth Session Error:', sessionError);
                 return res.redirect('/login');
             }
-            res.redirect('/');
+
+            // Standardize Session
+            req.session.userId = req.user._id.toString();
+            req.session.role = req.user.role || 'user';
+
+            req.session.save((saveError) => {
+                if (saveError) {
+                    console.error('Google Auth Session Save Error:', saveError);
+                    return res.redirect('/login');
+                }
+                return res.redirect('/');
+            });
         });
-    });
+    })(req, res, next);
 };
 
 module.exports = {

@@ -1,5 +1,7 @@
 const Cart = require('../models/cart.model');
 const Product = require('../models/Product');
+const AppError = require('../utils/AppError');
+const asyncHandler = require('../utils/asyncHandler');
 
 const MAX_CART_ITEM_QUANTITY = 5;
 const GST_RATE = 0.18;
@@ -23,17 +25,17 @@ const getValidatedProductAndVariant = async (productId, variantId) => {
     const product = await Product.findById(productId);
 
     if (!product || product.isListed !== true || product.isDeleted === true) {
-        throw new Error('Product not available');
+        throw new AppError('Product not available', 404);
     }
 
     const variant = product.variants.id(variantId);
 
     if (!variant) {
-        throw new Error('Variant not found');
+        throw new AppError('Variant not found', 404);
     }
 
     if (variant.stockCount <= 0) {
-        throw new Error('Out of stock');
+        throw new AppError('Out of stock', 400);
     }
 
     return { product, variant };
@@ -41,15 +43,15 @@ const getValidatedProductAndVariant = async (productId, variantId) => {
 
 const validateRequestedQuantity = (quantity, stockCount) => {
     if (!Number.isInteger(quantity) || quantity < 1) {
-        throw new Error('Invalid quantity');
+        throw new AppError('Invalid quantity', 400);
     }
 
     if (quantity > stockCount) {
-        throw new Error('Quantity exceeds available stock');
+        throw new AppError('Quantity exceeds available stock', 400);
     }
 
     if (quantity > MAX_CART_ITEM_QUANTITY) {
-        throw new Error('Quantity limit exceeded');
+        throw new AppError('Quantity limit exceeded', 400);
     }
 };
 
@@ -152,7 +154,7 @@ const buildCartResponse = async (userId) => {
     };
 };
 
-const addToCart = async (userId, productId, variantId, quantity) => {
+const addToCart = asyncHandler(async (userId, productId, variantId, quantity) => {
     const { product, variant } = await getValidatedProductAndVariant(productId, variantId);
 
     validateRequestedQuantity(quantity, variant.stockCount);
@@ -172,11 +174,11 @@ const addToCart = async (userId, productId, variantId, quantity) => {
         const updatedQuantity = cart.items[existingItemIndex].quantity + quantity;
 
         if (updatedQuantity > variant.stockCount) {
-            throw new Error('Quantity exceeds available stock');
+            throw new AppError('Quantity exceeds available stock', 400);
         }
 
         if (updatedQuantity > MAX_CART_ITEM_QUANTITY) {
-            throw new Error('Quantity limit exceeded');
+            throw new AppError('Quantity limit exceeded', 400);
         }
 
         cart.items[existingItemIndex].quantity = updatedQuantity;
@@ -193,27 +195,27 @@ const addToCart = async (userId, productId, variantId, quantity) => {
     await cart.save();
 
     return buildCartResponse(userId);
-};
+});
 
-const getCart = async (userId) => {
+const getCart = asyncHandler(async (userId) => {
     return buildCartResponse(userId);
-};
+});
 
-const updateCartItemQuantity = async (userId, productId, variantId, action) => {
+const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId, action) => {
     if (!['increment', 'decrement'].includes(action)) {
-        throw new Error('Invalid action');
+        throw new AppError('Invalid action', 400);
     }
 
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
-        throw new Error('Cart not found');
+        throw new AppError('Cart not found', 404);
     }
 
     const itemIndex = findCartItemIndex(cart.items, productId, variantId);
 
     if (itemIndex === -1) {
-        throw new Error('Cart item not found');
+        throw new AppError('Cart item not found', 404);
     }
 
     const { product, variant } = await getValidatedProductAndVariant(productId, variantId);
@@ -223,11 +225,11 @@ const updateCartItemQuantity = async (userId, productId, variantId, action) => {
         const updatedQuantity = cartItem.quantity + 1;
 
         if (updatedQuantity > variant.stockCount) {
-            throw new Error('Quantity exceeds available stock');
+            throw new AppError('Quantity exceeds available stock', 400);
         }
 
         if (updatedQuantity > MAX_CART_ITEM_QUANTITY) {
-            throw new Error('Quantity limit exceeded');
+            throw new AppError('Quantity limit exceeded', 400);
         }
 
         cartItem.quantity = updatedQuantity;
@@ -240,19 +242,19 @@ const updateCartItemQuantity = async (userId, productId, variantId, action) => {
     await cart.save();
 
     return buildCartResponse(userId);
-};
+});
 
-const removeCartItem = async (userId, productId, variantId) => {
+const removeCartItem = asyncHandler(async (userId, productId, variantId) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
-        throw new Error('Cart not found');
+        throw new AppError('Cart not found', 404);
     }
 
     const itemIndex = findCartItemIndex(cart.items, productId, variantId);
 
     if (itemIndex === -1) {
-        throw new Error('Cart item not found');
+        throw new AppError('Cart item not found', 404);
     }
 
     cart.items.splice(itemIndex, 1);
@@ -260,7 +262,7 @@ const removeCartItem = async (userId, productId, variantId) => {
     await cart.save();
 
     return buildCartResponse(userId);
-};
+});
 
 module.exports = {
     addToCart,

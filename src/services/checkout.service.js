@@ -1,5 +1,6 @@
 const cartService = require('./cart.service');
 const User = require('../models/user.model');
+const AppError = require('../utils/AppError');
 
 const GST_RATE = 0.18;
 const MAX_CART_ITEM_QUANTITY = 5;
@@ -32,41 +33,49 @@ const hasInvalidCartItem = (item) => {
 };
 
 const prepareCheckout = async (userId) => {
-    const cart = await cartService.getCart(userId);
+    try {
+        const cart = await cartService.getCart(userId);
 
-    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
-        throw new Error('Cart is empty');
+        if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+            throw new AppError('Cart is empty', 400);
+        }
+
+        if (cart.items.some(hasInvalidCartItem)) {
+            throw new AppError('Invalid cart items present', 400);
+        }
+
+        const user = await User.findById(userId).select('addresses').lean();
+        const addresses = user && Array.isArray(user.addresses) ? user.addresses : [];
+        const selectedAddress = addresses.find((address) => address && address.isDefault === true);
+
+        if (!selectedAddress) {
+            throw new AppError('No delivery address selected', 400);
+        }
+
+        const totalItems = cart.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+        const subtotal = roundCurrency(cart.items.reduce((sum, item) => {
+            return sum + (getItemUnitPrice(item) * Number(item.quantity || 0));
+        }, 0));
+        const gst = roundCurrency(subtotal * GST_RATE);
+        const finalTotal = roundCurrency(subtotal + gst);
+
+        return {
+            items: cart.items,
+            pricing: {
+                totalItems,
+                subtotal,
+                gst,
+                finalTotal
+            },
+            address: selectedAddress
+        };
+    } catch (error) {
+        if (error instanceof AppError) {
+            throw error;
+        }
+
+        throw new AppError('Checkout service failed', 500);
     }
-
-    if (cart.items.some(hasInvalidCartItem)) {
-        throw new Error('Invalid cart items present');
-    }
-
-    const user = await User.findById(userId).select('addresses').lean();
-    const addresses = user && Array.isArray(user.addresses) ? user.addresses : [];
-    const selectedAddress = addresses.find((address) => address && address.isDefault === true);
-
-    if (!selectedAddress) {
-        throw new Error('No delivery address selected');
-    }
-
-    const totalItems = cart.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-    const subtotal = roundCurrency(cart.items.reduce((sum, item) => {
-        return sum + (getItemUnitPrice(item) * Number(item.quantity || 0));
-    }, 0));
-    const gst = roundCurrency(subtotal * GST_RATE);
-    const finalTotal = roundCurrency(subtotal + gst);
-
-    return {
-        items: cart.items,
-        pricing: {
-            totalItems,
-            subtotal,
-            gst,
-            finalTotal
-        },
-        address: selectedAddress
-    };
 };
 
 module.exports = {

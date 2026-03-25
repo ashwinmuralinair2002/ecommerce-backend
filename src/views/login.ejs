@@ -10,6 +10,7 @@
     <title>SoundWave | Login</title>
     <%- include('./partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/js/utils.js"></script>
     <script>
         async function handleLogin() {
@@ -60,7 +61,7 @@
                 if (!response.ok) {
                     // Handle Blocked User
                     if (response.status === 403 && data.error === 'User account is blocked') {
-                        throw new Error('Your account is blocked. Please contact support.');
+                        throw new Error('This account is currently unavailable. Please contact support if needed.');
                     }
                     throw new Error(data.error || 'Login failed');
                 }
@@ -128,7 +129,15 @@
             };
 
             if (errorParam) {
-                showMessage(decodeURIComponent(errorParam), 'error');
+                if (errorParam === 'account_unavailable') {
+                    Swal.fire({
+                        title: 'Access Restricted',
+                        text: 'This account is currently unavailable. Please contact support if needed.',
+                        icon: 'warning'
+                    });
+                } else {
+                    showMessage(decodeURIComponent(errorParam), 'error');
+                }
             } else if (messageParam) {
                 showMessage(decodeURIComponent(messageParam), 'success'); // or neutral
             }

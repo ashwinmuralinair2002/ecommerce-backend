@@ -1,4 +1,5 @@
 const Order = require('../models/order.model');
+const AppError = require('../utils/AppError');
 
 const mapOrderSummary = (order) => ({
     orderId: order.orderId,
@@ -41,54 +42,66 @@ const getDateThreshold = (dateFilter) => {
 };
 
 const getUserOrders = async (userId, options = {}) => {
-    const { search = '', sort = 'newest', dateFilter = '' } = options;
-    const query = {
-        user: userId,
-        deleted: { $ne: true }
-    };
+    try {
+        const { search = '', sort = 'newest', dateFilter = '' } = options;
+        const query = {
+            user: userId,
+            deleted: { $ne: true }
+        };
 
-    if (search && search.trim()) {
-        query.$or = [
-            { 'items.productName': { $regex: search.trim(), $options: 'i' } },
-            { 'items.brandName': { $regex: search.trim(), $options: 'i' } }
-        ];
+        if (search && search.trim()) {
+            query.$or = [
+                { 'items.productName': { $regex: search.trim(), $options: 'i' } },
+                { 'items.brandName': { $regex: search.trim(), $options: 'i' } }
+            ];
+        }
+
+        const dateThreshold = getDateThreshold(dateFilter);
+        if (dateThreshold) {
+            query.createdAt = { $gte: dateThreshold };
+        }
+
+        const sortOption = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
+
+        const orders = await Order.find(query)
+            .sort(sortOption)
+            .lean();
+
+        return orders.map(mapOrderSummary);
+    } catch (err) {
+        if (err instanceof AppError) throw err;
+
+        throw new AppError('User order service failed', 500);
     }
-
-    const dateThreshold = getDateThreshold(dateFilter);
-    if (dateThreshold) {
-        query.createdAt = { $gte: dateThreshold };
-    }
-
-    const sortOption = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
-
-    const orders = await Order.find(query)
-        .sort(sortOption)
-        .lean();
-
-    return orders.map(mapOrderSummary);
 };
 
 const getUserOrderById = async (userId, orderId) => {
-    const order = await Order.findOne({
-        orderId,
-        user: userId,
-        deleted: { $ne: true }
-    }).lean();
+    try {
+        const order = await Order.findOne({
+            orderId,
+            user: userId,
+            deleted: { $ne: true }
+        }).lean();
 
-    if (!order) {
-        return null;
+        if (!order) {
+            return null;
+        }
+
+        return {
+            orderId: order.orderId,
+            items: order.items || [],
+            pricing: order.pricing || {},
+            shippingAddress: order.shippingAddress || {},
+            orderStatus: order.orderStatus,
+            paymentMethod: order.paymentMethod,
+            totalAmount: order.totalAmount,
+            createdAt: order.createdAt
+        };
+    } catch (err) {
+        if (err instanceof AppError) throw err;
+
+        throw new AppError('User order service failed', 500);
     }
-
-    return {
-        orderId: order.orderId,
-        items: order.items || [],
-        pricing: order.pricing || {},
-        shippingAddress: order.shippingAddress || {},
-        orderStatus: order.orderStatus,
-        paymentMethod: order.paymentMethod,
-        totalAmount: order.totalAmount,
-        createdAt: order.createdAt
-    };
 };
 
 module.exports = {

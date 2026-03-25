@@ -3,7 +3,7 @@ const User = require('../models/user.model');
 const injectDevOtp = (req, res, next) => {
     const originalJson = res.json;
     res.json = function (body) {
-        if (process.env.NODE_ENV !== 'production' && body) {
+        if (process.env.NODE_ENV !== 'production' && process.env.DEV_OTP_CONSOLE === 'true' && body) {
             const target = req.originalUrl;
             const isTarget = target.includes('/api/auth/signup') || target.includes('/api/auth/resend-otp');
 
