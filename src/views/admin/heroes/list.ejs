@@ -12,6 +12,23 @@
 </head>
 
 <body>
+    <%
+        const currentFilters = filters || {};
+        const currentType = currentFilters.type || '';
+        const currentRefId = currentFilters.refId || '';
+        const currentStatus = currentFilters.isActive || '';
+        const currentSearch = currentFilters.search || '';
+        const refOptions = refs || { brands: [], categories: [], products: [] };
+        const buildPageUrl = (pageNumber) => {
+            const params = new URLSearchParams();
+            if (currentType) params.set('type', currentType);
+            if (currentRefId) params.set('refId', currentRefId);
+            if (currentStatus) params.set('isActive', currentStatus);
+            if (currentSearch) params.set('search', currentSearch);
+            params.set('page', String(pageNumber));
+            return `/admin/heroes?${params.toString()}`;
+        };
+    %>
     <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
         <%- include("../../partials/admin/navbar") %>
 
@@ -47,15 +64,64 @@
                         </div>
                     <% } %>
 
+                    <form id="heroFiltersForm" method="GET" action="/admin/heroes">
+                        <div class="px-4 pt-1 pb-4">
+                            <div class="relative">
+                                <input id="searchInput" type="text" name="search" placeholder="Search banners..."
+                                    value="<%= currentSearch %>" onkeydown="handleSearch(event)"
+                                    class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
+                                <% if (currentSearch) { %>
+                                    <button type="button" onclick="clearSearch()"
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors"
+                                        title="Clear Search">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                            viewBox="0 0 256 256">
+                                            <path
+                                                d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
+                                            </path>
+                                        </svg>
+                                    </button>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-4 px-4 pb-4">
+                            <select id="filterType" name="type" onchange="handleTypeChange(); applyFilters();"
+                                class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                                <option value="">All Types</option>
+                                <option value="custom" <%= currentType === 'custom' ? 'selected' : '' %>>Custom</option>
+                                <option value="brand" <%= currentType === 'brand' ? 'selected' : '' %>>Brand</option>
+                                <option value="category" <%= currentType === 'category' ? 'selected' : '' %>>Category</option>
+                                <option value="product" <%= currentType === 'product' ? 'selected' : '' %>>Product</option>
+                            </select>
+
+                            <div id="targetFilterWrap" class="min-w-[220px] <%= ['brand', 'category', 'product'].includes(currentType) ? '' : 'hidden' %>">
+                                <select id="filterRefId" name="refId" onchange="applyFilters()"
+                                    class="form-input w-full rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                                    <option value="">All Targets</option>
+                                </select>
+                            </div>
+
+                            <select id="filterStatus" name="isActive" onchange="applyFilters()"
+                                class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                                <option value="">All Statuses</option>
+                                <option value="active" <%= currentStatus === 'active' ? 'selected' : '' %>>Active</option>
+                                <option value="inactive" <%= currentStatus === 'inactive' ? 'selected' : '' %>>Inactive</option>
+                            </select>
+                        </div>
+                    </form>
+
+                    <div class="border-b border-[#BCA6DB] mx-4 mb-4"></div>
+
                     <div class="overflow-hidden rounded-xl border border-[#BCA6DB]">
                         <table class="w-full">
                             <thead class="bg-white border-b">
                                 <tr>
                                     <th class="p-3 text-left">Image</th>
                                     <th class="p-3 text-left">Type</th>
-                                    <th class="p-3 text-left">Reference ID</th>
-                                    <th class="p-3 text-left">Order</th>
+                                    <th class="p-3 text-left">Target Name</th>
                                     <th class="p-3 text-left">Status</th>
+                                    <th class="p-3 text-left">Order</th>
                                     <th class="p-3 text-left">Actions</th>
                                 </tr>
                             </thead>
@@ -77,13 +143,13 @@
                                             </div>
                                         </td>
                                         <td class="p-3 text-[#1F1F1F] capitalize"><%= hero.type %></td>
-                                        <td class="p-3 text-[#1F1F1F] break-all"><%= hero.refId?.name || hero.refId?.title || hero.refId || '-' %></td>
-                                        <td class="p-3 text-[#1F1F1F]"><%= hero.order %></td>
+                                        <td class="p-3 text-[#1F1F1F] break-all"><%= hero.refId?.name || hero.refId?.title || '-' %></td>
                                         <td class="p-3">
                                             <span class="px-3 py-1 rounded-full text-xs font-semibold <%= hero.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700' %>">
                                                 <%= hero.isActive ? 'Active' : 'Inactive' %>
                                             </span>
                                         </td>
+                                        <td class="p-3 text-[#1F1F1F]"><%= hero.order %></td>
                                         <td class="p-3 text-sm font-medium">
                                             <div class="flex items-center gap-3 text-[#685BCB]">
                                                 <a href="/admin/heroes/<%= hero._id %>/edit" class="hover:underline" onclick="event.stopPropagation();">Edit</a>
@@ -104,7 +170,7 @@
                     <% if (pagination) { %>
                         <div class="flex justify-center items-center gap-2 mt-6">
                             <% if (pagination.hasPrevPage) { %>
-                                <a href="/admin/heroes?page=<%= pagination.currentPage - 1 %>"
+                                <a href="<%= buildPageUrl(pagination.currentPage - 1) %>"
                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                     &laquo; Previous
                                 </a>
@@ -121,7 +187,7 @@
                                             <%= i %>
                                         </span>
                                     <% } else { %>
-                                        <a href="/admin/heroes?page=<%= i %>"
+                                        <a href="<%= buildPageUrl(i) %>"
                                            class="flex items-center justify-center h-10 w-10 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                             <%= i %>
                                         </a>
@@ -130,7 +196,7 @@
                             </div>
 
                             <% if (pagination.hasNextPage) { %>
-                                <a href="/admin/heroes?page=<%= pagination.currentPage + 1 %>"
+                                <a href="<%= buildPageUrl(pagination.currentPage + 1) %>"
                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                     Next &raquo;
                                 </a>
@@ -147,6 +213,95 @@
     </div>
 
     <script>
+        const heroRefs = {
+            brands: <%- JSON.stringify(refOptions.brands || []) %>,
+            categories: <%- JSON.stringify(refOptions.categories || []) %>,
+            products: <%- JSON.stringify(refOptions.products || []) %>
+        };
+        const currentRefId = <%- JSON.stringify(currentRefId) %>;
+
+        function getRefOptionsByType(type) {
+            if (type === 'brand') return heroRefs.brands;
+            if (type === 'category') return heroRefs.categories;
+            if (type === 'product') return heroRefs.products;
+            return [];
+        }
+
+        function getRefLabel(option) {
+            return option.name || option.title || '';
+        }
+
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+            }
+        }
+
+        function clearSearch() {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) searchInput.value = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const form = document.getElementById('heroFiltersForm');
+            if (!form) return;
+
+            const params = new URLSearchParams(new FormData(form));
+            params.delete('page');
+
+            Array.from(params.keys()).forEach((key) => {
+                const value = params.get(key);
+                if (!value || !String(value).trim()) {
+                    params.delete(key);
+                }
+            });
+
+            const queryString = params.toString();
+            window.location.href = queryString ? `/admin/heroes?${queryString}` : '/admin/heroes';
+        }
+
+        function handleTypeChange() {
+            const typeSelect = document.getElementById('filterType');
+            const refSelect = document.getElementById('filterRefId');
+            const targetFilterWrap = document.getElementById('targetFilterWrap');
+            if (!typeSelect || !refSelect || !targetFilterWrap) return;
+
+            const type = typeSelect.value;
+            const options = getRefOptionsByType(type);
+            const previousValue = refSelect.value;
+            const selectedValue = previousValue || currentRefId;
+            const placeholder =
+                type === 'brand' ? 'All Brands'
+                    : type === 'category' ? 'All Categories'
+                        : type === 'product' ? 'All Products'
+                            : 'All Targets';
+
+            refSelect.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = placeholder;
+            refSelect.appendChild(defaultOption);
+
+            options.forEach((option) => {
+                const optionNode = document.createElement('option');
+                optionNode.value = option._id;
+                optionNode.textContent = getRefLabel(option);
+                if (String(option._id) === String(selectedValue || '')) {
+                    optionNode.selected = true;
+                }
+                refSelect.appendChild(optionNode);
+            });
+
+            if (type === 'brand' || type === 'category' || type === 'product') {
+                targetFilterWrap.classList.remove('hidden');
+            } else {
+                refSelect.value = '';
+                targetFilterWrap.classList.add('hidden');
+            }
+        }
         function confirmDeleteHero(heroId) {
             Swal.fire({
                 title: 'Delete Hero Banner?',
@@ -163,6 +318,8 @@
                 }
             });
         }
+
+        handleTypeChange();
     </script>
 </body>
 

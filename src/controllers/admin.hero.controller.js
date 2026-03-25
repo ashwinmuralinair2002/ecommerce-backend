@@ -7,6 +7,7 @@ const Brand = require('../models/Brand');
 const MAX_ACTIVE_HERO_BANNERS = 10;
 const MAX_ACTIVE_ERROR = 'Maximum 10 active hero banners allowed. Please unlist one before activating another.';
 const HERO_TYPES = ['product', 'category', 'brand', 'custom'];
+const HERO_SEARCHABLE_TYPES = ['product', 'category', 'brand'];
 
 function parseBoolean(value, defaultValue = false) {
     if (typeof value === 'boolean') return value;
@@ -111,17 +112,152 @@ async function renderEditPage(res, hero, payload) {
     });
 }
 
+async function findMatchingReferenceIds(type, search) {
+    const searchRegex = new RegExp(search, 'i');
+
+    if (type === 'brand') {
+        const brands = await Brand.find({
+            isDeleted: { $ne: true },
+            name: searchRegex
+        }).select('_id').lean();
+        return brands.map((item) => item._id);
+    }
+
+    if (type === 'category') {
+        const categories = await Category.find({
+            isDeleted: { $ne: true },
+            name: searchRegex
+        }).select('_id').lean();
+        return categories.map((item) => item._id);
+    }
+
+    if (type === 'product') {
+        const products = await Product.find({
+            isDeleted: { $ne: true },
+            title: searchRegex
+        }).select('_id').lean();
+        return products.map((item) => item._id);
+    }
+
+    return [];
+}
+
+async function hydrateHeroReferences(heroes) {
+    const groupedRefIds = {
+        brand: [],
+        category: [],
+        product: []
+    };
+
+    for (const hero of heroes) {
+        if (!hero || !hero.refId || !HERO_SEARCHABLE_TYPES.includes(hero.type)) continue;
+        groupedRefIds[hero.type].push(hero.refId);
+    }
+
+    const [brands, categories, products] = await Promise.all([
+        groupedRefIds.brand.length > 0
+            ? Brand.find({ _id: { $in: groupedRefIds.brand }, isDeleted: { $ne: true } }).select('_id name').lean()
+            : [],
+        groupedRefIds.category.length > 0
+            ? Category.find({ _id: { $in: groupedRefIds.category }, isDeleted: { $ne: true } }).select('_id name').lean()
+            : [],
+        groupedRefIds.product.length > 0
+            ? Product.find({ _id: { $in: groupedRefIds.product }, isDeleted: { $ne: true } }).select('_id title').lean()
+            : []
+    ]);
+
+    const brandMap = new Map(brands.map((item) => [String(item._id), item]));
+    const categoryMap = new Map(categories.map((item) => [String(item._id), item]));
+    const productMap = new Map(products.map((item) => [String(item._id), item]));
+
+    return heroes.map((hero) => {
+        if (!hero || !hero.refId || !HERO_SEARCHABLE_TYPES.includes(hero.type)) {
+            return hero;
+        }
+
+        const refKey = String(hero.refId);
+        const refDoc =
+            hero.type === 'brand' ? brandMap.get(refKey)
+                : hero.type === 'category' ? categoryMap.get(refKey)
+                    : productMap.get(refKey);
+
+        return {
+            ...hero,
+            refId: refDoc || hero.refId
+        };
+    });
+}
+
 exports.getAllHeroes = async (req, res) => {
     try {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = 5;
         const skip = (page - 1) * limit;
+        const type = typeof req.query.type === 'string' && HERO_TYPES.includes(req.query.type.trim())
+            ? req.query.type.trim()
+            : '';
+        const refId = typeof req.query.refId === 'string' ? req.query.refId.trim() : '';
+        const isActive = typeof req.query.isActive === 'string' ? req.query.isActive.trim().toLowerCase() : '';
+        const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+        const query = {};
 
-        const [heroes, activeCount, totalHeroes] = await Promise.all([
-            HeroBanner.find({}).populate('refId', 'title name').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        if (type) {
+            query.type = type;
+        }
+
+        if (refId) {
+            if (!mongoose.Types.ObjectId.isValid(refId)) {
+                query._id = null;
+            } else {
+                query.refId = new mongoose.Types.ObjectId(refId);
+            }
+        }
+
+        if (isActive === 'active') {
+            query.isActive = true;
+        } else if (isActive === 'inactive') {
+            query.isActive = false;
+        }
+
+        if (search) {
+            if (type && HERO_SEARCHABLE_TYPES.includes(type)) {
+                const matchingRefIds = await findMatchingReferenceIds(type, search);
+                if (query.refId) {
+                    const selectedRefId = String(query.refId);
+                    query.refId = matchingRefIds.some((id) => String(id) === selectedRefId)
+                        ? query.refId
+                        : { $in: [] };
+                } else {
+                    query.refId = {
+                        $in: matchingRefIds.length > 0 ? matchingRefIds : []
+                    };
+                }
+            } else {
+                const searchMatches = await Promise.all(
+                    HERO_SEARCHABLE_TYPES.map(async (heroType) => ({
+                        heroType,
+                        ids: await findMatchingReferenceIds(heroType, search)
+                    }))
+                );
+
+                const orConditions = searchMatches
+                    .filter((match) => match.ids.length > 0)
+                    .map((match) => ({
+                        type: match.heroType,
+                        refId: { $in: match.ids }
+                    }));
+
+                query.$or = orConditions.length > 0 ? orConditions : [{ _id: null }];
+            }
+        }
+
+        const [heroes, activeCount, totalHeroes, refs] = await Promise.all([
+            HeroBanner.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
             HeroBanner.countDocuments({ isActive: true }),
-            HeroBanner.countDocuments({})
+            HeroBanner.countDocuments(query),
+            loadReferenceData()
         ]);
+        const hydratedHeroes = await hydrateHeroReferences(heroes);
 
         const totalPages = Math.max(1, Math.ceil(totalHeroes / limit));
         const pagination = {
@@ -134,9 +270,16 @@ exports.getAllHeroes = async (req, res) => {
 
         return res.render('admin/heroes/list', {
             page: 'heroes',
-            heroes,
+            heroes: hydratedHeroes,
             activeCount,
             pagination,
+            filters: {
+                type,
+                refId,
+                isActive,
+                search
+            },
+            refs,
             maxActiveError: MAX_ACTIVE_ERROR,
             error: req.query.error || null,
             success: req.query.success || null
@@ -152,6 +295,17 @@ exports.getAllHeroes = async (req, res) => {
                 totalItems: 0,
                 hasPrevPage: false,
                 hasNextPage: false
+            },
+            filters: {
+                type: '',
+                refId: '',
+                isActive: '',
+                search: ''
+            },
+            refs: {
+                products: [],
+                categories: [],
+                brands: []
             },
             maxActiveError: MAX_ACTIVE_ERROR,
             error: 'Failed to load hero banners.',
