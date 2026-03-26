@@ -93,14 +93,15 @@
                                         <p class="font-medium text-primary text-sm leading-tight truncate">
                                             <%= product.title %>
                                         </p>
-                                        <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%=
-                                                product.price.toLocaleString('en-IN') %>
-                                        </p>
-                                        <% if (product.originalPrice && product.originalPrice> product.price) { %>
-                                            <p class="text-xs text-gray-400 line-through">₹ <%=
-                                                    product.originalPrice.toLocaleString('en-IN') %>
-                                            </p>
-                                            <% } %>
+                                        <% const bestSellerFinalPrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
+                                        <% if (Number(product.discountPercentage || 0) > 0) { %>
+                                            <div class="space-y-1">
+                                                <p class="text-xs text-gray-400 line-through">₹ <%= Number(product.price || 0).toLocaleString('en-IN') %></p>
+                                                <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%= bestSellerFinalPrice.toLocaleString('en-IN') %></p>
+                                            </div>
+                                        <% } else { %>
+                                            <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%= Number(product.price || 0).toLocaleString('en-IN') %></p>
+                                        <% } %>
                                     </div>
                                 </a>
                                 <% }) %>
@@ -127,14 +128,15 @@
                                         <p class="font-medium text-primary text-sm leading-tight truncate">
                                             <%= product.title %>
                                         </p>
-                                        <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%=
-                                                product.price.toLocaleString('en-IN') %>
-                                        </p>
-                                        <% if (product.originalPrice && product.originalPrice> product.price) { %>
-                                            <p class="text-xs text-gray-400 line-through">₹ <%=
-                                                    product.originalPrice.toLocaleString('en-IN') %>
-                                            </p>
-                                            <% } %>
+                                        <% const newArrivalFinalPrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
+                                        <% if (Number(product.discountPercentage || 0) > 0) { %>
+                                            <div class="space-y-1">
+                                                <p class="text-xs text-gray-400 line-through">₹ <%= Number(product.price || 0).toLocaleString('en-IN') %></p>
+                                                <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%= newArrivalFinalPrice.toLocaleString('en-IN') %></p>
+                                            </div>
+                                        <% } else { %>
+                                            <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%= Number(product.price || 0).toLocaleString('en-IN') %></p>
+                                        <% } %>
                                     </div>
                                 </a>
                                 <% }) %>
@@ -161,14 +163,15 @@
                                         <p class="font-medium text-primary text-sm leading-tight truncate">
                                             <%= product.title %>
                                         </p>
-                                        <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%=
-                                                product.price.toLocaleString('en-IN') %>
-                                        </p>
-                                        <% if (product.originalPrice && product.originalPrice> product.price) { %>
-                                            <p class="text-xs text-gray-400 line-through">₹ <%=
-                                                    product.originalPrice.toLocaleString('en-IN') %>
-                                            </p>
-                                            <% } %>
+                                        <% const dealFinalPrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
+                                        <% if (Number(product.discountPercentage || 0) > 0) { %>
+                                            <div class="space-y-1">
+                                                <p class="text-xs text-gray-400 line-through">₹ <%= Number(product.price || 0).toLocaleString('en-IN') %></p>
+                                                <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%= dealFinalPrice.toLocaleString('en-IN') %></p>
+                                            </div>
+                                        <% } else { %>
+                                            <p class="inline-flex items-center rounded-md bg-accent px-2 py-0.5 text-sm font-bold text-black">₹ <%= Number(product.price || 0).toLocaleString('en-IN') %></p>
+                                        <% } %>
                                     </div>
                                 </a>
                                 <% }) %>

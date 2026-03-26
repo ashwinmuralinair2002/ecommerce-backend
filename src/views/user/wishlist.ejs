@@ -82,7 +82,17 @@
 
                         <div class="p-5">
                             <h2 class="line-clamp-2 text-lg font-bold text-primary"><%= product.name || 'Untitled Product' %></h2>
-                            <p class="mt-2 text-xl font-semibold text-primary">₹<%= product.price || 0 %></p>
+                            <% const wishlistMrp = Number(product.price || 0); %>
+                            <% const wishlistDiscount = Number(product.discountPercentage || 0); %>
+                            <% const wishlistFinalPrice = wishlistMrp - ((wishlistMrp * wishlistDiscount) / 100); %>
+                            <% if (wishlistDiscount > 0) { %>
+                                <div class="mt-2">
+                                    <p class="text-sm text-gray-400 line-through">₹<%= wishlistMrp.toLocaleString('en-IN') %></p>
+                                    <p class="text-xl font-semibold text-primary">₹<%= wishlistFinalPrice.toLocaleString('en-IN') %></p>
+                                </div>
+                            <% } else { %>
+                                <p class="mt-2 text-xl font-semibold text-primary">₹<%= wishlistMrp.toLocaleString('en-IN') %></p>
+                            <% } %>
                             <% if ((product.priceChange || 0) > 0) { %>
                                 <p class="mt-2 text-sm font-medium text-red-600">↑ Price increased by ₹<%= Math.abs(product.priceChange || 0) %></p>
                             <% } %>

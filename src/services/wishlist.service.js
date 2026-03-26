@@ -16,7 +16,7 @@ const ensureValidIds = (productId, variantId) => {
 const getValidatedProductAndVariant = async (productId, variantId) => {
     ensureValidIds(productId, variantId);
 
-    const product = await Product.findById(productId).select('title price images variants');
+    const product = await Product.findById(productId).select('title price discountPercentage images variants');
 
     if (!product) {
         throw new AppError('Product not found', 404);
@@ -67,6 +67,7 @@ const formatWishlistItem = (item) => {
             _id: product._id,
             name: product.title,
             price: product.price,
+            discountPercentage: product.discountPercentage,
             images,
             variantName: variant ? variant.colorName : '',
             priceChange
@@ -82,7 +83,7 @@ const buildWishlistResponse = async (userId) => {
     const wishlist = await Wishlist.findOne({ user: userId })
         .populate({
             path: 'items.productId',
-            select: 'title price images variants'
+            select: 'title price discountPercentage images variants'
         })
         .lean();
 

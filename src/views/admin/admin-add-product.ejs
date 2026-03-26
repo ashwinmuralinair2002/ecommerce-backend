@@ -459,35 +459,25 @@
                                                                         <div class="mt-4">
                                                                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                                                                         <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Original Price (₹)
-                                                                                (Optional)</p>
-                                                                            <input id="originalPrice" name="originalPrice" placeholder="e.g., 1499" type="number"
-                                                                                step="0.01" min="0"
+                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Price (MRP) (₹) <span
+                                                                                    class="text-red-500">*</span></p>
+                                                                            <input id="productPrice" name="price" placeholder="e.g., 1299" type="number" step="0.01"
+                                                                                min="0" required
                                                                                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                                                                 value="" />
-                                                                            <p class="field-error" id="originalPriceError">Must be a positive number</p>
+                                                                            <p id="finalPricePreview" class="text-sm font-semibold text-[#685BCB] hidden mt-1"></p>
+                                                                            <p class="field-error" id="productPriceError">Price must be a positive number</p>
                                                                         </label>
                                                                     </div>
                                                                     <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
                                                                         <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Discount Percentage (%)
+                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Discount (%) 
                                                                             </p>
                                                                             <input id="discountPercentage" name="discountPercentage" placeholder="e.g., 10"
                                                                                 type="number" step="0.01" min="0" max="100"
                                                                                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                                                                 value="" />
                                                                             <p class="field-error" id="discountPercentageError">Must be between 0 and 100</p>
-                                                                        </label>
-                                                                    </div>
-                                                                    <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
-                                                                        <label class="flex flex-col min-w-40 flex-1">
-                                                                            <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Discounted Price (₹) <span
-                                                                                    class="text-red-500">*</span></p>
-                                                                            <input id="productPrice" name="price" placeholder="e.g., 1299" type="number" step="0.01"
-                                                                                min="0" required
-                                                                                class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                                                                value="" />
-                                                                            <p class="field-error" id="productPriceError">Price must be a positive number</p>
                                                                         </label>
                                                                     </div>
                                                                         </div>
@@ -1490,7 +1480,7 @@
 
         // ========== Validation Helpers ==========
         ['productTitle', 'productSku', 'brandSelect', 'connectionType', 'categorySelect', 'shortDescription', 'productPrice',
-            'originalPrice', 'discountPercentage', 'reorderThreshold',
+                'discountPercentage', 'reorderThreshold',
             'warrantyDuration', 'warrantyProvider', 'shippingLength', 'shippingWidth', 'shippingHeight', 'shippingWeight'
         ].forEach((id) => {
             const el = document.getElementById(id);
@@ -1603,31 +1593,43 @@
         }
 
         function setupAutoPriceCalculation() {
-            const originalPriceEl = document.getElementById('originalPrice');
-            const discountEl = document.getElementById('discountPercentage');
             const priceEl = document.getElementById('productPrice');
-            if (!originalPriceEl || !discountEl || !priceEl) return;
-            if (originalPriceEl.dataset.priceCalcBound === 'true') return;
+            const discountEl = document.getElementById('discountPercentage');
+            const previewEl = document.getElementById('finalPricePreview');
+            if (!priceEl || !discountEl || !previewEl) return;
+            if (priceEl.dataset.priceCalcBound === 'true') return;
 
             const recalcPrice = () => {
-                const originalRaw = originalPriceEl.value.trim();
+                const priceRaw = priceEl.value.trim();
                 const discountRaw = discountEl.value.trim();
-                if (!originalRaw || !discountRaw) return;
+                
+                if (!priceRaw) {
+                    previewEl.classList.add('hidden');
+                    return;
+                }
 
-                const originalPrice = Number(originalRaw);
-                const discount = Number(discountRaw);
-                if (!Number.isFinite(originalPrice) || !Number.isFinite(discount)) return;
-                if (originalPrice < 0 || discount < 0 || discount > 90) return;
+                const price = Number(priceRaw);
+                const discount = discountRaw ? Number(discountRaw) : 0;
+                
+                if (!Number.isFinite(price) || !Number.isFinite(discount)) {
+                    previewEl.classList.add('hidden');
+                    return;
+                }
+                if (price < 0 || discount < 0 || discount > 100) {
+                    previewEl.classList.add('hidden');
+                    return;
+                }
 
-                const computed = originalPrice - ((originalPrice * discount) / 100);
-                priceEl.value = Math.max(0, computed).toFixed(2);
+                const computed = price - ((price * discount) / 100);
+                previewEl.textContent = 'Final Price: ₹' + Math.max(0, computed).toFixed(2);
+                previewEl.classList.remove('hidden');
             };
 
-            originalPriceEl.addEventListener('input', recalcPrice);
+            priceEl.addEventListener('input', recalcPrice);
             discountEl.addEventListener('input', recalcPrice);
-            originalPriceEl.addEventListener('change', recalcPrice);
+            priceEl.addEventListener('change', recalcPrice);
             discountEl.addEventListener('change', recalcPrice);
-            originalPriceEl.dataset.priceCalcBound = 'true';
+            priceEl.dataset.priceCalcBound = 'true';
 
             recalcPrice();
         }
@@ -1660,14 +1662,9 @@
             } else clearFieldError('shortDescription');
 
             const price = getValue('productPrice');
-            const originalPrice = getValue('originalPrice');
             const discount = getValue('discountPercentage');
             if (!/^\d+(\.\d{1,2})?$/.test(price) || Number(price) <= 0) valid = setFieldError('productPrice', 'Price must be > 0 with up to 2 decimals.') && valid; else clearFieldError('productPrice');
-            if (!/^\d+(\.\d{1,2})?$/.test(originalPrice) || Number(originalPrice) <= 0) valid = setFieldError('originalPrice', 'Original price is required and must be positive.') && valid; else clearFieldError('originalPrice');
             if (!/^\d+(\.\d{1,2})?$/.test(discount) || Number(discount) < 0 || Number(discount) > 90) valid = setFieldError('discountPercentage', 'Discount must be between 0 and 90.') && valid; else clearFieldError('discountPercentage');
-            if (/^\d+(\.\d{1,2})?$/.test(price) && /^\d+(\.\d{1,2})?$/.test(originalPrice) && Number(originalPrice) < Number(price)) {
-                valid = setFieldError('originalPrice', 'Original price must be greater than or equal to price.') && valid;
-            }
 
             const reorder = getValue('reorderThreshold');
             if (!/^\d+$/.test(reorder)) valid = setFieldError('reorderThreshold', 'Reorder threshold is required and must be an integer >= 0.') && valid; else clearFieldError('reorderThreshold');

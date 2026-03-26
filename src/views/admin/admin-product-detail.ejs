@@ -253,10 +253,11 @@
                         <aside class="lg:col-span-3 flex flex-col gap-6">
                             <div class="lg:sticky lg:top-24 border border-primary-light/45 bg-white rounded-lg shadow-sm p-4 space-y-4">
                                 <div class="pb-3 border-b border-primary-light/30">
-                                    <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">₹<%= Number(product.price || 0).toLocaleString('en-IN') %></h2>
-                                    <% if (product.originalPrice && product.originalPrice > product.price) { %>
+                                    <% const adminFinalPrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
+                                    <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">₹<%= adminFinalPrice.toLocaleString('en-IN') %></h2>
+                                    <% if (Number(product.discountPercentage || 0) > 0) { %>
                                         <div class="flex items-center gap-2 mt-1">
-                                            <span class="text-gray-500 line-through text-sm">₹<%= Number(product.originalPrice).toLocaleString('en-IN') %></span>
+                                            <span class="text-gray-500 line-through text-sm">₹<%= Number(product.price || 0).toLocaleString('en-IN') %></span>
                                             <span class="rounded-md bg-accent px-2 py-1 text-xs font-bold text-black"><%= product.discountPercentage %>% OFF</span>
                                         </div>
                                     <% } %>

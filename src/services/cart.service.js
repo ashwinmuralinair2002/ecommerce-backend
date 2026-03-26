@@ -2,6 +2,7 @@ const Cart = require('../models/cart.model');
 const Product = require('../models/Product');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { getBaseProductPrice } = require('../utils/pricing');
 
 const MAX_CART_ITEM_QUANTITY = 5;
 const GST_RATE = 0.18;
@@ -89,7 +90,8 @@ const buildCartResponse = async (userId) => {
             variant = fallbackVariant;
         }
 
-        const currentPrice = typeof (product && product.price) === 'number' ? product.price : 0;
+        const computedPrice = product ? getBaseProductPrice(product) : 0;
+        const currentPrice = computedPrice;
         const savedPrice = Number(item.savedPrice || item.priceSnapshot || currentPrice);
         const priceChange = currentPrice - savedPrice;
         const isUnlisted = !product || product.isListed !== true || product.isDeleted === true;
@@ -103,8 +105,8 @@ const buildCartResponse = async (userId) => {
                 _id: product._id,
                 title: product.title,
                 price: product.price,
-                originalPrice: product.originalPrice,
                 discountPercentage: product.discountPercentage,
+                computedPrice,
                 imageUrl: getProductImageUrl(product),
                 isListed: product.isListed,
                 isDeleted: product.isDeleted
@@ -136,7 +138,7 @@ const buildCartResponse = async (userId) => {
     });
 
     const subtotal = roundCurrency(items.reduce((total, item) => (
-        total + ((Number(item.product && item.product.price) || Number(item.priceSnapshot) || 0) * item.quantity)
+        total + ((Number(item.priceSnapshot) || Number(item.product ? getBaseProductPrice(item.product) : 0) || 0) * item.quantity)
     ), 0));
     const gst = roundCurrency(subtotal * GST_RATE);
     const total = roundCurrency(subtotal + gst);
@@ -187,8 +189,8 @@ const addToCart = asyncHandler(async (userId, productId, variantId, quantity) =>
             productId,
             variantId,
             quantity,
-            priceSnapshot: product.price,
-            savedPrice: product.price
+            priceSnapshot: getBaseProductPrice(product),
+            savedPrice: getBaseProductPrice(product)
         });
     }
 

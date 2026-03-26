@@ -50,7 +50,7 @@
     const subtotal = Number(pricing.subtotal || 0);
     const gst = Number(pricing.gst || 0);
     const totalPrice = Number(pricing.finalTotal || 0);
-    const discount = 0;
+    const couponDiscount = 0;
     const hasSelectedAddress = Boolean(selectedAddress);
 %>
 
@@ -102,12 +102,10 @@
                             const product = item.product || {};
                             const variant = item.variant || {};
                             const quantity = Number(item.quantity || 0);
-                            const originalPrice = Number(product.originalPrice || 0) || (typeof product.price === 'number' ? product.price : Number(item.priceSnapshot || 0));
-                            const discountedPrice = typeof product.price === 'number'
-                                ? item.product.price
-                                : Number(item.priceSnapshot || 0);
-                            const subtotal = discountedPrice * quantity;
-                            const savings = originalPrice && originalPrice > discountedPrice ? (originalPrice - discountedPrice) : 0;
+                            const mrp = Number(product.price || 0);
+                            const discountPercentage = Number(product.discountPercentage || 0);
+                            const finalPrice = Number(item.priceSnapshot || (mrp - ((mrp * discountPercentage) / 100)) || 0);
+                            const subtotal = finalPrice * quantity;
                             const variantImages = Array.isArray(variant.images) ? variant.images : [];
                             const variantImage = variantImages[0];
                             const productImageUrl = variantImage && variantImage.url ? variantImage.url : placeholderImage;
@@ -126,29 +124,23 @@
                                         </div>
                                     </div>
 
-                                    <div class="flex flex-col items-end text-sm">
-                                        <div class="flex items-center gap-6">
-                                            <div class="text-right">
-                                                <p class="text-gray-500">Price</p>
-                                                <p class="font-semibold text-primary"><%= formatCurrency(originalPrice) %></p>
-                                            </div>
+                                        <div class="flex flex-col items-end text-sm">
+                                            <div class="flex items-center gap-6">
+                                                <div class="text-right">
+                                                    <p class="text-gray-500">Price</p>
+                                                    <% if (discountPercentage > 0) { %>
+                                                        <p class="text-xs text-gray-400 line-through"><%= formatCurrency(mrp) %></p>
+                                                        <p class="font-bold text-primary"><%= formatCurrency(finalPrice) %></p>
+                                                    <% } else { %>
+                                                        <p class="font-bold text-primary"><%= formatCurrency(mrp) %></p>
+                                                    <% } %>
+                                                </div>
 
-                                            <div class="text-right">
-                                                <p class="text-gray-500">Discounted Price</p>
-                                                <p class="font-bold text-primary"><%= formatCurrency(discountedPrice) %></p>
+                                                <div class="text-right">
+                                                    <p class="text-gray-500">Subtotal</p>
+                                                    <p class="font-bold text-primary"><%= formatCurrency(subtotal) %></p>
+                                                </div>
                                             </div>
-
-                                            <div class="text-right">
-                                                <p class="text-gray-500">Subtotal</p>
-                                                <p class="font-bold text-primary"><%= formatCurrency(subtotal) %></p>
-                                            </div>
-                                        </div>
-
-                                        <% if (savings > 0) { %>
-                                            <p class="mt-1 text-xs text-green-600 font-medium text-right">
-                                                You save <%= formatCurrency(savings) %>
-                                            </p>
-                                        <% } %>
                                     </div>
                                 </div>
                             </article>
@@ -250,8 +242,8 @@
                             <span class="font-semibold text-primary"><%= formatCurrency(subtotal) %></span>
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-gray-500">Discount</span>
-                            <span class="font-semibold text-primary"><%= formatCurrency(discount) %></span>
+                            <span class="text-gray-500">Coupon Discount</span>
+                            <span class="font-semibold text-primary"><%= formatCurrency(couponDiscount) %></span>
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-gray-500">GST (18%)</span>
@@ -261,7 +253,7 @@
 
                     <div class="mt-4 flex items-center justify-between">
                         <span class="text-base font-bold text-primary">Final Total</span>
-                        <span class="text-xl font-bold text-primary"><%= formatCurrency(totalPrice - discount) %></span>
+                        <span class="text-xl font-bold text-primary"><%= formatCurrency(totalPrice - couponDiscount) %></span>
                     </div>
                 </div>
 

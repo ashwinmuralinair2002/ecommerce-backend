@@ -325,16 +325,17 @@
 
                                 <!-- Right Column -->
                                 <aside class="lg:col-span-3">
-                                    <div
-                                        class="lg:sticky lg:top-24 border border-primary-light/45 bg-white rounded-lg shadow-sm p-4 space-y-4">
+                                        <div
+                                            class="lg:sticky lg:top-24 border border-primary-light/45 bg-white rounded-lg shadow-sm p-4 space-y-4">
                                         <div class="pb-3 border-b border-primary-light/30">
+                                            <% const productFinalPrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
                                             <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">
-                                                ₹<%= product.price.toLocaleString('en-IN') %>
+                                                ₹<%= productFinalPrice.toLocaleString('en-IN') %>
                                             </h2>
-                                            <% if (product.originalPrice && product.originalPrice> product.price) { %>
+                                            <% if (Number(product.discountPercentage || 0) > 0) { %>
                                                 <div class="flex items-center gap-2 mt-1">
                                                     <span class="text-gray-500 line-through text-sm">
-                                                        ₹<%= product.originalPrice.toLocaleString('en-IN') %>
+                                                        ₹<%= Number(product.price || 0).toLocaleString('en-IN') %>
                                                     </span>
                                                     <span
                                                         class="rounded-md bg-accent px-2 py-1 text-xs font-bold text-black">
@@ -451,9 +452,15 @@
                                                                 class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
                                                                 <%= relProduct.title %>
                                                             </p>
-                                                            <p class="text-primary text-sm font-normal leading-normal">₹
-                                                                <%= relProduct.price.toLocaleString('en-IN') %>
-                                                            </p>
+                                                            <% const relFinalPrice = Number(relProduct.price || 0) - ((Number(relProduct.price || 0) * Number(relProduct.discountPercentage || 0)) / 100); %>
+                                                            <% if (Number(relProduct.discountPercentage || 0) > 0) { %>
+                                                                <div class="space-y-1">
+                                                                    <p class="text-xs text-gray-400 line-through">₹ <%= Number(relProduct.price || 0).toLocaleString('en-IN') %></p>
+                                                                    <p class="text-primary text-sm font-normal leading-normal">₹ <%= relFinalPrice.toLocaleString('en-IN') %></p>
+                                                                </div>
+                                                            <% } else { %>
+                                                                <p class="text-primary text-sm font-normal leading-normal">₹ <%= Number(relProduct.price || 0).toLocaleString('en-IN') %></p>
+                                                            <% } %>
                                                         </div>
                                                     </div>
                                                 </a>
@@ -488,9 +495,15 @@
                                                                 class="text-primary text-base font-medium leading-normal hover:underline line-clamp-1">
                                                                 <%= abProduct.title %>
                                                             </p>
-                                                            <p class="text-primary text-sm font-normal leading-normal">₹
-                                                                <%= abProduct.price.toLocaleString('en-IN') %>
-                                                            </p>
+                                                            <% const abFinalPrice = Number(abProduct.price || 0) - ((Number(abProduct.price || 0) * Number(abProduct.discountPercentage || 0)) / 100); %>
+                                                            <% if (Number(abProduct.discountPercentage || 0) > 0) { %>
+                                                                <div class="space-y-1">
+                                                                    <p class="text-xs text-gray-400 line-through">₹ <%= Number(abProduct.price || 0).toLocaleString('en-IN') %></p>
+                                                                    <p class="text-primary text-sm font-normal leading-normal">₹ <%= abFinalPrice.toLocaleString('en-IN') %></p>
+                                                                </div>
+                                                            <% } else { %>
+                                                                <p class="text-primary text-sm font-normal leading-normal">₹ <%= Number(abProduct.price || 0).toLocaleString('en-IN') %></p>
+                                                            <% } %>
                                                         </div>
                                                     </div>
                                                 </a>
