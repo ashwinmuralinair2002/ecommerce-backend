@@ -201,57 +201,51 @@ const getCart = asyncHandler(async (userId) => {
     return buildCartResponse(userId);
 });
 
-const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId, action) => {
-    if (!['increment', 'decrement'].includes(action)) {
-        throw new AppError('Invalid action', 400);
-    }
-
+const updateCartItemQuantity = asyncHandler(async (userId, itemId, quantity) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
         throw new AppError('Cart not found', 404);
     }
 
-    const itemIndex = findCartItemIndex(cart.items, productId, variantId);
+    const itemIndex = cart.items.findIndex(item => 
+        item.productId.toString() === itemId.toString() || 
+        (item._id && item._id.toString() === itemId.toString())
+    );
 
     if (itemIndex === -1) {
         throw new AppError('Cart item not found', 404);
     }
 
-    const { product, variant } = await getValidatedProductAndVariant(productId, variantId);
     const cartItem = cart.items[itemIndex];
+    const { product, variant } = await getValidatedProductAndVariant(cartItem.productId, cartItem.variantId);
 
-    if (action === 'increment') {
-        const updatedQuantity = cartItem.quantity + 1;
-
-        if (updatedQuantity > variant.stockCount) {
-            throw new AppError('Quantity exceeds available stock', 400);
-        }
-
-        if (updatedQuantity > MAX_CART_ITEM_QUANTITY) {
-            throw new AppError('Quantity limit exceeded', 400);
-        }
-
-        cartItem.quantity = updatedQuantity;
+    if (quantity > variant.stockCount) {
+        throw new AppError('Quantity exceeds available stock', 400);
     }
 
-    if (action === 'decrement') {
-        cartItem.quantity = Math.max(1, cartItem.quantity - 1);
+    if (quantity > MAX_CART_ITEM_QUANTITY) {
+        throw new AppError('Quantity limit exceeded', 400);
     }
+
+    cartItem.quantity = quantity;
 
     await cart.save();
 
     return buildCartResponse(userId);
 });
 
-const removeCartItem = asyncHandler(async (userId, productId, variantId) => {
+const removeCartItem = asyncHandler(async (userId, itemId) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
         throw new AppError('Cart not found', 404);
     }
 
-    const itemIndex = findCartItemIndex(cart.items, productId, variantId);
+    const itemIndex = cart.items.findIndex(item => 
+        item.productId.toString() === itemId.toString() || 
+        (item._id && item._id.toString() === itemId.toString())
+    );
 
     if (itemIndex === -1) {
         throw new AppError('Cart item not found', 404);

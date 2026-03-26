@@ -9,6 +9,12 @@ const userOrderController = require('../controllers/user.order.controller');
 const wishlistController = require('../controllers/wishlist.controller');
 const homeController = require('../controllers/home.controller');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
+const validate = require('../middleware/validate.middleware');
+const {
+  addToWishlistSchema,
+  removeFromWishlistSchema,
+  moveToCartSchema
+} = require('../validations/wishlist.validation');
 
 router.get('/api/search', userProductController.liveSearch);
 router.get('/hero/redirect/:id', homeController.redirectHeroBanner);
@@ -31,9 +37,24 @@ router.get('/order-success', ensureAuthenticated, orderPageController.getOrderSu
 router.get('/orders', ensureAuthenticated, userOrderController.getUserOrdersPage);
 router.get('/orders/:orderId', ensureAuthenticated, userOrderController.getUserOrderDetailsPage);
 router.get('/api/invoice/:orderId', ensureAuthenticated, invoiceController.downloadInvoice);
-router.post('/wishlist/add', ensureAuthenticated, wishlistController.addToWishlist);
-router.delete('/wishlist/remove', ensureAuthenticated, wishlistController.removeFromWishlist);
-router.patch('/wishlist/move-to-cart', ensureAuthenticated, wishlistController.moveToCart);
+router.post(
+  '/wishlist/add',
+  ensureAuthenticated,
+  validate(addToWishlistSchema),
+  wishlistController.addToWishlist
+);
+router.delete(
+  '/wishlist/remove',
+  ensureAuthenticated,
+  validate(removeFromWishlistSchema),
+  wishlistController.removeFromWishlist
+);
+router.patch(
+  '/wishlist/move-to-cart',
+  ensureAuthenticated,
+  validate(moveToCartSchema),
+  wishlistController.moveToCart
+);
 
 // Product Details
 router.get('/product/:id', userProductController.getProductDetails);

@@ -56,14 +56,24 @@
                     body: JSON.stringify({ email, password })
                 });
 
-                const data = await response.json();
+                let data;
+                try {
+                    data = await response.json();
+                } catch {
+                    throw new Error("Invalid server response");
+                }
 
                 if (!response.ok) {
+                    if (data.success === false && data.errors && data.errors.length > 0) {
+                        throw new Error(data.errors?.[0]?.message || 'Validation failed');
+                    } else if (data.message) {
+                        throw new Error(data.message);
+                    }
                     // Handle Blocked User
                     if (response.status === 403 && data.error === 'User account is blocked') {
                         throw new Error('This account is currently unavailable. Please contact support if needed.');
                     }
-                    throw new Error(data.error || 'Login failed');
+                    throw new Error(data.error || "Something went wrong");
                 }
 
                 // Success: Session cookie is handled by browser automatically

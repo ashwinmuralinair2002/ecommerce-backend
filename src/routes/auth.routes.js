@@ -10,24 +10,28 @@ const {
     resetPassword,
     handleGoogleAuthCallback
 } = require('../controllers/auth.controller');
-const { signupValidation, forgotPasswordValidation } = require('../middleware/auth-validation.middleware');
 // const { verifyToken } = require('../middleware/auth.middleware'); // Removed
+const validate = require('../middleware/validate.middleware');
+const {
+  signupSchema,
+  loginSchema,
+  verifyOtpSchema,
+  resendOtpSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema
+} = require('../validations/auth.validation');
 
 const router = express.Router();
 
 
 
-router.post(
-    '/signup',
-    signupValidation,
-    signup
-);
+router.post('/signup', validate(signupSchema), signup);
 
-router.post('/login', login);
-router.post('/verify-otp', verifyOtp);
-router.post('/resend-otp', resendOtp);
-router.post('/forgot-password', forgotPasswordValidation, forgotPassword);
-router.post('/reset-password', resetPassword);
+router.post('/login', validate(loginSchema), login);
+router.post('/verify-otp', validate(verifyOtpSchema), verifyOtp);
+router.post('/resend-otp', validate(resendOtpSchema), resendOtp);
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 router.post('/logout', require('../controllers/auth.controller').logout);
 
 // Google Auth Routes

@@ -208,9 +208,21 @@
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ otp })
                                 });
-                                const data = await response.json();
+                                let data;
+                                try {
+                                    data = await response.json();
+                                } catch {
+                                    throw new Error("Invalid server response");
+                                }
 
-                                if (!response.ok) throw new Error(data.error || 'Verification failed');
+                                if (!response.ok) {
+                                    if (data.success === false && data.errors && data.errors.length > 0) {
+                                        throw new Error(data.errors?.[0]?.message || 'Validation failed');
+                                    } else if (data.message) {
+                                        throw new Error(data.message);
+                                    }
+                                    throw new Error(data.error || "Something went wrong");
+                                }
 
                                 showMessage('Password updated successfully!', 'success');
                                 setTimeout(() => window.location.href = '/account', 1500);
@@ -234,9 +246,21 @@
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ otp })
                                 });
-                                const data = await response.json();
+                                let data;
+                                try {
+                                    data = await response.json();
+                                } catch {
+                                    throw new Error("Invalid server response");
+                                }
 
-                                if (!response.ok) throw new Error(data.error || 'Verification failed');
+                                if (!response.ok) {
+                                    if (data.success === false && data.errors && data.errors.length > 0) {
+                                        throw new Error(data.errors?.[0]?.message || 'Validation failed');
+                                    } else if (data.message) {
+                                        throw new Error(data.message);
+                                    }
+                                    throw new Error(data.error || "Something went wrong");
+                                }
 
                                 const redirectTarget = data.role === 'admin' ? '/admin/dashboard' : '/account';
                                 showMessage(data.message || 'Email updated successfully!', 'success');
@@ -263,10 +287,20 @@
                                 body: JSON.stringify({ email, otp })
                             });
 
-                            const data = await response.json();
+                            let data;
+                            try {
+                                data = await response.json();
+                            } catch {
+                                throw new Error("Invalid server response");
+                            }
 
                             if (!response.ok) {
-                                throw new Error(data.error || 'Verification failed');
+                                if (data.success === false && data.errors && data.errors.length > 0) {
+                                    throw new Error(data.errors?.[0]?.message || 'Validation failed');
+                                } else if (data.message) {
+                                    throw new Error(data.message);
+                                }
+                                throw new Error(data.error || "Something went wrong");
                             }
 
                             showMessage('Email verified successfully!', 'success');
@@ -330,14 +364,23 @@
                                     body: JSON.stringify({ email })
                                 });
                             }
-                            const data = await response.json();
+                            let data;
+                            try {
+                                data = await response.json();
+                            } catch {
+                                throw new Error("Invalid server response");
+                            }
 
                             if (!response.ok) {
-                                // Check for specific cooldown error
+                                if (data.success === false && data.errors && data.errors.length > 0) {
+                                    throw new Error(data.errors?.[0]?.message || 'Validation failed');
+                                } else if (data.message) {
+                                    throw new Error(data.message);
+                                }
                                 if (response.status === 429) {
                                     throw new Error(data.error || 'Please wait before resending.');
                                 }
-                                throw new Error(data.error || 'Resend failed');
+                                throw new Error(data.error || "Something went wrong");
                             }
 
 

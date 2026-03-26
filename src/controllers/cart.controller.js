@@ -37,10 +37,11 @@ const getCart = async (req, res) => {
 
 const updateQuantity = async (req, res) => {
     const userId = req.session.userId;
-    const { productId, variantId, action } = req.body;
+    const { itemId } = req.params;
+    const { quantity } = req.body;
 
     try {
-        const cart = await cartService.updateCartItemQuantity(userId, productId, variantId, action);
+        const cart = await cartService.updateCartItemQuantity(userId, itemId, quantity);
         res.json({
             success: true,
             data: cart
@@ -55,10 +56,10 @@ const updateQuantity = async (req, res) => {
 
 const removeItem = async (req, res) => {
     const userId = req.session.userId;
-    const { productId, variantId } = req.body;
+    const { itemId } = req.params;
 
     try {
-        const cart = await cartService.removeCartItem(userId, productId, variantId);
+        const cart = await cartService.removeCartItem(userId, itemId);
         res.json({
             success: true,
             data: cart
