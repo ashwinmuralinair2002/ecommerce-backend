@@ -1,7 +1,7 @@
 const express = require('express');
 const cartController = require('../controllers/cart.controller');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
-const validate = require('../middleware/validate.middleware');
+const { validate } = require('../middleware/validate.middleware');
 const {
   addToCartSchema,
   updateCartItemSchema,

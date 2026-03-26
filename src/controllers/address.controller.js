@@ -107,18 +107,19 @@ const addAddress = async (req, res) => {
         // Title-case helper
         const toTitleCase = (s) => s.trim().replace(/\s+/g, ' ').replace(/\b[a-z]/g, c => c.toUpperCase());
 
+        const normalizedIsDefault = isDefault === 'Yes' || isDefault === 'on' || isDefault === true;
+
         const addressData = {
-            street: `${houseNo}, ${street}`,
+            street,
             city: toTitleCase(city),
             state: toTitleCase(state),
             zip: postalCode,
             country: 'India',
-            isDefault: isDefault === 'Yes',
+            isDefault: normalizedIsDefault,
             name,
             phone,
             label,
-            houseNo,
-            originalStreet: street
+            houseNo
         };
 
         await profileService.addAddress(userId, addressData);
@@ -202,6 +203,8 @@ const updateAddress = async (req, res) => {
         // Title-case helper
         const toTitleCase = (s) => s.trim().replace(/\s+/g, ' ').replace(/\b[a-z]/g, c => c.toUpperCase());
 
+        const normalizedIsDefault = isDefault === 'Yes' || isDefault === 'on' || isDefault === true;
+
         const addressData = {
             name,
             phone,
@@ -212,7 +215,7 @@ const updateAddress = async (req, res) => {
             zip: postalCode,
             country: 'India',
             label,
-            isDefault: isDefault === 'on'
+            isDefault: normalizedIsDefault
         };
 
         await profileService.updateAddress(userId, req.params.id, addressData);

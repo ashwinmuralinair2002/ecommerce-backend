@@ -9,7 +9,7 @@ const userOrderController = require('../controllers/user.order.controller');
 const wishlistController = require('../controllers/wishlist.controller');
 const homeController = require('../controllers/home.controller');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
-const validate = require('../middleware/validate.middleware');
+const { validate } = require('../middleware/validate.middleware');
 const {
   addToWishlistSchema,
   removeFromWishlistSchema,

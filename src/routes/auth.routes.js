@@ -11,7 +11,7 @@ const {
     handleGoogleAuthCallback
 } = require('../controllers/auth.controller');
 // const { verifyToken } = require('../middleware/auth.middleware'); // Removed
-const validate = require('../middleware/validate.middleware');
+const { validate } = require('../middleware/validate.middleware');
 const {
   signupSchema,
   loginSchema,
