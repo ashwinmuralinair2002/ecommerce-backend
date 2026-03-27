@@ -54,6 +54,8 @@
     const totalPrice = Number(pricing.finalTotal || 0);
     const couponDiscount = 0;
     const hasSelectedAddress = Boolean(selectedAddress);
+    const walletBalanceValue = Number(walletBalance || 0);
+    const isWalletUnavailable = walletBalanceValue <= 0;
 %>
 
 <%- include('../partials/user/navbar') %>
@@ -279,10 +281,13 @@
                         </label>
 
                         <label class="flex items-start gap-3 rounded-lg border border-primary-light/35 bg-primary-light/10 px-4 py-3">
-                            <input type="radio" name="paymentMethod" value="wallet" class="mt-1 h-4 w-4 border-primary-light text-primary focus:ring-primary">
+                            <input type="radio" name="paymentMethod" value="wallet" class="mt-1 h-4 w-4 border-primary-light text-primary focus:ring-primary" <%= isWalletUnavailable ? 'disabled' : '' %>>
                             <span class="block">
                                 <span class="block font-semibold text-primary">Wallet</span>
                                 <span class="mt-1 block text-sm text-gray-500">Balance: ₹<%= (walletBalance || 0).toFixed(2) %></span>
+                                <% if (isWalletUnavailable) { %>
+                                    <span class="mt-1 block text-sm text-red-500">Insufficient wallet balance</span>
+                                <% } %>
                             </span>
                         </label>
                     </div>
@@ -318,6 +323,9 @@
         const selectedAddressLocation = document.getElementById('selected-address-location');
         const editAddressLink = document.getElementById('edit-address-link');
         const placeOrderButton = document.getElementById('place-order-button');
+        const walletBalance = <%- JSON.stringify(walletBalanceValue) %>;
+        const walletRadio = document.querySelector('input[name="paymentMethod"][value="wallet"]');
+        const codRadio = document.querySelector('input[name="paymentMethod"][value="cod"]');
         let isPlacingOrder = false;
 
         const notifyError = (message) => {
@@ -330,6 +338,10 @@
 
             window.alert(nextMessage);
         };
+
+        if (walletRadio && walletRadio.disabled && walletRadio.checked && codRadio) {
+            codRadio.checked = true;
+        }
 
         const setAddressDropdownState = (isOpen) => {
             if (!addressSelector) return;
@@ -408,6 +420,11 @@
                 try {
                     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || null;
                     console.log('Selected method:', paymentMethod);
+
+                    if (paymentMethod === 'wallet' && walletBalance <= 0) {
+                        notifyError('Wallet balance is empty');
+                        return;
+                    }
 
                     const response = await fetch('/api/order/place', {
                         method: 'POST',

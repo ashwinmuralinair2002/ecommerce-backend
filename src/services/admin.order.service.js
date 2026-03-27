@@ -367,7 +367,8 @@ const processReturn = async (orderId, itemId, action) => {
                             order.user,
                             refundAmount,
                             'refund_returned',
-                            String(item.itemId)
+                            String(item.itemId),
+                            order.orderId
                         );
                     } catch (err) {
                         throw new Error('Wallet refund failed. Cancellation aborted.');

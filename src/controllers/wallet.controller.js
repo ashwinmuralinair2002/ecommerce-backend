@@ -20,7 +20,15 @@ const attachOrderIds = async (transactions) => {
     }
 
     for (const tx of transactions) {
-        if (!tx || !tx.referenceId) {
+        if (!tx) {
+            continue;
+        }
+
+        if (tx.orderId) {
+            continue;
+        }
+
+        if (!tx.referenceId) {
             continue;
         }
 

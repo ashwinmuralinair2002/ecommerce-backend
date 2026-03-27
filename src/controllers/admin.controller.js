@@ -141,11 +141,16 @@ const getCustomerDetails = async (req, res) => {
         }
 
         const wallet = await Wallet.findOne({ userId: user._id }).select('balance').lean();
+        const orders = await Order.find({ user: user._id }).select('totalAmount').lean();
+        const totalOrders = orders.length;
+        const lifetimeValue = orders.reduce((sum, order) => {
+            return sum + Number(order && order.totalAmount ? order.totalAmount : 0);
+        }, 0);
 
         const customer = {
             ...user.toObject(),
-            totalOrders: 0,
-            lifetimeValue: 0,
+            totalOrders,
+            lifetimeValue,
             joinedDate: user.createdAt,
             lastLogin: user.updatedAt,
             walletBalance: wallet ? Number(wallet.balance || 0) : 0

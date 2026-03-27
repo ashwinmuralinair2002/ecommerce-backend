@@ -31,6 +31,13 @@ const walletTransactionSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    orderId: {
+        type: String,
+        required: false,
+        default: null,
+        index: true,
+        trim: true
+    },
     status: {
         type: String,
         default: 'success',
@@ -42,5 +49,6 @@ const walletTransactionSchema = new mongoose.Schema({
 
 walletTransactionSchema.index({ userId: 1 });
 walletTransactionSchema.index({ referenceId: 1 }, { unique: true });
+walletTransactionSchema.index({ orderId: 1 });
 
 module.exports = mongoose.model('WalletTransaction', walletTransactionSchema);

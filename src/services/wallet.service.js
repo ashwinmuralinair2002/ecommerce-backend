@@ -55,9 +55,10 @@ const getWallet = async (userId, session = null) => {
     return createWallet(userId, session);
 };
 
-const creditWallet = async (userId, amount, reason, referenceId) => {
+const creditWallet = async (userId, amount, reason, referenceId, orderId = null) => {
     const normalizedAmount = validateAmount(amount);
     const normalizedReferenceId = normalizeReferenceId(referenceId);
+    const normalizedOrderId = typeof orderId === 'string' && orderId.trim() ? orderId.trim() : null;
     const session = await mongoose.startSession();
 
     try {
@@ -93,6 +94,7 @@ const creditWallet = async (userId, amount, reason, referenceId) => {
                 type: 'credit',
                 reason,
                 referenceId: normalizedReferenceId,
+                orderId: normalizedOrderId,
                 status: 'success'
             }], { session });
 
@@ -128,11 +130,12 @@ const creditWallet = async (userId, amount, reason, referenceId) => {
     }
 };
 
-const debitWallet = async (userId, amount, reason, referenceId, session = null) => {
+const debitWallet = async (userId, amount, reason, referenceId, orderId = null, session = null) => {
     const normalizedAmount = validateAmount(amount);
     const normalizedReferenceId = referenceId
         ? normalizeReferenceId(referenceId)
         : normalizeReferenceId(generateWalletReferenceId('WALLET-DEBIT'));
+    const normalizedOrderId = typeof orderId === 'string' && orderId.trim() ? orderId.trim() : null;
     const ownsSession = !session;
     const activeSession = session || await mongoose.startSession();
 
@@ -160,6 +163,11 @@ const debitWallet = async (userId, amount, reason, referenceId, session = null) 
         }
 
         const wallet = await createWallet(userId, activeSession);
+
+        if (!wallet || Number(wallet.balance || 0) < normalizedAmount) {
+            throw new AppError('Insufficient wallet balance', 400);
+        }
+
         const updatedWallet = await Wallet.findOneAndUpdate(
             {
                 _id: wallet._id,
@@ -179,6 +187,7 @@ const debitWallet = async (userId, amount, reason, referenceId, session = null) 
             type: 'debit',
             reason,
             referenceId: normalizedReferenceId,
+            orderId: normalizedOrderId,
             status: 'success'
         }], { session: activeSession });
 

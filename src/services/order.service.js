@@ -185,6 +185,7 @@ const placeOrder = async (userId, paymentMethod) => {
                     finalTotal,
                     'purchase',
                     referenceId,
+                    order.orderId,
                     session
                 );
             } catch (err) {
@@ -303,7 +304,8 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
                     userId,
                     refundAmount,
                     'refund_cancelled',
-                    String(item.itemId)
+                    String(item.itemId),
+                    order.orderId
                 );
             } catch (err) {
                 throw new Error('Wallet refund failed. Cancellation aborted.');

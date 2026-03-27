@@ -110,57 +110,86 @@
 
         <%- include("../partials/admin/navbar") %>
 
-        <!-- Main Layout: Sidebar + Content -->
-        <main class="flex flex-1 bg-white">
+	        <!-- Main Layout: Sidebar + Content -->
+	        <main class="flex flex-1 bg-white">
             <!-- Sidebar -->
             <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
                 <%- include('../partials/admin/sidebar', { page: 'customers' }) %>
             </aside>
 
-            <!-- Main Content Panel -->
-            <section class="flex-1 p-6 md:p-8">
-                <!-- Breadcrumb -->
-                <div class="flex items-center gap-2 text-sm mb-4">
-                    <a href="/admin/customers" class="text-[#685BCB] hover:underline">Customers</a>
+	            <!-- Main Content Panel -->
+	            <section class="flex-1 p-6 md:p-8">
+	                <%
+	                    const user = customer;
+	                    const totalOrders = Number(customer.totalOrders || 0);
+	                    const lifetimeValue = Number(customer.lifetimeValue || 0);
+	                    const walletBalance = Number(customer.walletBalance || 0);
+	                %>
+	                <!-- Breadcrumb -->
+	                <div class="flex items-center gap-2 text-sm mb-4">
+	                    <a href="/admin/customers" class="text-[#685BCB] hover:underline">Customers</a>
                     <span class="text-gray-400">/</span>
-                    <span class="text-[#1F1F1F]">
-                        <%= customer.name %>
-                    </span>
-                </div>
+	                    <span class="text-[#1F1F1F]">
+	                        <%= customer.name %>
+	                    </span>
+	                </div>
+	
+	                <div class="mb-6 overflow-hidden rounded-[28px] border border-[#E7DDF5] bg-gradient-to-br from-[#F8F4FF] via-white to-[#F4EEFF] shadow-[0_18px_45px_rgba(104,91,203,0.10)]">
+	                    <div class="flex flex-col gap-6 px-6 py-7 md:px-8 md:py-8">
+	                        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+	                            <div class="flex items-center gap-5">
+	                                <% if (user.profileImage) { %>
+	                                    <img src="<%= user.profileImage %>" alt="<%= user.name %>" class="h-24 w-24 rounded-full object-cover ring-4 ring-white shadow-lg" />
+	                                <% } else { %>
+	                                    <div class="flex h-24 w-24 items-center justify-center rounded-full bg-[#D9D1F7] text-3xl font-bold text-[#3F3478] ring-4 ring-white shadow-lg">
+	                                        <%= user.name ? user.name.charAt(0).toUpperCase() : 'U' %>
+	                                    </div>
+	                                <% } %>
+	                                <div>
+	                                    <div class="flex flex-wrap items-center gap-3">
+	                                        <h1 class="text-[30px] font-black tracking-tight text-[#1F1F1F]"><%= user.name %></h1>
+	                                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] <%= user.isBlocked ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' %>">
+	                                            <%= user.isBlocked ? 'Banned' : 'Active' %>
+	                                        </span>
+	                                    </div>
+	                                    <p class="mt-2 text-sm text-[#6B6382]"><%= user.email %></p>
+	                                    <p class="mt-1 text-sm text-[#8A82A6]">Customer profile and account activity overview</p>
+	                                </div>
+	                            </div>
+	                            <div class="flex flex-wrap gap-3">
+	                                <a href="/admin/customers/<%= customer._id %>/edit"
+	                                    class="flex h-11 items-center justify-center rounded-xl border border-[#D7CAEF] bg-white px-5 text-sm font-bold text-[#1F1F1F] shadow-sm transition-colors hover:bg-[#F3ECFF]">
+	                                    Edit Profile
+	                                </a>
+	                                <button onclick="toggleBlock('<%= customer._id %>', <%= customer.isBlocked %>)"
+	                                    class="flex h-11 items-center justify-center rounded-xl px-5 text-sm font-bold transition-colors <%= customer.isBlocked ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-700 hover:bg-red-200' %>">
+	                                    <%= customer.isBlocked ? 'Unban' : 'Ban' %>
+	                                </button>
+	                                <button onclick="deleteUser('<%= customer._id %>')"
+	                                    class="flex h-11 items-center justify-center rounded-xl border border-red-200 bg-white px-5 text-sm font-bold text-red-600 transition-colors hover:bg-red-50">
+	                                    Delete
+	                                </button>
+	                            </div>
+	                        </div>
+	                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+	                            <div class="rounded-2xl border border-[#EFE6FB] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(31,31,31,0.05)]">
+	                                <div class="text-3xl font-black text-[#1F1F1F]"><%= totalOrders %></div>
+	                                <p class="mt-2 text-sm font-medium text-[#7A7198]">Total Orders</p>
+	                            </div>
+	                            <div class="rounded-2xl border border-[#EFE6FB] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(31,31,31,0.05)]">
+	                                <div class="text-3xl font-black text-[#1F1F1F]">RS <%= Number(lifetimeValue || 0).toFixed(2) %></div>
+	                                <p class="mt-2 text-sm font-medium text-[#7A7198]">Lifetime Value</p>
+	                            </div>
+	                            <div class="rounded-2xl border border-[#EFE6FB] bg-white px-5 py-5 shadow-[0_12px_30px_rgba(31,31,31,0.05)]">
+	                                <div class="text-3xl font-black text-[#1F1F1F]">₹<%= walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+	                                <p class="mt-2 text-sm font-medium text-[#7A7198]">Wallet Balance</p>
+	                            </div>
+	                        </div>
+	                    </div>
+	                </div>
 
-                <!-- Header -->
-                <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
-                    <h1 class="text-[32px] font-bold text-[#1F1F1F]">
-                        <%= customer.name %>
-                    </h1>
-                    <a href="/admin/customers/<%= customer._id %>/edit"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#BCA6DB] transition-colors">
-                        Edit profile
-                    </a>
-                </div>
-
-                <!-- Status Badge -->
-                <div class="flex gap-3 mb-4">
-                    <span
-                        class="inline-flex items-center px-3 py-1 rounded-lg text-sm font-medium <%= customer.isBlocked ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' %>">
-                        <%= customer.isBlocked ? 'Blocked' : 'Active' %>
-                    </span>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex gap-3 mb-6">
-                    <button onclick="toggleBlock('<%= customer._id %>', <%= customer.isBlocked %>)"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 text-sm font-bold <%= customer.isBlocked ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200' %> transition-colors">
-                        <%= customer.isBlocked ? 'Unban' : 'Ban' %>
-                    </button>
-                    <button onclick="deleteUser('<%= customer._id %>')"
-                        class="flex items-center justify-center rounded-lg h-10 px-4 text-sm font-bold text-red-600 border border-red-200 hover:bg-red-50 transition-colors">
-                        Delete customer
-                    </button>
-                </div>
-
-                <!-- Tabs -->
-                <div class="border-b border-[#BCA6DB] mb-4">
+	                <!-- Tabs -->
+	                <div class="border-b border-[#BCA6DB] mb-4">
                     <div class="flex gap-6">
                         <button onclick="openTab(event, 'Overview')"
                             class="tablinks pb-3 border-b-[3px] border-b-[#1F1F1F] text-[#1F1F1F] text-sm font-bold">
@@ -181,54 +210,39 @@
                     </div>
                 </div>
 
-                <!-- Tab Content: Overview -->
-                <div id="Overview" class="tabcontent" style="display:block;">
-                    <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Contact Information</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <p class="text-sm text-[#685BCB] mb-1">Email</p>
-                            <p class="text-sm text-[#1F1F1F] bg-gray-100 rounded-lg px-3 py-2">
-                                <%= customer.email %>
-                            </p>
-                        </div>
-                        <div>
-                            <p class="text-sm text-[#685BCB] mb-1">Phone</p>
-                            <p class="text-sm text-[#1F1F1F] bg-gray-100 rounded-lg px-3 py-2">
-                                <%= customer.phone || 'N/A' %>
-                            </p>
-                        </div>
-                    </div>
-
-                    <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Account Meta</h2>
-                    <div class="space-y-3">
-                        <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#685BCB]">Joined</span>
-                            <span class="text-sm text-[#1F1F1F]">
-                                <%= new Date(customer.joinedDate).toLocaleDateString() %>
-                            </span>
-                        </div>
-                        <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#685BCB]">Last Login</span>
-                            <span class="text-sm text-[#1F1F1F]">
-                                <%= customer.lastLogin ? new Date(customer.lastLogin).toLocaleDateString() : 'N/A' %>
-                            </span>
-                        </div>
-                        <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#685BCB]">Total Orders</span>
-                            <span class="text-sm text-[#1F1F1F]">
-                                <%= customer.totalOrders %>
-                            </span>
-                        </div>
-                        <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#685BCB]">Lifetime Value</span>
-                            <span class="text-sm text-[#1F1F1F]">$<%= customer.lifetimeValue %></span>
-                        </div>
-                        <div class="flex border-t border-gray-200 py-3">
-                            <span class="w-32 text-sm text-[#685BCB]">Wallet Balance</span>
-                            <span class="text-sm text-[#1F1F1F]">₹<%= Number(customer.walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) %></span>
-                        </div>
-                    </div>
-                </div>
+	                <!-- Tab Content: Overview -->
+	                <div id="Overview" class="tabcontent" style="display:block;">
+	                    <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+	                        <div class="rounded-3xl border border-[#ECE4F8] bg-white p-6 shadow-[0_14px_35px_rgba(31,31,31,0.05)]">
+	                            <h2 class="text-lg font-bold text-[#1F1F1F]">Contact Information</h2>
+	                            <p class="mt-1 text-sm text-[#847A9F]">Primary contact details used for account communication.</p>
+	                            <div class="mt-6 space-y-4">
+	                                <div class="rounded-2xl bg-[#F8F5FF] px-4 py-4">
+	                                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Email</p>
+	                                    <p class="mt-2 text-sm font-medium text-[#1F1F1F] break-all"><%= user.email %></p>
+	                                </div>
+	                                <div class="rounded-2xl bg-[#F8F5FF] px-4 py-4">
+	                                    <p class="text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Phone</p>
+	                                    <p class="mt-2 text-sm font-medium text-[#1F1F1F]"><%= user.phone || 'N/A' %></p>
+	                                </div>
+	                            </div>
+	                        </div>
+	                        <div class="rounded-3xl border border-[#ECE4F8] bg-white p-6 shadow-[0_14px_35px_rgba(31,31,31,0.05)]">
+	                            <h2 class="text-lg font-bold text-[#1F1F1F]">Account Meta</h2>
+	                            <p class="mt-1 text-sm text-[#847A9F]">Snapshot of when this customer joined and their latest activity.</p>
+	                            <div class="mt-6 space-y-4">
+	                                <div class="flex items-center justify-between rounded-2xl bg-[#F8F5FF] px-4 py-4">
+	                                    <span class="text-sm font-medium text-[#7A6F9B]">Joined</span>
+	                                    <span class="text-sm font-bold text-[#1F1F1F]"><%= new Date(user.joinedDate).toLocaleDateString() %></span>
+	                                </div>
+	                                <div class="flex items-center justify-between rounded-2xl bg-[#F8F5FF] px-4 py-4">
+	                                    <span class="text-sm font-medium text-[#7A6F9B]">Last Login</span>
+	                                    <span class="text-sm font-bold text-[#1F1F1F]"><%= user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'N/A' %></span>
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                </div>
 
                 <!-- Tab Content: Orders -->
                 <div id="Orders" class="tabcontent">
