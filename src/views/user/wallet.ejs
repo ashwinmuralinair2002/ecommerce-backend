@@ -21,6 +21,8 @@
     const walletTransactions = Array.isArray(transactions) ? transactions : [];
     const currentSort = sort === 'oldest' ? 'oldest' : 'newest';
     const currentType = ['credit', 'debit'].includes(type) ? type : 'all';
+    const currentWalletPage = Math.max(Number(currentPage || 1), 1);
+    const walletTotalPages = Math.max(Number(totalPages || 1), 1);
 
     const formatCurrency = (value) => `₹ ${Number(value || 0).toLocaleString('en-IN', {
         minimumFractionDigits: 2,
@@ -31,6 +33,10 @@
         month: 'short',
         year: 'numeric'
     }) : 'N/A';
+    const walletQueryParts = [];
+    if (currentSort !== 'newest') walletQueryParts.push(`sort=${encodeURIComponent(currentSort)}`);
+    if (currentType !== 'all') walletQueryParts.push(`type=${encodeURIComponent(currentType)}`);
+    const walletBaseQs = walletQueryParts.length > 0 ? `&${walletQueryParts.join('&')}` : '';
 %>
 
     <div class="relative flex min-h-screen w-full flex-col bg-white"
@@ -133,8 +139,8 @@
                             <h3 class="text-lg font-bold text-primary">No wallet transactions yet</h3>
                             <p class="mt-2 text-sm text-gray-500">Refunds, recharges, and debits will appear here once they happen.</p>
                         </div>
-                    <% } else { %>
-                        <div class="mt-6 overflow-x-auto">
+	                    <% } else { %>
+	                        <div class="mt-6 overflow-x-auto">
                             <table class="min-w-full divide-y divide-primary-light/35">
                                 <thead>
                                     <tr class="text-left text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
@@ -184,10 +190,53 @@
                                         </tr>
                                     <% }) %>
                                 </tbody>
-                            </table>
-                        </div>
-                    <% } %>
-                </section>
+	                            </table>
+	                        </div>
+                            <% if (walletTotalPages > 0) { %>
+                                <div class="mt-6 flex items-center justify-center gap-2">
+                                    <% if (currentWalletPage > 1) { %>
+                                        <a href="/wallet?page=<%= currentWalletPage - 1 %><%= walletBaseQs %>"
+                                            class="flex h-10 items-center justify-center rounded-lg bg-[#FFFFFF] px-4 text-sm font-medium text-[#1F1F1F] transition-colors hover:bg-[#D3CEEA]">
+                                            &laquo; Previous
+                                        </a>
+                                    <% } else { %>
+                                        <span class="flex h-10 items-center justify-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                            &laquo; Previous
+                                        </span>
+                                    <% } %>
+
+                                    <div class="flex gap-1">
+                                        <% for (let i = 1; i <= walletTotalPages; i++) { %>
+                                            <% if (i === currentWalletPage) { %>
+                                                <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#685BCB] text-sm font-bold text-white">
+                                                    <%= i %>
+                                                </span>
+                                            <% } else { %>
+                                                <a href="/wallet?page=<%= i %><%= walletBaseQs %>"
+                                                    class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FFFFFF] text-sm font-medium text-[#1F1F1F] transition-colors hover:bg-[#D3CEEA]">
+                                                    <%= i %>
+                                                </a>
+                                            <% } %>
+                                        <% } %>
+                                    </div>
+
+                                    <% if (currentWalletPage < walletTotalPages) { %>
+                                        <a href="/wallet?page=<%= currentWalletPage + 1 %><%= walletBaseQs %>"
+                                            class="flex h-10 items-center justify-center rounded-lg bg-[#FFFFFF] px-4 text-sm font-medium text-[#1F1F1F] transition-colors hover:bg-[#D3CEEA]">
+                                            Next &raquo;
+                                        </a>
+                                    <% } else { %>
+                                        <span class="flex h-10 items-center justify-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-400 cursor-not-allowed">
+                                            Next &raquo;
+                                        </span>
+                                    <% } %>
+                                </div>
+                                <p class="mt-2 text-center text-sm text-[#685BCB]">
+                                    Showing page <%= currentWalletPage %> of <%= walletTotalPages %>
+                                </p>
+                            <% } %>
+	                    <% } %>
+	                </section>
             </section>
         </main>
     </div>

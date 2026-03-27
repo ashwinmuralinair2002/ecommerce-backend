@@ -1,17 +1,21 @@
 // Admin management controller for customer and system operations
 const User = require('../models/user.model');
 const Wallet = require('../models/wallet.model');
+const WalletTransaction = require('../models/wallet-transaction.model');
 const Order = require('../models/order.model');
+const { attachOrderIds } = require('./wallet.controller');
 const profileService = require('../services/profile.service');
 const { Parser } = require('json2csv');
 const bcrypt = require('bcryptjs');
+
+const ENABLE_ADMIN_USER_EDIT = process.env.ENABLE_ADMIN_USER_EDIT === 'true';
 
 // @desc    Get Customers Page (with Pagination)
 // @route   GET /admin/customers
 const getCustomersPage = async (req, res) => {
     try {
         const { search, page = 1, status, sort } = req.query;
-        const limit = 5;
+        const limit = 15;
         const currentPage = parseInt(page) || 1;
 
         let query = { role: 'user', isDeleted: { $ne: true } };
@@ -140,8 +144,14 @@ const getCustomerDetails = async (req, res) => {
             return res.redirect('/admin/customers');
         }
 
-        const wallet = await Wallet.findOne({ userId: user._id }).select('balance').lean();
-        const orders = await Order.find({ user: user._id }).select('totalAmount').lean();
+        const wallet = await Wallet.findOne({ userId: user._id }).lean();
+        const transactions = await WalletTransaction.find({ userId: user._id })
+            .sort({ createdAt: -1 })
+            .lean();
+        await attachOrderIds(transactions);
+        const orders = await Order.find({ user: user._id })
+            .sort({ createdAt: -1 })
+            .lean();
         const totalOrders = orders.length;
         const lifetimeValue = orders.reduce((sum, order) => {
             return sum + Number(order && order.totalAmount ? order.totalAmount : 0);
@@ -156,7 +166,13 @@ const getCustomerDetails = async (req, res) => {
             walletBalance: wallet ? Number(wallet.balance || 0) : 0
         };
 
-        res.render('admin/customer-details', { customer });
+        res.render('admin/customer-details', {
+            customer,
+            orders,
+            wallet,
+            transactions,
+            adminUserEditEnabled: ENABLE_ADMIN_USER_EDIT
+        });
     } catch (error) {
         res.redirect('/admin/customers');
     }
@@ -166,6 +182,10 @@ const getCustomerDetails = async (req, res) => {
 // @route   GET /admin/customers/:id/edit
 const renderEditCustomerPage = async (req, res) => {
     try {
+        if (!ENABLE_ADMIN_USER_EDIT) {
+            return res.redirect(`/admin/customers/${req.params.id}`);
+        }
+
         const user = await User.findById(req.params.id);
         if (!user || user.role === 'admin' || user.isDeleted) {
             return res.redirect('/admin/customers');
@@ -180,6 +200,13 @@ const renderEditCustomerPage = async (req, res) => {
 // @route   POST /admin/customers/:id/update
 const updateCustomer = async (req, res) => {
     try {
+        if (!ENABLE_ADMIN_USER_EDIT) {
+            return res.status(403).json({
+                success: false,
+                message: 'Editing user details is currently disabled'
+            });
+        }
+
         const { name, email, phone } = req.body;
         const user = await User.findById(req.params.id);
         const errors = {};

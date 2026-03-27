@@ -157,10 +157,20 @@
 	                                </div>
 	                            </div>
 	                            <div class="flex flex-wrap gap-3">
-	                                <a href="/admin/customers/<%= customer._id %>/edit"
-	                                    class="flex h-11 items-center justify-center rounded-xl border border-[#D7CAEF] bg-white px-5 text-sm font-bold text-[#1F1F1F] shadow-sm transition-colors hover:bg-[#F3ECFF]">
-	                                    Edit Profile
-	                                </a>
+	                                <% if (adminUserEditEnabled) { %>
+	                                    <a href="/admin/customers/<%= customer._id %>/edit"
+	                                        class="flex h-11 items-center justify-center rounded-xl border border-[#D7CAEF] bg-white px-5 text-sm font-bold text-[#1F1F1F] shadow-sm transition-colors hover:bg-[#F3ECFF]">
+	                                        Edit Profile
+	                                    </a>
+	                                <% } else { %>
+	                                    <button
+	                                        type="button"
+	                                        title="Editing user details is currently disabled"
+	                                        aria-disabled="true"
+	                                        class="flex h-11 items-center justify-center rounded-xl border border-[#D7CAEF] bg-white px-5 text-sm font-bold text-[#1F1F1F] opacity-40 shadow-sm cursor-not-allowed">
+	                                        Edit Profile
+	                                    </button>
+	                                <% } %>
 	                                <button onclick="toggleBlock('<%= customer._id %>', <%= customer.isBlocked %>)"
 	                                    class="flex h-11 items-center justify-center rounded-xl px-5 text-sm font-bold transition-colors <%= customer.isBlocked ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-700 hover:bg-red-200' %>">
 	                                    <%= customer.isBlocked ? 'Unban' : 'Ban' %>
@@ -199,13 +209,17 @@
                             class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
                             Orders
                         </button>
-                        <button onclick="openTab(event, 'Addresses')"
-                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
-                            Addresses
-                        </button>
-                        <button onclick="openTab(event, 'Notes')"
-                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
-                            Notes
+	                        <button onclick="openTab(event, 'Addresses')"
+	                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
+	                            Addresses
+	                        </button>
+	                        <button onclick="openTab(event, 'Wallet')"
+	                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
+	                            Wallet
+	                        </button>
+	                        <button onclick="openTab(event, 'Notes')"
+	                            class="tablinks pb-3 border-b-[3px] border-b-transparent text-[#685BCB] text-sm font-bold">
+	                            Notes
                         </button>
                     </div>
                 </div>
@@ -244,19 +258,46 @@
 	                    </div>
 	                </div>
 
-                <!-- Tab Content: Orders -->
-                <div id="Orders" class="tabcontent">
-                    <div class="text-center py-8 text-gray-500">
-                        <p>No orders found</p>
-                        <a href="/admin/customers/<%= customer._id %>/orders"
-                            class="text-[#685BCB] hover:underline mt-2 inline-block">
-                            View Orders Page
-                        </a>
-                    </div>
-                </div>
+	                <!-- Tab Content: Orders -->
+	                <div id="Orders" class="tabcontent">
+	                    <% if (orders && orders.length > 0) { %>
+	                        <div class="overflow-hidden rounded-3xl border border-[#ECE4F8] bg-white shadow-[0_14px_35px_rgba(31,31,31,0.05)]">
+	                            <div class="overflow-x-auto">
+	                                <table class="min-w-full divide-y divide-[#ECE4F8]">
+	                                    <thead class="bg-[#F8F5FF]">
+	                                        <tr>
+	                                            <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Order ID</th>
+	                                            <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Date</th>
+	                                            <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Total</th>
+	                                            <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Status</th>
+	                                            <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Payment</th>
+	                                        </tr>
+	                                    </thead>
+	                                    <tbody class="divide-y divide-[#F1EBFA]">
+	                                        <% orders.forEach((order) => { %>
+	                                            <tr
+	                                                class="cursor-pointer transition-colors hover:bg-[#FAF7FF]"
+	                                                onclick="window.location='/admin/orders/<%= order.orderId %>'">
+	                                                <td class="px-5 py-4 text-sm font-bold text-[#1F1F1F]"><%= order.orderId %></td>
+	                                                <td class="px-5 py-4 text-sm text-[#5F5876]"><%= new Date(order.createdAt).toLocaleDateString() %></td>
+	                                                <td class="px-5 py-4 text-sm font-semibold text-[#1F1F1F]">RS <%= Number(order.totalAmount || 0).toFixed(2) %></td>
+	                                                <td class="px-5 py-4 text-sm text-[#5F5876]"><%= order.orderStatus || 'N/A' %></td>
+	                                                <td class="px-5 py-4 text-sm text-[#5F5876]"><%= order.paymentMethod || 'N/A' %></td>
+	                                            </tr>
+	                                        <% }) %>
+	                                    </tbody>
+	                                </table>
+	                            </div>
+	                        </div>
+	                    <% } else { %>
+	                        <div class="rounded-3xl border border-dashed border-[#D8CCE9] bg-[#FBF9FF] px-6 py-10 text-center text-sm text-[#7A7198]">
+	                            No orders found
+	                        </div>
+	                    <% } %>
+	                </div>
 
-                <!-- Tab Content: Addresses -->
-                <div id="Addresses" class="tabcontent">
+	                <!-- Tab Content: Addresses -->
+	                <div id="Addresses" class="tabcontent">
                     <% if (customer.addresses && customer.addresses.length> 0) { %>
                         <div class="space-y-3">
                             <% customer.addresses.forEach(addr=> { %>
@@ -287,11 +328,61 @@
                         </div>
                         <% } else { %>
                             <p class="text-center py-8 text-gray-500">No saved addresses.</p>
-                            <% } %>
-                </div>
+	                            <% } %>
+	                </div>
 
-                <!-- Tab Content: Notes -->
-                <div id="Notes" class="tabcontent">
+	                <!-- Tab Content: Wallet -->
+	                <div id="Wallet" class="tabcontent">
+	                    <div class="space-y-5">
+	                        <div class="rounded-3xl border border-[#ECE4F8] bg-white p-6 shadow-[0_14px_35px_rgba(31,31,31,0.05)]">
+	                            <h3 class="text-lg font-bold text-[#1F1F1F]">Wallet Balance</h3>
+	                            <p class="mt-3 text-3xl font-black text-[#1F1F1F]">RS <%= Number((wallet && wallet.balance) || 0).toFixed(2) %></p>
+	                        </div>
+	                        <div class="overflow-hidden rounded-3xl border border-[#ECE4F8] bg-white shadow-[0_14px_35px_rgba(31,31,31,0.05)]">
+	                            <% if (transactions && transactions.length > 0) { %>
+	                                <div class="overflow-x-auto">
+	                                    <table class="min-w-full divide-y divide-[#ECE4F8]">
+	                                        <thead class="bg-[#F8F5FF]">
+	                                            <tr>
+	                                                <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Date</th>
+	                                                <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Type</th>
+	                                                <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Amount</th>
+	                                                <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Reason</th>
+	                                                <th class="px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.18em] text-[#7A6F9B]">Order</th>
+	                                            </tr>
+	                                        </thead>
+	                                        <tbody class="divide-y divide-[#F1EBFA]">
+	                                            <% transactions.forEach((tx) => { %>
+	                                                <tr>
+	                                                    <td class="px-5 py-4 text-sm text-[#5F5876]"><%= new Date(tx.createdAt).toLocaleDateString() %></td>
+	                                                    <td class="px-5 py-4 text-sm">
+	                                                        <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize <%= tx.type === 'debit' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' %>">
+	                                                            <%= tx.type %>
+	                                                        </span>
+	                                                    </td>
+	                                                    <td class="px-5 py-4 text-sm font-semibold text-[#1F1F1F]">RS <%= Number(tx.amount || 0).toFixed(2) %></td>
+	                                                    <td class="px-5 py-4 text-sm text-[#5F5876]"><%= tx.reason || 'N/A' %></td>
+	                                                    <td class="px-5 py-4 text-sm text-[#5F5876]">
+	                                                        <% if (tx.orderId) { %>
+	                                                            <a href="/admin/orders/<%= tx.orderId %>" class="inline-flex items-center rounded-full bg-teal-500 px-4 py-2 text-xs font-semibold text-white transition-all duration-200 hover:scale-[1.03] hover:bg-teal-600 active:scale-[0.98]">View Order</a>
+	                                                        <% } else { %>
+	                                                            <span class="inline-flex cursor-not-allowed items-center rounded-full bg-teal-500 px-4 py-2 text-xs font-semibold text-white opacity-45 transition-all duration-200">View Order</span>
+	                                                        <% } %>
+	                                                    </td>
+	                                                </tr>
+	                                            <% }) %>
+	                                        </tbody>
+	                                    </table>
+	                                </div>
+	                            <% } else { %>
+	                                <div class="px-6 py-10 text-center text-sm text-[#7A7198]">No transactions found</div>
+	                            <% } %>
+	                        </div>
+	                    </div>
+	                </div>
+
+	                <!-- Tab Content: Notes -->
+	                <div id="Notes" class="tabcontent">
                     <label class="block mb-2 text-sm font-bold text-[#1F1F1F]">Admin Notes (Internal Use Only)</label>
                     <textarea id="adminNotes" rows="5"
                         class="w-full rounded-lg border border-gray-200 p-3 text-sm focus:ring-2 focus:ring-[#685BCB] focus:border-transparent"
