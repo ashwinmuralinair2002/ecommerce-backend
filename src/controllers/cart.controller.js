@@ -1,3 +1,4 @@
+const Cart = require('../models/cart.model');
 const cartService = require('../services/cart.service');
 
 const addToCart = async (req, res) => {
@@ -71,9 +72,34 @@ const removeItem = async (req, res) => {
     }
 };
 
+const buyNow = async (req, res) => {
+    const userId = req.session.userId;
+    const { productId, variantId, quantity } = req.body;
+
+    try {
+        await Cart.findOneAndUpdate(
+            { userId },
+            { $set: { items: [] } },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+
+        await cartService.addToCart(userId, productId, variantId, Number(quantity));
+
+        res.json({
+            success: true
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 module.exports = {
     addToCart,
     getCart,
     updateQuantity,
-    removeItem
+    removeItem,
+    buyNow
 };

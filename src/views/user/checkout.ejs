@@ -516,7 +516,12 @@
                                 contact: '9999999999'
                             },
                             modal: {
-                                ondismiss: function () {
+                                ondismiss: async function () {
+                                    try {
+                                        await fetch('/api/checkout/clear-buy-now', { method: 'POST' });
+                                    } catch (error) {
+                                        console.error('Failed to clear Buy Now session:', error);
+                                    }
                                     window.location.href = "/payment-failure";
                                 }
                             },
@@ -547,8 +552,13 @@
                         console.log("RAZORPAY KEY FINAL:", options.key);
 
                         const rzp = new Razorpay(options);
-                        rzp.on('payment.failed', function (response) {
+                        rzp.on('payment.failed', async function (response) {
                             console.error('RAZORPAY FAILURE:', response.error);
+                            try {
+                                await fetch('/api/checkout/clear-buy-now', { method: 'POST' });
+                            } catch (error) {
+                                console.error('Failed to clear Buy Now session:', error);
+                            }
                             window.location.href = "/payment-failure";
                         });
                         rzp.open();

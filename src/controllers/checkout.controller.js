@@ -1,5 +1,7 @@
+const Product = require('../models/Product');
 const checkoutService = require('../services/checkout.service');
 const walletService = require('../services/wallet.service');
+const { buildBuyNowCheckoutData } = require('../utils/buy-now-checkout');
 
 const getCheckoutPage = async (req, res, next) => {
     if (!req.session.userId) {
@@ -9,7 +11,9 @@ const getCheckoutPage = async (req, res, next) => {
     const userId = req.session.userId;
 
     try {
-        const checkoutData = await checkoutService.prepareCheckout(userId);
+        const checkoutData = req.session.buyNowItem
+            ? await buildBuyNowCheckoutData(userId, req.session.buyNowItem)
+            : await checkoutService.prepareCheckout(userId);
         const wallet = await walletService.getWallet(userId);
 
         res.render('user/checkout', {
@@ -31,6 +35,81 @@ const getCheckoutPage = async (req, res, next) => {
     }
 };
 
+const buyNow = async (req, res) => {
+    const { productId, variantId, quantity } = req.body;
+
+    try {
+        const product = await Product.findById(productId).select('isListed isDeleted variants').lean();
+        const normalizedQuantity = Number(quantity);
+
+        if (!productId || !variantId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid product selection'
+            });
+        }
+
+        if (!Number.isInteger(normalizedQuantity) || normalizedQuantity < 1 || normalizedQuantity > 5) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid quantity'
+            });
+        }
+
+        if (!product || product.isListed !== true || product.isDeleted === true) {
+            return res.status(400).json({
+                success: false,
+                message: 'Product not available'
+            });
+        }
+
+        const variant = Array.isArray(product.variants)
+            ? product.variants.find((entry) => String(entry && entry._id) === String(variantId))
+            : null;
+
+        if (!variant) {
+            return res.status(400).json({
+                success: false,
+                message: 'Variant not found'
+            });
+        }
+
+        if (Number(variant.stockCount || 0) <= 0 || normalizedQuantity > Number(variant.stockCount || 0)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Quantity exceeds available stock'
+            });
+        }
+
+        req.session.buyNowItem = {
+            productId: String(productId),
+            variantId: String(variantId),
+            quantity: normalizedQuantity
+        };
+
+        return res.json({
+            success: true
+        });
+    } catch (error) {
+        return res.status(400).json({
+            success: false,
+            message: error.message || 'Unable to start buy now'
+        });
+    }
+};
+
+const clearBuyNow = async (req, res) => {
+    if (req.session) {
+        delete req.session.buyNowItem;
+    }
+
+    return res.json({
+        success: true
+    });
+};
+
 module.exports = {
-    getCheckoutPage
+    getCheckoutPage,
+    buyNow,
+    clearBuyNow
 };

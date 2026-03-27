@@ -395,6 +395,8 @@
                                                 <%= isProductUnavailable ? 'This product is currently unavailable' : 'Selected variant is out of stock' %>
                                             </p>
                                             <button
+                                                id="buyNowButton"
+                                                type="button"
                                                 class="theme-accent-btn w-full flex h-10 items-center justify-center rounded-lg px-6 text-sm font-bold">
                                                 Buy Now
                                             </button>
@@ -540,6 +542,7 @@
                         const addToCartButton = document.getElementById("addToCartButton");
                         const addToCartFeedback = document.getElementById("addToCartFeedback");
                         const productAvailabilityMessage = document.getElementById("productAvailabilityMessage");
+                        const buyNowButton = document.getElementById("buyNowButton");
                         const decrementQuantityButton = document.getElementById("decrementQuantityButton");
                         const incrementQuantityButton = document.getElementById("incrementQuantityButton");
                         const productQuantityValue = document.getElementById("productQuantityValue");
@@ -730,6 +733,14 @@
                             addToCartButton.classList.toggle('cursor-not-allowed', !canAddToCart);
                             addToCartButton.classList.toggle('opacity-50', !canAddToCart);
                             addToCartButton.classList.toggle('pointer-events-none', !canAddToCart);
+                            if (buyNowButton) {
+                                buyNowButton.disabled = !canAddToCart;
+                                buyNowButton.setAttribute('aria-disabled', canAddToCart ? 'false' : 'true');
+                                buyNowButton.classList.toggle('cursor-pointer', canAddToCart);
+                                buyNowButton.classList.toggle('cursor-not-allowed', !canAddToCart);
+                                buyNowButton.classList.toggle('opacity-50', !canAddToCart);
+                                buyNowButton.classList.toggle('pointer-events-none', !canAddToCart);
+                            }
                             updateQuantityControls();
 
                             if (!productAvailabilityMessage) return;
@@ -883,6 +894,59 @@
                                         icon: 'error',
                                         title: 'Error',
                                         text: error.message || 'Failed to add item to cart'
+                                    });
+                                } finally {
+                                    isAddingToCart = false;
+                                    updateAddToCartState();
+                                }
+                            });
+                        }
+
+                        if (buyNowButton) {
+                            buyNowButton.addEventListener('click', async () => {
+                                if (buyNowButton.disabled || isAddingToCart) return;
+
+                                const activeVariant = variants[currentVariantIndex] || {};
+                                const variantId = activeVariant && activeVariant._id ? String(activeVariant._id) : '';
+
+                                if (!productId || !variantId) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: 'Unable to identify the selected product variant.'
+                                    });
+                                    return;
+                                }
+
+                                isAddingToCart = true;
+                                buyNowButton.disabled = true;
+
+                                try {
+                                    const response = await fetch('/api/checkout/buy-now', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        },
+                                        body: JSON.stringify({
+                                            productId,
+                                            variantId,
+                                            quantity: selectedQuantity
+                                        })
+                                    });
+
+                                    const result = await response.json().catch(() => null);
+
+                                    if (!response.ok || !result || result.success !== true) {
+                                        throw new Error(result && result.message ? result.message : 'Unable to proceed to checkout');
+                                    }
+
+                                    window.location.href = '/checkout';
+                                } catch (error) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: error.message || 'Failed to proceed to checkout'
                                     });
                                 } finally {
                                     isAddingToCart = false;

@@ -34,6 +34,8 @@ router.get('/category/:id', userProductController.getCategoryDetailPage);
 router.get('/cart', ensureAuthenticated, cartPageController.getCartPage);
 router.get('/wishlist', ensureAuthenticated, wishlistController.getWishlistPage);
 router.get('/wishlist/count', ensureAuthenticated, wishlistController.getWishlistCount);
+router.post('/api/checkout/buy-now', ensureAuthenticated, checkoutController.buyNow);
+router.post('/api/checkout/clear-buy-now', ensureAuthenticated, checkoutController.clearBuyNow);
 router.get('/checkout', ensureAuthenticated, checkoutController.getCheckoutPage);
 router.get('/payment-failure', ensureAuthenticated, (req, res) => {
   res.render('user/payment-failure');

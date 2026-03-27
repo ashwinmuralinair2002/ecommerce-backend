@@ -1,7 +1,9 @@
 const { z } = require('zod');
+const Cart = require('../models/cart.model');
 const Order = require('../models/order.model');
 const orderService = require('../services/order.service');
 const { verifyRazorpaySignature } = require('../services/payment.service');
+const { buildBuyNowCartItem } = require('../utils/buy-now-checkout');
 
 const baseSchema = z.object({
     paymentMethod: z.preprocess((value) => {
@@ -52,6 +54,7 @@ const placeOrder = async (req, res) => {
         }
 
         const parsedPaymentMethod = baseParse.data.paymentMethod || 'COD';
+        const buyNowItem = req.session.buyNowItem || null;
 
         if (parsedPaymentMethod === 'online') {
             const onlineParse = onlineSchema.safeParse(req.body);
@@ -76,6 +79,7 @@ const placeOrder = async (req, res) => {
 
             if (existingOrder) {
                 console.warn('Duplicate online payment attempt:', razorpay_payment_id);
+                delete req.session.buyNowItem;
                 return res.json({
                     success: true,
                     message: 'Order already processed',
@@ -104,7 +108,33 @@ const placeOrder = async (req, res) => {
                 razorpayOrderId: razorpay_order_id
             };
         }
-        const orderId = await orderService.placeOrder(userId, parsedPaymentMethod, req.paymentData);
+        let orderId;
+
+        if (buyNowItem) {
+            const existingCart = await Cart.findOne({ userId }).lean();
+            const originalItems = existingCart && Array.isArray(existingCart.items) ? existingCart.items : [];
+            const tempCartItem = await buildBuyNowCartItem(buyNowItem);
+
+            await Cart.findOneAndUpdate(
+                { userId },
+                { $set: { items: [tempCartItem] } },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
+
+            try {
+                orderId = await orderService.placeOrder(userId, parsedPaymentMethod, req.paymentData);
+            } finally {
+                await Cart.findOneAndUpdate(
+                    { userId },
+                    { $set: { items: originalItems } },
+                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                );
+            }
+        } else {
+            orderId = await orderService.placeOrder(userId, parsedPaymentMethod, req.paymentData);
+        }
+
+        delete req.session.buyNowItem;
 
         return res.json({
             success: true,

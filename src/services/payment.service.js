@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 const checkoutService = require('./checkout.service');
 const AppError = require('../utils/AppError');
+const { buildBuyNowCheckoutData } = require('../utils/buy-now-checkout');
 
 const razorpayInstance = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
@@ -18,13 +19,15 @@ const verifyRazorpaySignature = (orderId, paymentId, signature) => {
     return expectedSignature === signature;
 };
 
-const createRazorpayOrder = async (userId) => {
+const createRazorpayOrder = async (userId, buyNowItem = null) => {
     try {
         if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
             throw new AppError('Razorpay is not configured', 500);
         }
 
-        const checkoutData = await checkoutService.prepareCheckout(userId);
+        const checkoutData = buyNowItem
+            ? await buildBuyNowCheckoutData(userId, buyNowItem)
+            : await checkoutService.prepareCheckout(userId);
 
         if (!checkoutData || !checkoutData.pricing) {
             throw new Error('Invalid checkout state');
