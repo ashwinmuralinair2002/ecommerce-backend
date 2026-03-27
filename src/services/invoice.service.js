@@ -10,6 +10,21 @@ const formatStatusLabel = (status) => String(status || 'pending')
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+const formatPaymentMethodLabel = (paymentMethod) => {
+    if (paymentMethod === 'wallet') {
+        return 'Wallet';
+    }
+
+    if (paymentMethod === 'online') {
+        return 'Online (UPI)';
+    }
+
+    if (paymentMethod === 'COD') {
+        return 'Cash on Delivery';
+    }
+
+    return 'N/A';
+};
 
 const buildLocationLine = (address = {}) => [address.city, address.state, address.pincode].filter(Boolean).join(', ');
 
@@ -170,14 +185,17 @@ const generateInvoice = async (orderId, userId, res) => {
         ensurePageSpace(doc, 120);
         doc.moveDown(0.6);
         const summaryTop = doc.y;
-        doc.fontSize(10).fillColor('#4B5563').text('Subtotal', 360, summaryTop, { width: 100, align: 'right' });
-        doc.fontSize(10).fillColor('#111827').text(formatCurrency(pricing.subtotal), 470, summaryTop, { width: 85, align: 'right' });
-        doc.fontSize(10).fillColor('#4B5563').text('GST', 360, summaryTop + 18, { width: 100, align: 'right' });
-        doc.fontSize(10).fillColor('#111827').text(formatCurrency(pricing.gst), 470, summaryTop + 18, { width: 85, align: 'right' });
-        doc.fontSize(12).fillColor('#111827').text('Grand Total', 360, summaryTop + 42, { width: 100, align: 'right' });
-        doc.fontSize(12).text(formatCurrency(pricing.finalTotal), 470, summaryTop + 42, { width: 85, align: 'right' });
+        const paymentLabel = formatPaymentMethodLabel(order.paymentMethod);
+        doc.fontSize(10).fillColor('#4B5563').text('Payment Method', 360, summaryTop, { width: 100, align: 'right' });
+        doc.fontSize(10).fillColor('#111827').text(paymentLabel, 470, summaryTop, { width: 85, align: 'right' });
+        doc.fontSize(10).fillColor('#4B5563').text('Subtotal', 360, summaryTop + 18, { width: 100, align: 'right' });
+        doc.fontSize(10).fillColor('#111827').text(formatCurrency(pricing.subtotal), 470, summaryTop + 18, { width: 85, align: 'right' });
+        doc.fontSize(10).fillColor('#4B5563').text('GST', 360, summaryTop + 36, { width: 100, align: 'right' });
+        doc.fontSize(10).fillColor('#111827').text(formatCurrency(pricing.gst), 470, summaryTop + 36, { width: 85, align: 'right' });
+        doc.fontSize(12).fillColor('#111827').text('Grand Total', 360, summaryTop + 60, { width: 100, align: 'right' });
+        doc.fontSize(12).text(formatCurrency(pricing.finalTotal), 470, summaryTop + 60, { width: 85, align: 'right' });
 
-        doc.moveDown(3);
+        doc.moveDown(4);
         doc.fontSize(9).fillColor('#6B7280').text('This is a computer-generated invoice.', 40, doc.y);
 
         doc.end();

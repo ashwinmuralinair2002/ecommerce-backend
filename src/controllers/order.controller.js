@@ -3,18 +3,34 @@ const Order = require('../models/order.model');
 const orderService = require('../services/order.service');
 const { verifyRazorpaySignature } = require('../services/payment.service');
 
-const placeOrderSchema = z.object({
+const baseSchema = z.object({
     paymentMethod: z.preprocess((value) => {
-        if (typeof value === 'string' && value.trim().toLowerCase() === 'cod') {
+        if (typeof value !== 'string') {
+            return value;
+        }
+
+        const normalizedValue = value.trim().toLowerCase();
+
+        if (normalizedValue === 'cod') {
             return 'COD';
         }
 
-        if (typeof value === 'string' && value.trim().toLowerCase() === 'online') {
+        if (normalizedValue === 'wallet') {
+            return 'wallet';
+        }
+
+        if (normalizedValue === 'online') {
             return 'online';
         }
 
         return value;
-    }, z.enum(['COD', 'wallet', 'online']))
+    }, z.enum(['COD', 'wallet', 'online']).optional())
+});
+
+const onlineSchema = z.object({
+    razorpay_payment_id: z.string().min(1),
+    razorpay_order_id: z.string().min(1),
+    razorpay_signature: z.string().min(1)
 });
 
 const placeOrder = async (req, res) => {
@@ -26,9 +42,27 @@ const placeOrder = async (req, res) => {
             razorpay_order_id,
             razorpay_signature
         } = req.body;
-        const { paymentMethod: parsedPaymentMethod } = placeOrderSchema.parse({ paymentMethod });
+        const baseParse = baseSchema.safeParse(req.body);
+
+        if (!baseParse.success) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid payment method'
+            });
+        }
+
+        const parsedPaymentMethod = baseParse.data.paymentMethod || 'COD';
 
         if (parsedPaymentMethod === 'online') {
+            const onlineParse = onlineSchema.safeParse(req.body);
+
+            if (!onlineParse.success) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid payment data'
+                });
+            }
+
             if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
                 return res.status(400).json({
                     success: false,
