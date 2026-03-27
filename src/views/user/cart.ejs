@@ -692,8 +692,9 @@
                     const action = quantityButton.getAttribute('data-action');
                     const currentQty = parseInt(cartItem.querySelector('.quantity-value').textContent, 10) || 1;
                     const quantity = action === 'increment' ? currentQty + 1 : currentQty - 1;
-                    const itemId = productId;
-                    const updatedCart = await sendCartRequest(`/api/cart/item/${itemId}`, 'PATCH', {
+                    const updatedCart = await sendCartRequest('/api/cart/item', 'PATCH', {
+                        productId,
+                        variantId,
                         quantity
                     });
                     replaceCart(updatedCart);
@@ -717,8 +718,10 @@
                     }
 
                     try {
-                        const itemId = productId;
-                        const updatedCart = await sendCartRequest(`/api/cart/item/${itemId}`, 'DELETE');
+                        const updatedCart = await sendCartRequest('/api/cart/item', 'DELETE', {
+                            productId,
+                            variantId
+                        });
                         replaceCart(updatedCart);
                         await Swal.fire({
                             title: 'Removed!',

@@ -10,16 +10,16 @@ const addToCartSchema = z.object({
 
 const updateCartItemSchema = z.object({
   body: z.object({
+    productId: z.string().min(1),
+    variantId: z.string().min(1),
     quantity: z.coerce.number().int().min(1),
-  }),
-  params: z.object({
-    itemId: z.string().min(1),
   })
 });
 
 const removeCartItemSchema = z.object({
-  params: z.object({
-    itemId: z.string().min(1),
+  body: z.object({
+    productId: z.string().min(1),
+    variantId: z.string().min(1),
   })
 });
 

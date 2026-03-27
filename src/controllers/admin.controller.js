@@ -1,5 +1,6 @@
 // Admin management controller for customer and system operations
 const User = require('../models/user.model');
+const Wallet = require('../models/wallet.model');
 const Order = require('../models/order.model');
 const profileService = require('../services/profile.service');
 const { Parser } = require('json2csv');
@@ -139,12 +140,15 @@ const getCustomerDetails = async (req, res) => {
             return res.redirect('/admin/customers');
         }
 
+        const wallet = await Wallet.findOne({ userId: user._id }).select('balance').lean();
+
         const customer = {
             ...user.toObject(),
             totalOrders: 0,
             lifetimeValue: 0,
             joinedDate: user.createdAt,
-            lastLogin: user.updatedAt
+            lastLogin: user.updatedAt,
+            walletBalance: wallet ? Number(wallet.balance || 0) : 0
         };
 
         res.render('admin/customer-details', { customer });

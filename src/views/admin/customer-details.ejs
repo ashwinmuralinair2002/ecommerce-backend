@@ -223,6 +223,10 @@
                             <span class="w-32 text-sm text-[#685BCB]">Lifetime Value</span>
                             <span class="text-sm text-[#1F1F1F]">$<%= customer.lifetimeValue %></span>
                         </div>
+                        <div class="flex border-t border-gray-200 py-3">
+                            <span class="w-32 text-sm text-[#685BCB]">Wallet Balance</span>
+                            <span class="text-sm text-[#1F1F1F]">₹<%= Number(customer.walletBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }) %></span>
+                        </div>
                     </div>
                 </div>
 

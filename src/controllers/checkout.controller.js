@@ -1,4 +1,5 @@
 const checkoutService = require('../services/checkout.service');
+const walletService = require('../services/wallet.service');
 
 const getCheckoutPage = async (req, res, next) => {
     if (!req.session.userId) {
@@ -9,9 +10,11 @@ const getCheckoutPage = async (req, res, next) => {
 
     try {
         const checkoutData = await checkoutService.prepareCheckout(userId);
+        const wallet = await walletService.getWallet(userId);
 
         res.render('user/checkout', {
-            checkout: checkoutData
+            checkout: checkoutData,
+            walletBalance: Number(wallet && wallet.balance ? wallet.balance : 0)
         });
     } catch (error) {
         if (

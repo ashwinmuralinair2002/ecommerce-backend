@@ -66,6 +66,21 @@ const orderItemSchema = new mongoose.Schema({
         required: true,
         min: 0
     },
+    gstAmount: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    finalPrice: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    unitFinalPrice: {
+        type: Number,
+        required: true,
+        min: 0
+    },
     imageUrl: {
         type: String,
         default: '',
@@ -75,6 +90,12 @@ const orderItemSchema = new mongoose.Schema({
         type: String,
         default: 'pending',
         enum: ORDER_ITEM_STATUSES,
+        trim: true
+    },
+    refundStatus: {
+        type: String,
+        enum: ['none', 'pending', 'processed'],
+        default: 'none',
         trim: true
     },
     returnReason: {

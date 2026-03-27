@@ -203,17 +203,17 @@ const getCart = asyncHandler(async (userId) => {
     return buildCartResponse(userId);
 });
 
-const updateCartItemQuantity = asyncHandler(async (userId, itemId, quantity) => {
+const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId, quantity) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
         throw new AppError('Cart not found', 404);
     }
 
-    const itemIndex = cart.items.findIndex(item => 
-        item.productId.toString() === itemId.toString() || 
-        (item._id && item._id.toString() === itemId.toString())
-    );
+    const itemIndex = cart.items.findIndex((item) => (
+        item.productId.toString() === productId.toString()
+        && item.variantId.toString() === variantId.toString()
+    ));
 
     if (itemIndex === -1) {
         throw new AppError('Cart item not found', 404);
@@ -237,17 +237,17 @@ const updateCartItemQuantity = asyncHandler(async (userId, itemId, quantity) => 
     return buildCartResponse(userId);
 });
 
-const removeCartItem = asyncHandler(async (userId, itemId) => {
+const removeCartItem = asyncHandler(async (userId, productId, variantId) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
         throw new AppError('Cart not found', 404);
     }
 
-    const itemIndex = cart.items.findIndex(item => 
-        item.productId.toString() === itemId.toString() || 
-        (item._id && item._id.toString() === itemId.toString())
-    );
+    const itemIndex = cart.items.findIndex((item) => (
+        item.productId.toString() === productId.toString()
+        && item.variantId.toString() === variantId.toString()
+    ));
 
     if (itemIndex === -1) {
         throw new AppError('Cart item not found', 404);

@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Order = require('../models/order.model');
 const User = require('../models/user.model');
 const Product = require('../models/Product');
+const walletService = require('../services/wallet.service');
 const AppError = require('../utils/AppError');
 
 const ALLOWED_ORDER_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
@@ -120,6 +121,7 @@ const getAllOrders = async (filters = {}) => {
         return {
             orders: orders.map((order) => ({
             orderId: order.orderId,
+            items: Array.isArray(order.items) ? order.items : [],
             totalAmount: order.totalAmount,
             totalItems: Array.isArray(order.items)
                 ? order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
@@ -345,6 +347,33 @@ const processReturn = async (orderId, itemId, action) => {
                     order.orderStatus = 'returned';
                 } else if (someItemsReturned) {
                     order.orderStatus = 'partially_returned';
+                }
+
+                if (action === 'approve') {
+                    if (item.refundStatus === 'processed') {
+                        throw new Error('Refund already processed');
+                    }
+
+                    item.refundStatus = 'pending';
+
+                    if (!Number.isFinite(item.finalPrice)) {
+                        throw new Error('Invalid finalPrice for refund');
+                    }
+
+                    const refundAmount = item.finalPrice;
+
+                    try {
+                        await walletService.creditWallet(
+                            order.user,
+                            refundAmount,
+                            'refund_returned',
+                            String(item.itemId)
+                        );
+                    } catch (err) {
+                        throw new Error('Wallet refund failed. Cancellation aborted.');
+                    }
+
+                    item.refundStatus = 'processed';
                 }
 
                 await order.save({ session });

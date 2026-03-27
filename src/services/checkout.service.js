@@ -1,7 +1,6 @@
 const cartService = require('./cart.service');
 const User = require('../models/user.model');
 const AppError = require('../utils/AppError');
-const { getBaseProductPrice } = require('../utils/pricing');
 
 const GST_RATE = 0.18;
 const MAX_CART_ITEM_QUANTITY = 5;
@@ -9,11 +8,11 @@ const MAX_CART_ITEM_QUANTITY = 5;
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
 const getItemUnitPrice = (item) => {
-    if (item && item.product) {
-        return Number(item.priceSnapshot) || getBaseProductPrice(item.product);
+    if (item && Number.isFinite(item.priceSnapshot)) {
+        return item.priceSnapshot;
     }
 
-    return Number(item && item.priceSnapshot ? item.priceSnapshot : 0);
+    throw new Error('Invalid price snapshot during checkout');
 };
 
 const hasInvalidCartItem = (item) => {
@@ -27,6 +26,7 @@ const hasInvalidCartItem = (item) => {
         ||
         product.isListed === false
         || product.isDeleted === true
+        || quantity < 1
         || stockCount === 0
         || quantity > stockCount
         || quantity > MAX_CART_ITEM_QUANTITY

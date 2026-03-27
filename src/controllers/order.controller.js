@@ -1,9 +1,21 @@
+const { z } = require('zod');
 const orderService = require('../services/order.service');
+
+const placeOrderSchema = z.object({
+    paymentMethod: z.preprocess((value) => {
+        if (typeof value === 'string' && value.trim().toLowerCase() === 'cod') {
+            return 'COD';
+        }
+
+        return value;
+    }, z.enum(['COD', 'wallet']))
+});
 
 const placeOrder = async (req, res) => {
     try {
         const userId = req.session.userId;
-        const orderId = await orderService.placeOrder(userId);
+        const { paymentMethod } = placeOrderSchema.parse(req.body);
+        const orderId = await orderService.placeOrder(userId, paymentMethod);
 
         return res.json({
             success: true,

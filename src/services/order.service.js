@@ -3,10 +3,50 @@ const Cart = require('../models/cart.model');
 const Order = require('../models/order.model');
 const Product = require('../models/Product');
 const checkoutService = require('./checkout.service');
+const walletService = require('../services/wallet.service');
 const AppError = require('../utils/AppError');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const generateOrderItemId = () => `ITEM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const distributeItemGst = (items, subtotal, gst) => {
+    const safeSubtotal = Number.isFinite(Number(subtotal)) ? Number(subtotal) : 0;
+    const safeGst = roundCurrency(Number.isFinite(Number(gst)) ? Number(gst) : 0);
+
+    if (!Array.isArray(items) || items.length === 0) {
+        return [];
+    }
+
+    if (safeGst === 0) {
+        return items.map(() => 0);
+    }
+
+    if (items.length === 1) {
+        return [safeGst];
+    }
+
+    if (safeSubtotal <= 0) {
+        const allocations = items.map(() => 0);
+        allocations[allocations.length - 1] = safeGst;
+
+        return allocations;
+    }
+
+    let allocatedGst = 0;
+
+    return items.map((item, index) => {
+        if (index === items.length - 1) {
+            return roundCurrency(safeGst - allocatedGst);
+        }
+
+        const itemTotal = Number.isFinite(Number(item && item.totalPrice)) ? Number(item.totalPrice) : 0;
+        const itemShare = itemTotal / safeSubtotal;
+        const itemGst = roundCurrency(itemShare * safeGst);
+        allocatedGst = roundCurrency(allocatedGst + itemGst);
+
+        return itemGst;
+    });
+};
 
 const buildShippingAddress = (address) => {
     return {
@@ -19,14 +59,41 @@ const buildShippingAddress = (address) => {
     };
 };
 
-const placeOrder = async (userId) => {
+const placeOrder = async (userId, paymentMethod) => {
+    const session = await mongoose.startSession();
+
     try {
+        session.startTransaction();
+
         const checkoutData = await checkoutService.prepareCheckout(userId);
+        const finalTotal = Number(
+            checkoutData
+            && checkoutData.pricing
+            && Number.isFinite(Number(checkoutData.pricing.finalTotal))
+                ? checkoutData.pricing.finalTotal
+                : 0
+        );
+        const normalizedPaymentMethod = typeof paymentMethod === 'string'
+            ? paymentMethod.trim()
+            : '';
+        const resolvedPaymentMethod = normalizedPaymentMethod.toLowerCase() === 'cod'
+            ? 'COD'
+            : normalizedPaymentMethod;
         const orderId = `ORD-${Date.now()}`;
+        const referenceId = `ORDER_${Date.now()}_${userId}`;
         const orderItems = [];
+
+        if (normalizedPaymentMethod.toLowerCase() === 'wallet') {
+            const wallet = await walletService.getWallet(userId, session);
+
+            if (!wallet || Number(wallet.balance || 0) < finalTotal) {
+                throw new AppError('Insufficient wallet balance', 400);
+            }
+        }
 
         for (const item of checkoutData.items) {
             const product = await Product.findById(item.product && item.product._id)
+                .session(session)
                 .populate('brand', 'name');
 
             if (!product || product.isListed === false || product.isDeleted === true) {
@@ -44,7 +111,11 @@ const placeOrder = async (userId) => {
                 throw new AppError('Stock changed, please refresh', 409);
             }
 
-            const price = Number(item.product && typeof item.product.price === 'number' ? item.product.price : item.priceSnapshot || 0);
+            if (!Number.isFinite(item.priceSnapshot)) {
+                throw new AppError('Invalid price snapshot during order creation', 500);
+            }
+
+            const price = item.priceSnapshot;
             const totalPrice = roundCurrency(price * quantity);
             const checkoutVariant = item && item.variant ? item.variant : {};
             const variantImages = Array.isArray(checkoutVariant.images) ? checkoutVariant.images : [];
@@ -72,34 +143,78 @@ const placeOrder = async (userId) => {
             });
 
             variant.stockCount -= quantity;
-            await product.save();
+            await product.save({ session });
         }
+
+        const itemGstAllocations = distributeItemGst(
+            orderItems,
+            checkoutData && checkoutData.pricing ? checkoutData.pricing.subtotal : 0,
+            checkoutData && checkoutData.pricing ? checkoutData.pricing.gst : 0
+        );
+
+        const pricedOrderItems = orderItems.map((item, index) => {
+            const itemGst = Number.isFinite(Number(itemGstAllocations[index])) ? Number(itemGstAllocations[index]) : 0;
+            const unitFinalPrice = Number(item.quantity) > 0
+                ? roundCurrency((Number(item.totalPrice || 0) + itemGst) / Number(item.quantity))
+                : 0;
+            const finalPrice = roundCurrency(unitFinalPrice * Number(item.quantity || 0));
+
+            return {
+                ...item,
+                gstAmount: itemGst,
+                finalPrice,
+                unitFinalPrice
+            };
+        });
 
         const order = new Order({
             orderId,
             user: userId,
-            items: orderItems,
+            items: pricedOrderItems,
             pricing: checkoutData.pricing,
             shippingAddress: buildShippingAddress(checkoutData.address),
-            paymentMethod: 'COD',
+            paymentMethod: resolvedPaymentMethod || 'COD',
             orderStatus: 'pending',
-            totalAmount: checkoutData.pricing.finalTotal
+            totalAmount: finalTotal
         });
 
-        await order.save();
+        if (normalizedPaymentMethod.toLowerCase() === 'wallet') {
+            try {
+                await walletService.debitWallet(
+                    userId,
+                    finalTotal,
+                    'purchase',
+                    referenceId,
+                    session
+                );
+            } catch (err) {
+                throw new AppError('Wallet payment failed. Order not placed.', 400);
+            }
+        }
+
+        await order.save({ session });
 
         await Cart.findOneAndUpdate(
             { userId },
-            { $set: { items: [] } }
+            { $set: { items: [] } },
+            { session }
         );
+
+        await session.commitTransaction();
 
         return order.orderId;
     } catch (error) {
+        if (session.inTransaction()) {
+            await session.abortTransaction();
+        }
+
         if (error instanceof AppError) {
             throw error;
         }
 
         throw new AppError('Order service failed', 500);
+    } finally {
+        await session.endSession();
     }
 };
 
@@ -170,6 +285,31 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
             } else if (someItemsCancelled) {
                 order.orderStatus = 'partially_cancelled';
             }
+
+            if (item.refundStatus === 'processed') {
+                throw new Error('Refund already processed');
+            }
+
+            item.refundStatus = 'pending';
+
+            if (!Number.isFinite(item.finalPrice)) {
+                throw new Error('Invalid finalPrice for refund');
+            }
+
+            const refundAmount = item.finalPrice;
+
+            try {
+                await walletService.creditWallet(
+                    userId,
+                    refundAmount,
+                    'refund_cancelled',
+                    String(item.itemId)
+                );
+            } catch (err) {
+                throw new Error('Wallet refund failed. Cancellation aborted.');
+            }
+
+            item.refundStatus = 'processed';
 
             await order.save({ session });
 

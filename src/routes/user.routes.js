@@ -8,6 +8,7 @@ const orderPageController = require('../controllers/order.page.controller');
 const userOrderController = require('../controllers/user.order.controller');
 const wishlistController = require('../controllers/wishlist.controller');
 const homeController = require('../controllers/home.controller');
+const walletRoutes = require('./wallet.routes');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const {
@@ -37,6 +38,7 @@ router.get('/order-success', ensureAuthenticated, orderPageController.getOrderSu
 router.get('/orders', ensureAuthenticated, userOrderController.getUserOrdersPage);
 router.get('/orders/:orderId', ensureAuthenticated, userOrderController.getUserOrderDetailsPage);
 router.get('/api/invoice/:orderId', ensureAuthenticated, invoiceController.downloadInvoice);
+router.use('/wallet', ensureAuthenticated, walletRoutes);
 router.post(
   '/wishlist/add',
   ensureAuthenticated,

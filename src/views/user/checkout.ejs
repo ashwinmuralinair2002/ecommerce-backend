@@ -13,6 +13,8 @@
 
     <%- include('../partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/utils.js"></script>
 </head>
 
 <body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
@@ -275,6 +277,14 @@
                                 <span class="mt-1 block text-sm text-gray-500">Coming soon.</span>
                             </span>
                         </label>
+
+                        <label class="flex items-start gap-3 rounded-lg border border-primary-light/35 bg-primary-light/10 px-4 py-3">
+                            <input type="radio" name="paymentMethod" value="wallet" class="mt-1 h-4 w-4 border-primary-light text-primary focus:ring-primary">
+                            <span class="block">
+                                <span class="block font-semibold text-primary">Wallet</span>
+                                <span class="mt-1 block text-sm text-gray-500">Balance: ₹<%= (walletBalance || 0).toFixed(2) %></span>
+                            </span>
+                        </label>
                     </div>
 
                     <% if (!hasSelectedAddress) { %>
@@ -290,7 +300,6 @@
                         <%= hasSelectedAddress ? '' : 'disabled aria-disabled="true"' %>>
                         Place Order
                     </button>
-                    <p id="place-order-feedback" class="mt-2 hidden text-xs text-red-600"></p>
                 </div>
             </aside>
         </div>
@@ -309,8 +318,18 @@
         const selectedAddressLocation = document.getElementById('selected-address-location');
         const editAddressLink = document.getElementById('edit-address-link');
         const placeOrderButton = document.getElementById('place-order-button');
-        const placeOrderFeedback = document.getElementById('place-order-feedback');
         let isPlacingOrder = false;
+
+        const notifyError = (message) => {
+            const nextMessage = message || 'Unable to place order';
+
+            if (typeof window.showToast === 'function') {
+                window.showToast(nextMessage, 'error');
+                return;
+            }
+
+            window.alert(nextMessage);
+        };
 
         const setAddressDropdownState = (isOpen) => {
             if (!addressSelector) return;
@@ -386,17 +405,18 @@
                 placeOrderButton.disabled = true;
                 placeOrderButton.classList.add('pointer-events-none', 'opacity-50');
 
-                if (placeOrderFeedback) {
-                    placeOrderFeedback.classList.add('hidden');
-                    placeOrderFeedback.textContent = '';
-                }
-
                 try {
+                    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || null;
+                    console.log('Selected method:', paymentMethod);
+
                     const response = await fetch('/api/order/place', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
-                        }
+                        },
+                        body: JSON.stringify({
+                            paymentMethod
+                        })
                     });
 
                     const data = await response.json().catch(() => null);
@@ -407,24 +427,10 @@
                     }
 
                     const message = data && data.message ? data.message : 'Unable to place order';
-                    if (placeOrderFeedback) {
-                        placeOrderFeedback.textContent = message;
-                        placeOrderFeedback.classList.remove('hidden');
-                    } else {
-                        window.alert(message);
-                    }
-
-                    placeOrderButton.disabled = false;
-                    placeOrderButton.classList.remove('opacity-50', 'pointer-events-none');
+                    notifyError(message);
                 } catch (error) {
-                    const message = 'Unable to place order';
-                    if (placeOrderFeedback) {
-                        placeOrderFeedback.textContent = message;
-                        placeOrderFeedback.classList.remove('hidden');
-                    } else {
-                        window.alert(message);
-                    }
-
+                    notifyError('Unable to place order');
+                } finally {
                     isPlacingOrder = false;
                     placeOrderButton.disabled = false;
                     placeOrderButton.classList.remove('opacity-50', 'pointer-events-none');

@@ -385,17 +385,23 @@
                                         <th
                                             class="px-4 py-3 text-left text-[#1F1F1F] w-36 text-sm font-medium leading-normal">
                                             Status</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-[#1F1F1F] w-40 text-sm font-medium leading-normal">
+                                            Refund</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <% if (orders.length===0) { %>
                                         <tr>
-                                            <td colspan="8" class="text-center py-8 text-[#685BCB]">No orders found</td>
+                                            <td colspan="9" class="text-center py-8 text-[#685BCB]">No orders found</td>
                                         </tr>
                                     <% } else { %>
                                         <% orders.forEach(order => { %>
                                             <% let statusClasses = 'bg-gray-100 text-gray-700'; %>
                                             <% let statusLabel = order.orderStatus; %>
+                                            <% const orderItems = Array.isArray(order.items) ? order.items : []; %>
+                                            <% const refundedCount = orderItems.filter((item) => item && item.refundStatus === 'processed').length; %>
+                                            <% const totalItemCount = orderItems.length; %>
                                             <% if (order.hasReturnRequested) { %>
                                                 <% statusClasses = 'bg-[#ffecec] text-red-600 hover:bg-[#ffdddd]'; %>
                                                 <% statusLabel = 'Return Requested'; %>
@@ -448,6 +454,25 @@
                                                         class="inline-flex items-center justify-center rounded-lg h-8 px-4 text-xs font-bold transition-colors <%= statusClasses %>">
                                                         <%= statusLabel %>
                                                     </span>
+                                                </td>
+                                                <td class="h-[72px] px-4 py-2 w-40 text-sm font-normal leading-normal">
+                                                    <% if (totalItemCount === 0) { %>
+                                                        <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 px-2 py-1 text-xs font-semibold">
+                                                            No Refund
+                                                        </span>
+                                                    <% } else if (refundedCount === 0) { %>
+                                                        <span class="inline-flex items-center rounded-full bg-gray-100 text-gray-600 px-2 py-1 text-xs font-semibold">
+                                                            No Refund
+                                                        </span>
+                                                    <% } else if (refundedCount < totalItemCount) { %>
+                                                        <span class="inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-xs font-semibold">
+                                                            Partial Refund
+                                                        </span>
+                                                    <% } else { %>
+                                                        <span class="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-1 text-xs font-semibold">
+                                                            Refunded
+                                                        </span>
+                                                    <% } %>
                                                 </td>
                                             </tr>
                                         <% }) %>

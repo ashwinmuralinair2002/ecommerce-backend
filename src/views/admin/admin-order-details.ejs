@@ -115,6 +115,7 @@
                                                 <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Price</th>
                                                 <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Total</th>
                                                 <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Status</th>
+                                                <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Refund</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -198,13 +199,28 @@
                                                             <% } %>
                                                         </div>
                                                     </td>
+                                                    <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
+                                                        <% if (item.refundStatus === 'processed') { %>
+                                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-green-100 text-green-700">
+                                                                Refunded
+                                                            </span>
+                                                        <% } else if (item.refundStatus === 'pending') { %>
+                                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700">
+                                                                Pending
+                                                            </span>
+                                                        <% } else { %>
+                                                            <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600">
+                                                                Not Initiated
+                                                            </span>
+                                                        <% } %>
+                                                    </td>
                                                 </tr>
                                                 <% if (
                                                     (item.status === 'cancelled' && item.cancellationReason && item.cancellationReason.trim())
                                                     || ((item.status === 'return_requested' || item.status === 'returned') && item.returnReason && item.returnReason.trim())
                                                 ) { %>
                                                     <tr id="reason-<%= item.itemId %>" class="hidden border-t border-t-[#BCA6DB] bg-gray-50/60">
-                                                        <td colspan="7" class="px-4 py-2">
+                                                        <td colspan="8" class="px-4 py-2">
                                                             <div class="mt-2 p-3 bg-gray-50 border rounded max-h-32 overflow-y-auto text-sm text-gray-700">
                                                                 <% if (item.status === 'cancelled') { %>
                                                                     <%= item.cancellationReason %>
