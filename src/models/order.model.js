@@ -201,6 +201,26 @@ const orderSchema = new mongoose.Schema({
         default: 'COD',
         trim: true
     },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed'],
+        default: 'pending',
+        trim: true
+    },
+    razorpayPaymentId: {
+        type: String,
+        default: null,
+        trim: true
+    },
+    razorpayOrderId: {
+        type: String,
+        default: null,
+        trim: true
+    },
+    paymentCapturedAt: {
+        type: Date,
+        default: null
+    },
     orderStatus: {
         type: String,
         enum: ORDER_STATUSES,
@@ -219,5 +239,7 @@ const orderSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+orderSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Order', orderSchema);

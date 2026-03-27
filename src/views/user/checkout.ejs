@@ -272,11 +272,11 @@
                             </span>
                         </label>
 
-                        <label class="flex items-start gap-3 rounded-lg border border-primary-light/35 bg-gray-50 px-4 py-3 opacity-70">
-                            <input type="radio" name="paymentMethod" value="online" class="mt-1 h-4 w-4 border-primary-light text-primary focus:ring-primary" disabled>
+                        <label class="flex items-start gap-3 rounded-lg border border-primary-light/35 bg-primary-light/10 px-4 py-3">
+                            <input type="radio" name="paymentMethod" value="online" class="mt-1 h-4 w-4 border-primary-light text-primary focus:ring-primary">
                             <span class="block">
                                 <span class="block font-semibold text-primary">Online Payment</span>
-                                <span class="mt-1 block text-sm text-gray-500">Coming soon.</span>
+                                <span class="mt-1 block text-sm text-gray-500">Pay securely using Razorpay.</span>
                             </span>
                         </label>
 
@@ -326,7 +326,12 @@
         const walletBalance = <%- JSON.stringify(walletBalanceValue) %>;
         const walletRadio = document.querySelector('input[name="paymentMethod"][value="wallet"]');
         const codRadio = document.querySelector('input[name="paymentMethod"][value="cod"]');
+        const razorpayKeyId = "<%= RAZORPAY_KEY_ID %>";
+        const currentUserName = <%- JSON.stringify((user && user.name) || '') %>;
+        const currentUserEmail = <%- JSON.stringify((user && user.email) || '') %>;
         let isPlacingOrder = false;
+
+        console.log("RAZORPAY KEY FRONTEND:", "<%= RAZORPAY_KEY_ID %>");
 
         const notifyError = (message) => {
             const nextMessage = message || 'Unable to place order';
@@ -342,6 +347,30 @@
         if (walletRadio && walletRadio.disabled && walletRadio.checked && codRadio) {
             codRadio.checked = true;
         }
+
+        const placeOrder = async (paymentMethod) => {
+            const response = await fetch('/api/order/place', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    paymentMethod
+                })
+            });
+
+            const data = await response.json().catch(() => null);
+
+            if (data && data.success) {
+                window.location.href = `/order-success?orderId=${data.orderId}`;
+                return true;
+            }
+
+            const message = data && data.message ? data.message : 'Unable to place order';
+            notifyError(message);
+
+            return false;
+        };
 
         const setAddressDropdownState = (isOpen) => {
             if (!addressSelector) return;
@@ -426,25 +455,107 @@
                         return;
                     }
 
-                    const response = await fetch('/api/order/place', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            paymentMethod
-                        })
-                    });
+                    if (paymentMethod === 'online') {
+                        if (!razorpayKeyId) {
+                            notifyError('Online payment is not configured');
+                            return;
+                        }
 
-                    const data = await response.json().catch(() => null);
+                        const orderResponse = await fetch('/payment/create-order', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
 
-                    if (data && data.success) {
-                        window.location.href = `/order-success?orderId=${data.orderId}`;
+                        const orderData = await orderResponse.json().catch(() => null);
+
+                        if (!orderData || !orderData.success || !orderData.data) {
+                            const message = orderData && orderData.message ? orderData.message : 'Unable to initiate payment';
+                            notifyError(message);
+                            return;
+                        }
+
+                        const options = {
+                            key: "<%= RAZORPAY_KEY_ID %>",
+                            amount: orderData.data.amount,
+                            currency: orderData.data.currency,
+                            name: 'Your Store',
+                            description: 'Order Payment',
+                            order_id: orderData.data.razorpayOrderId,
+                            handler: async function (response) {
+                                try {
+                                    const res = await fetch('/api/order/place', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({
+                                            paymentMethod: 'online',
+                                            razorpay_payment_id: response.razorpay_payment_id,
+                                            razorpay_order_id: response.razorpay_order_id,
+                                            razorpay_signature: response.razorpay_signature
+                                        })
+                                    });
+
+                                    const data = await res.json();
+
+                                    if (data.success) {
+                                        window.location.href = `/order-success?orderId=${data.orderId}`;
+                                    } else {
+                                        window.alert('Order placement failed');
+                                    }
+                                } catch (err) {
+                                    console.error('Order placement error:', err);
+                                    window.alert('Something went wrong');
+                                }
+                            },
+                            prefill: {
+                                name: currentUserName || 'Test User',
+                                email: currentUserEmail || 'test@example.com',
+                                contact: '9999999999'
+                            },
+                            modal: {
+                                ondismiss: function () {
+                                    window.location.href = "/payment-failure";
+                                }
+                            },
+                            config: {
+                                display: {
+                                    blocks: {
+                                        upi: {
+                                            name: 'Pay using UPI',
+                                            instruments: [
+                                                {
+                                                    method: 'upi'
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    sequence: ['upi'],
+                                    preferences: {
+                                        show_default_blocks: false
+                                    }
+                                }
+                            },
+                            theme: {
+                                color: '#000000'
+                            }
+                        };
+
+                        console.log("RAZORPAY OPTIONS:", options);
+                        console.log("RAZORPAY KEY FINAL:", options.key);
+
+                        const rzp = new Razorpay(options);
+                        rzp.on('payment.failed', function (response) {
+                            console.error('RAZORPAY FAILURE:', response.error);
+                            window.location.href = "/payment-failure";
+                        });
+                        rzp.open();
                         return;
                     }
 
-                    const message = data && data.message ? data.message : 'Unable to place order';
-                    notifyError(message);
+                    await placeOrder(paymentMethod);
                 } catch (error) {
                     notifyError('Unable to place order');
                 } finally {
@@ -456,6 +567,7 @@
         }
     })();
 </script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>
 
 </html>

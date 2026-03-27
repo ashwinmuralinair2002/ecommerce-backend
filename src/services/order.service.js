@@ -59,7 +59,7 @@ const buildShippingAddress = (address) => {
     };
 };
 
-const placeOrder = async (userId, paymentMethod) => {
+const placeOrder = async (userId, paymentMethod, paymentData = {}) => {
     const session = await mongoose.startSession();
 
     try {
@@ -79,11 +79,23 @@ const placeOrder = async (userId, paymentMethod) => {
         const resolvedPaymentMethod = normalizedPaymentMethod.toLowerCase() === 'cod'
             ? 'COD'
             : normalizedPaymentMethod;
+        const isWalletPayment = normalizedPaymentMethod.toLowerCase() === 'wallet';
+        const isOnlinePayment = normalizedPaymentMethod.toLowerCase() === 'online';
+        const paymentStatus = isOnlinePayment || isWalletPayment ? 'paid' : 'pending';
+        const razorpayPaymentId = isOnlinePayment && paymentData && paymentData.razorpayPaymentId
+            ? String(paymentData.razorpayPaymentId)
+            : null;
+        const razorpayOrderId = isOnlinePayment && paymentData && paymentData.razorpayOrderId
+            ? String(paymentData.razorpayOrderId)
+            : null;
+        const paymentCapturedAt = isOnlinePayment || isWalletPayment
+            ? new Date()
+            : null;
         const orderId = `ORD-${Date.now()}`;
         const referenceId = `ORDER_${Date.now()}_${userId}`;
         const orderItems = [];
 
-        if (normalizedPaymentMethod.toLowerCase() === 'wallet') {
+        if (isWalletPayment) {
             const wallet = await walletService.getWallet(userId, session);
 
             if (!wallet || Number(wallet.balance || 0) < finalTotal) {
@@ -174,11 +186,15 @@ const placeOrder = async (userId, paymentMethod) => {
             pricing: checkoutData.pricing,
             shippingAddress: buildShippingAddress(checkoutData.address),
             paymentMethod: resolvedPaymentMethod || 'COD',
+            paymentStatus,
+            razorpayPaymentId,
+            razorpayOrderId,
+            paymentCapturedAt,
             orderStatus: 'pending',
             totalAmount: finalTotal
         });
 
-        if (normalizedPaymentMethod.toLowerCase() === 'wallet') {
+        if (isWalletPayment) {
             try {
                 await walletService.debitWallet(
                     userId,
@@ -203,6 +219,8 @@ const placeOrder = async (userId, paymentMethod) => {
 
         await session.commitTransaction();
 
+        console.log(`Order ${order.orderId} created with payment: ${resolvedPaymentMethod || 'COD'}`);
+
         return order.orderId;
     } catch (error) {
         if (session.inTransaction()) {
@@ -211,6 +229,10 @@ const placeOrder = async (userId, paymentMethod) => {
 
         if (error instanceof AppError) {
             throw error;
+        }
+
+        if (error && error.code === 11000 && isOnlinePayment) {
+            throw new AppError('Order already exists for this payment', 409);
         }
 
         throw new AppError('Order service failed', 500);

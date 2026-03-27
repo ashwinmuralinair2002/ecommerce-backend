@@ -14,7 +14,9 @@ const getCheckoutPage = async (req, res, next) => {
 
         res.render('user/checkout', {
             checkout: checkoutData,
-            walletBalance: Number(wallet && wallet.balance ? wallet.balance : 0)
+            walletBalance: Number(wallet && wallet.balance ? wallet.balance : 0),
+            razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
+            RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || ''
         });
     } catch (error) {
         if (

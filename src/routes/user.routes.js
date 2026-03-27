@@ -9,6 +9,7 @@ const userOrderController = require('../controllers/user.order.controller');
 const wishlistController = require('../controllers/wishlist.controller');
 const homeController = require('../controllers/home.controller');
 const walletRoutes = require('./wallet.routes');
+const paymentRoutes = require('./payment.routes');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const {
@@ -34,11 +35,15 @@ router.get('/cart', ensureAuthenticated, cartPageController.getCartPage);
 router.get('/wishlist', ensureAuthenticated, wishlistController.getWishlistPage);
 router.get('/wishlist/count', ensureAuthenticated, wishlistController.getWishlistCount);
 router.get('/checkout', ensureAuthenticated, checkoutController.getCheckoutPage);
+router.get('/payment-failure', ensureAuthenticated, (req, res) => {
+  res.render('user/payment-failure');
+});
 router.get('/order-success', ensureAuthenticated, orderPageController.getOrderSuccessPage);
 router.get('/orders', ensureAuthenticated, userOrderController.getUserOrdersPage);
 router.get('/orders/:orderId', ensureAuthenticated, userOrderController.getUserOrderDetailsPage);
 router.get('/api/invoice/:orderId', ensureAuthenticated, invoiceController.downloadInvoice);
 router.use('/wallet', ensureAuthenticated, walletRoutes);
+router.use('/payment', paymentRoutes);
 router.post(
   '/wishlist/add',
   ensureAuthenticated,
