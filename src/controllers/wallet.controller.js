@@ -1,6 +1,27 @@
 const walletService = require('../services/wallet.service');
 const WalletTransaction = require('../models/wallet-transaction.model');
 const Order = require('../models/order.model');
+const { razorpayInstance, verifyRazorpaySignature } = require('../services/payment.service');
+const AppError = require('../utils/AppError');
+
+const MIN_RECHARGE_AMOUNT = 10;
+const MAX_RECHARGE_AMOUNT = 50000;
+
+const parseRechargeAmount = (value) => {
+    const amount = typeof value === 'string' ? Number(value.trim()) : Number(value);
+
+    if (!Number.isFinite(amount)) {
+        throw new AppError('Invalid recharge amount', 400);
+    }
+
+    const normalizedAmount = Math.round((amount + Number.EPSILON) * 100) / 100;
+
+    if (normalizedAmount < MIN_RECHARGE_AMOUNT || normalizedAmount > MAX_RECHARGE_AMOUNT) {
+        throw new AppError(`Recharge amount must be between Rs ${MIN_RECHARGE_AMOUNT} and Rs ${MAX_RECHARGE_AMOUNT}`, 400);
+    }
+
+    return normalizedAmount;
+};
 
 const buildTransactionQuery = (userId, type) => {
     const query = { userId };
@@ -99,7 +120,9 @@ const getWalletPage = async (req, res, next) => {
             currentPage: safePage,
             totalPages,
             sort,
-            type
+            type,
+            razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
+            RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || ''
         });
     } catch (error) {
         return next(error);
@@ -136,13 +159,144 @@ const getTransactions = async (req, res, next) => {
     }
 };
 
+const createRechargeOrder = async (req, res) => {
+    try {
+        const userId = req.session && req.session.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+            throw new AppError('Razorpay is not configured', 500);
+        }
+
+        const amount = parseRechargeAmount(req.body && req.body.amount);
+        const amountInPaise = Math.round(amount * 100);
+        const receipt = `wallet_${String(userId).slice(-6)}_${Date.now()}`.slice(0, 40);
+        const razorpayOrder = await razorpayInstance.orders.create({
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt,
+            payment_capture: 1,
+            notes: {
+                userId: String(userId),
+                purpose: 'wallet_recharge'
+            }
+        });
+
+        return res.json({
+            success: true,
+            data: {
+                razorpayOrderId: razorpayOrder.id,
+                amount: razorpayOrder.amount,
+                currency: razorpayOrder.currency
+            }
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Failed to create recharge order'
+        });
+    }
+};
+
+const verifyRecharge = async (req, res) => {
+    try {
+        const userId = req.session && req.session.userId;
+
+        if (!userId) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+
+        const {
+            razorpay_payment_id: razorpayPaymentId,
+            razorpay_order_id: razorpayOrderId,
+            razorpay_signature: razorpaySignature
+        } = req.body || {};
+
+        if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing payment verification data'
+            });
+        }
+
+        const isValid = verifyRazorpaySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+
+        if (!isValid) {
+            return res.status(400).json({
+                success: false,
+                message: 'Payment verification failed'
+            });
+        }
+
+        const existingTransaction = await WalletTransaction.findOne({
+            razorpayPaymentId
+        }).select('userId').lean();
+
+        if (existingTransaction) {
+            if (String(existingTransaction.userId) !== String(userId)) {
+                throw new AppError('Payment already linked to another wallet', 400);
+            }
+
+            return res.json({ success: true });
+        }
+
+        const order = await razorpayInstance.orders.fetch(razorpayOrderId);
+
+        if (!order || !order.notes || String(order.notes.userId || '') !== String(userId)) {
+            throw new AppError('Recharge order does not belong to this user', 400);
+        }
+
+        const payment = await razorpayInstance.payments.fetch(razorpayPaymentId);
+
+        if (!payment || payment.status !== 'captured') {
+            throw new AppError('Payment is not captured', 400);
+        }
+
+        if (payment.order_id !== razorpayOrderId) {
+            throw new AppError('Payment order mismatch', 400);
+        }
+
+        const amountInRupees = Number(payment.amount || 0) / 100;
+
+        await walletService.creditWallet(
+            userId,
+            amountInRupees,
+            'online recharge',
+            razorpayPaymentId,
+            null,
+            {
+                razorpayPaymentId,
+                razorpayOrderId
+            }
+        );
+
+        return res.json({ success: true });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Failed to verify recharge payment'
+        });
+    }
+};
+
 const rechargeWallet = async (req, res) => {
-    return res.json({ message: 'Razorpay integration pending' });
+    return createRechargeOrder(req, res);
 };
 
 module.exports = {
     attachOrderIds,
     getWalletPage,
     getTransactions,
-    rechargeWallet
+    rechargeWallet,
+    createRechargeOrder,
+    verifyRecharge
 };

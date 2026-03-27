@@ -55,10 +55,16 @@ const getWallet = async (userId, session = null) => {
     return createWallet(userId, session);
 };
 
-const creditWallet = async (userId, amount, reason, referenceId, orderId = null) => {
+const creditWallet = async (userId, amount, reason, referenceId, orderId = null, metadata = {}) => {
     const normalizedAmount = validateAmount(amount);
     const normalizedReferenceId = normalizeReferenceId(referenceId);
     const normalizedOrderId = typeof orderId === 'string' && orderId.trim() ? orderId.trim() : null;
+    const normalizedRazorpayPaymentId = typeof metadata.razorpayPaymentId === 'string' && metadata.razorpayPaymentId.trim()
+        ? metadata.razorpayPaymentId.trim()
+        : null;
+    const normalizedRazorpayOrderId = typeof metadata.razorpayOrderId === 'string' && metadata.razorpayOrderId.trim()
+        ? metadata.razorpayOrderId.trim()
+        : null;
     const session = await mongoose.startSession();
 
     try {
@@ -95,6 +101,8 @@ const creditWallet = async (userId, amount, reason, referenceId, orderId = null)
                 reason,
                 referenceId: normalizedReferenceId,
                 orderId: normalizedOrderId,
+                razorpayPaymentId: normalizedRazorpayPaymentId,
+                razorpayOrderId: normalizedRazorpayOrderId,
                 status: 'success'
             }], { session });
 

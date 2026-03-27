@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const WALLET_TRANSACTION_TYPES = ['credit', 'debit'];
-const WALLET_TRANSACTION_REASONS = ['refund_cancelled', 'refund_returned', 'purchase', 'recharge'];
+const WALLET_TRANSACTION_REASONS = ['refund_cancelled', 'refund_returned', 'purchase', 'recharge', 'online recharge'];
 
 const walletTransactionSchema = new mongoose.Schema({
     userId: {
@@ -38,6 +38,18 @@ const walletTransactionSchema = new mongoose.Schema({
         index: true,
         trim: true
     },
+    razorpayPaymentId: {
+        type: String,
+        required: false,
+        default: null,
+        trim: true
+    },
+    razorpayOrderId: {
+        type: String,
+        required: false,
+        default: null,
+        trim: true
+    },
     status: {
         type: String,
         default: 'success',
@@ -50,5 +62,6 @@ const walletTransactionSchema = new mongoose.Schema({
 walletTransactionSchema.index({ userId: 1 });
 walletTransactionSchema.index({ referenceId: 1 }, { unique: true });
 walletTransactionSchema.index({ orderId: 1 });
+walletTransactionSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('WalletTransaction', walletTransactionSchema);

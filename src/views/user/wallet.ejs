@@ -69,23 +69,18 @@
                 </section>
 
                 <section class="mb-6 rounded-xl bg-white p-6 shadow">
-                    <h2 class="text-lg font-semibold text-gray-600">Wallet Balance</h2>
-                    <p class="mt-2 text-3xl font-bold text-green-600">
-                        ₹<%= walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
-                    </p>
-                </section>
-
-                <section class="mb-6 rounded-2xl border border-primary-light/40 bg-white px-6 py-6 shadow-sm">
                     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div>
-                            <h2 class="text-xl font-bold text-primary">Balance Actions</h2>
-                            <p class="mt-1 text-sm text-gray-500">Recharge support is reserved for the Razorpay integration step.</p>
+                            <h2 class="text-lg font-semibold text-gray-600">Wallet Balance</h2>
+                            <p class="mt-2 text-3xl font-bold text-green-600">
+                                ₹<%= walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                            </p>
                         </div>
                         <button
                             type="button"
-                            id="wallet-recharge-btn"
-                            class="inline-flex h-11 items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:opacity-90">
-                            Add Money
+                            id="rechargeWalletBtn"
+                            class="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70">
+                            Recharge Wallet
                         </button>
                     </div>
                 </section>
@@ -164,6 +159,8 @@
                                                 reasonLabel = 'Purchase';
                                             } else if (tx.reason === 'recharge') {
                                                 reasonLabel = 'Recharge';
+                                            } else if (tx.reason === 'online recharge') {
+                                                reasonLabel = 'Online Recharge';
                                             }
                                         %>
                                         <tr class="transition hover:bg-background-soft">
@@ -241,21 +238,257 @@
         </main>
     </div>
 
+    <div id="walletToast" class="pointer-events-none fixed right-4 top-4 z-50 hidden max-w-sm rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg"></div>
+
+    <div id="rechargeWalletModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 px-4">
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-primary">Recharge Wallet</h2>
+                    <p class="mt-1 text-sm text-gray-500">Enter an amount between ₹10 and ₹50,000.</p>
+                </div>
+                <button
+                    type="button"
+                    id="closeRechargeModalBtn"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-full text-xl leading-none text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+                    aria-label="Close recharge modal">
+                    &times;
+                </button>
+            </div>
+
+            <div class="mt-5">
+                <label for="rechargeAmountInput" class="mb-2 block text-sm font-semibold text-gray-700">Amount</label>
+                <input
+                    id="rechargeAmountInput"
+                    type="number"
+                    min="10"
+                    max="50000"
+                    step="1"
+                    placeholder="Enter recharge amount"
+                    class="w-full rounded-xl border border-primary-light/50 bg-white px-4 py-3 text-sm text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                <p id="rechargeAmountError" class="mt-2 hidden text-sm font-medium text-red-600"></p>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button
+                    type="button"
+                    id="cancelRechargeBtn"
+                    class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    id="confirmRechargeBtn"
+                    class="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-70">
+                    Proceed to Pay
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const rechargeButton = document.getElementById('wallet-recharge-btn');
+        const rechargeButton = document.getElementById('rechargeWalletBtn');
+        const rechargeModal = document.getElementById('rechargeWalletModal');
+        const closeRechargeModalBtn = document.getElementById('closeRechargeModalBtn');
+        const cancelRechargeBtn = document.getElementById('cancelRechargeBtn');
+        const confirmRechargeBtn = document.getElementById('confirmRechargeBtn');
+        const rechargeAmountInput = document.getElementById('rechargeAmountInput');
+        const rechargeAmountError = document.getElementById('rechargeAmountError');
+        const walletToast = document.getElementById('walletToast');
+        const razorpayKeyId = "<%= RAZORPAY_KEY_ID %>";
+        let toastTimeoutId = null;
+
+        function showToast(message, type = 'success') {
+            if (!walletToast) {
+                return;
+            }
+
+            walletToast.textContent = message;
+            walletToast.className = `pointer-events-none fixed right-4 top-4 z-50 max-w-sm rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`;
+            walletToast.classList.remove('hidden');
+
+            if (toastTimeoutId) {
+                window.clearTimeout(toastTimeoutId);
+            }
+
+            toastTimeoutId = window.setTimeout(() => {
+                walletToast.classList.add('hidden');
+            }, 3200);
+        }
+
+        function resetRechargeModal() {
+            rechargeAmountInput.value = '';
+            rechargeAmountError.textContent = '';
+            rechargeAmountError.classList.add('hidden');
+        }
+
+        function openRechargeModal() {
+            resetRechargeModal();
+            rechargeModal.classList.remove('hidden');
+            rechargeModal.classList.add('flex');
+            window.setTimeout(() => rechargeAmountInput.focus(), 0);
+        }
+
+        function closeRechargeModal() {
+            rechargeModal.classList.add('hidden');
+            rechargeModal.classList.remove('flex');
+            resetRechargeModal();
+        }
+
+        function getRechargeAmount() {
+            const amount = Number(rechargeAmountInput.value);
+
+            if (!amount || amount < 10 || amount > 50000) {
+                rechargeAmountError.textContent = 'Enter a valid amount between ₹10 and ₹50,000';
+                rechargeAmountError.classList.remove('hidden');
+                return null;
+            }
+
+            rechargeAmountError.textContent = '';
+            rechargeAmountError.classList.add('hidden');
+            return amount;
+        }
 
         if (rechargeButton) {
-            rechargeButton.addEventListener('click', async () => {
+            rechargeButton.addEventListener('click', () => {
+                openRechargeModal();
+            });
+        }
+
+        if (closeRechargeModalBtn) {
+            closeRechargeModalBtn.addEventListener('click', closeRechargeModal);
+        }
+
+        if (cancelRechargeBtn) {
+            cancelRechargeBtn.addEventListener('click', closeRechargeModal);
+        }
+
+        if (rechargeModal) {
+            rechargeModal.addEventListener('click', (event) => {
+                if (event.target === rechargeModal) {
+                    closeRechargeModal();
+                }
+            });
+        }
+
+        if (rechargeAmountInput) {
+            rechargeAmountInput.addEventListener('input', () => {
+                if (!rechargeAmountError.classList.contains('hidden')) {
+                    getRechargeAmount();
+                }
+            });
+
+            rechargeAmountInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    confirmRechargeBtn?.click();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && rechargeModal && !rechargeModal.classList.contains('hidden')) {
+                closeRechargeModal();
+            }
+        });
+
+        if (confirmRechargeBtn) {
+            confirmRechargeBtn.addEventListener('click', async () => {
+                const amount = getRechargeAmount();
+
+                if (!amount) {
+                    return;
+                }
+
+                if (!window.Razorpay || !razorpayKeyId) {
+                    showToast('Online recharge is not available right now.', 'error');
+                    return;
+                }
+
                 try {
-                    const response = await fetch('/wallet/recharge', { method: 'POST' });
-                    const data = await response.json();
-                    window.alert(data.message || 'Razorpay integration pending');
-                } catch (error) {
-                    window.alert('Unable to reach wallet recharge right now.');
+                    rechargeButton.disabled = true;
+                    confirmRechargeBtn.disabled = true;
+                    closeRechargeModal();
+
+                    const res = await fetch('/wallet/create-recharge-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ amount })
+                    });
+                    const data = await res.json();
+
+                    if (!data.success) {
+                        showToast('Failed to initiate recharge', 'error');
+                        return;
+                    }
+
+                    const options = {
+                        key: razorpayKeyId,
+                        amount: data.data.amount,
+                        currency: data.data.currency,
+                        order_id: data.data.razorpayOrderId,
+                        name: 'Wallet Recharge',
+                        description: 'Add money to wallet',
+                        config: {
+                            display: {
+                                blocks: {
+                                    upi: {
+                                        name: 'Pay using UPI',
+                                        instruments: [{ method: 'upi' }]
+                                    }
+                                },
+                                sequence: ['upi'],
+                                preferences: {
+                                    show_default_blocks: false
+                                }
+                            }
+                        },
+                        handler: async function (response) {
+                            const verifyRes = await fetch('/wallet/verify-recharge', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_signature: response.razorpay_signature
+                                })
+                            });
+
+                            const verifyData = await verifyRes.json();
+
+                            if (verifyData.success) {
+                                showToast('Wallet recharged successfully', 'success');
+                                window.location.reload();
+                            } else {
+                                showToast('Recharge verification failed', 'error');
+                            }
+                        },
+                        theme: {
+                            color: '#000000'
+                        }
+                    };
+
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function (failureResponse) {
+                        console.error('Wallet recharge payment failed:', failureResponse.error);
+                        showToast('Payment failed. Wallet not credited.', 'error');
+                    });
+                    rzp.open();
+                } catch (err) {
+                    console.error(err);
+                    showToast('Something went wrong', 'error');
+                } finally {
+                    rechargeButton.disabled = false;
+                    confirmRechargeBtn.disabled = false;
                 }
             });
         }
     </script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>
 
 </html>
