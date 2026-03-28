@@ -16,8 +16,10 @@
 </head>
 
 <body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+<%- include('../partials/user/currency-helper') %>
 <%
     const cartData = (typeof cart !== 'undefined' && cart) ? cart : { items: [], totalItems: 0 };
+    const pricing = cartData.pricing || {};
     const cartItems = Array.isArray(cartData.items) ? cartData.items : [];
     const placeholderImage = '/images/placeholder.png';
     const userAddresses = locals.user && Array.isArray(locals.user.addresses) ? locals.user.addresses : [];
@@ -35,18 +37,23 @@
         ? `/account/addresses/${defaultAddress._id}/edit?returnTo=cart`
         : '/account/addresses';
 
-    const formatCurrency = (value) => {
-        const amount = Number(value || 0);
-        return `₹ ${amount.toLocaleString('en-IN')}`;
-    };
-
     const totalItems = typeof cartData.totalItems === 'number'
         ? cartData.totalItems
         : cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const baseSubtotal = cartItems.reduce((sum, item) => (
+        sum + (Number(item.priceSnapshot || (item.product && item.product.computedPrice) || 0) * Number(item.quantity || 0))
+    ), 0);
+    const offerDiscountTotal = typeof pricing.offerDiscountTotal === 'number'
+        ? pricing.offerDiscountTotal
+        : (typeof cartData.offerDiscountTotal === 'number'
+            ? cartData.offerDiscountTotal
+        : cartItems.reduce((sum, item) => (
+            sum + (Number(item.offerDiscountPerUnit || 0) * Number(item.quantity || 0))
+        ), 0));
     const subtotal = typeof cartData.subtotal === 'number'
         ? cartData.subtotal
         : cartItems.reduce((sum, item) => {
-            const finalPrice = Number(item.priceSnapshot || (item.product && item.product.computedPrice) || 0);
+            const finalPrice = Number(item.finalUnitPrice || item.priceSnapshot || (item.product && item.product.computedPrice) || 0);
             return sum + (finalPrice * Number(item.quantity || 0));
         }, 0);
     const gst = typeof cartData.gst === 'number' ? cartData.gst : subtotal * 0.18;
@@ -105,10 +112,11 @@
                         const isUnlisted = item.isUnlisted === true;
                         const isUnavailable = isOutOfStock || isUnlisted;
                         const priceChange = Number(item.priceChange || 0);
-                        const mrp = Number(product.price || 0);
-                        const discountPercentage = Number(product.discountPercentage || 0);
-                        const finalPrice = Number(item.priceSnapshot || (mrp - ((mrp * discountPercentage) / 100)) || 0);
+                        const basePrice = Number(item.priceSnapshot || (item.product && item.product.computedPrice) || 0);
+                        const offerDiscountPerUnit = Number(item.offerDiscountPerUnit || 0);
+                        const finalPrice = Number(item.finalUnitPrice || (basePrice - offerDiscountPerUnit) || 0);
                         const subtotal = finalPrice * quantity;
+                        const savedTotal = offerDiscountPerUnit * quantity;
                         const variantLabel = variant.colorName || 'Default';
                         const variantImages = Array.isArray(variant.images) ? variant.images : [];
                         const variantImage = variantImages[0];
@@ -118,7 +126,7 @@
                             || Number(item.quantity || 0) >= 5
                             || Number(item.quantity || 0) >= Number(variant.stockCount || 0);
                     %>
-                        <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md <%= isUnavailable ? 'opacity-60' : '' %>" data-product-id="<%= item.productId || '' %>" data-variant-id="<%= item.variantId || '' %>">
+                        <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md <%= isUnavailable ? 'opacity-60' : '' %>" data-product-id="<%= item.productId || '' %>" data-variant-id="<%= item.variantId || '' %>" data-selected-offer-id="<%= item.selectedOfferId || '' %>">
                             <div class="flex flex-col gap-4 sm:flex-row">
                                 <div class="cart-product-media">
                                     <img src="<%= productImageUrl %>" alt="<%= product.title || 'Cart product image' %>" onerror="this.onerror=null;this.src='<%= placeholderImage %>';">
@@ -164,21 +172,24 @@
                                         <div class="flex flex-col items-end text-sm">
                                             <div class="flex items-center gap-6">
                                                 <div class="text-right">
-                                                    <p class="text-gray-500">Price</p>
-                                                    <% if (discountPercentage > 0) { %>
-                                                        <p class="text-xs text-gray-400 line-through"><%= formatCurrency(mrp) %></p>
-                                                        <p class="font-bold text-primary"><%= formatCurrency(finalPrice) %></p>
-                                                    <% } else { %>
-                                                        <p class="font-bold text-primary"><%= formatCurrency(mrp) %></p>
+                                                    <p class="text-gray-500">MRP</p>
+                                                    <p class="font-semibold text-primary"><%= formatCurrency(basePrice) %></p>
+                                                </div>
+                                                <div class="text-right">
+                                                    <p class="text-gray-500">Final Price</p>
+                                                    <p class="font-bold text-primary"><%= formatCurrency(finalPrice) %></p>
+                                                    <% if (savedTotal > 0) { %>
+                                                        <p class="text-xs text-green-700">Saved: <%= formatCurrency(savedTotal) %></p>
                                                     <% } %>
                                                 </div>
-
                                                 <div class="text-right">
                                                     <p class="text-gray-500">Subtotal</p>
                                                     <p class="font-bold text-primary"><%= formatCurrency(subtotal) %></p>
                                                 </div>
                                             </div>
-
+                                            <% if (offerDiscountPerUnit > 0) { %>
+                                                <p class="mt-2 text-xs text-green-600">Offer Discount: -<%= formatCurrency(offerDiscountPerUnit) %></p>
+                                            <% } %>
                                         </div>
                                     </div>
                                 </div>
@@ -278,7 +289,15 @@
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-gray-500">Subtotal</span>
-                            <span id="summary-subtotal" class="font-semibold text-primary"><%= formatCurrency(subtotal) %></span>
+                            <span id="summary-subtotal" class="font-semibold text-primary"><%= formatCurrency(baseSubtotal) %></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Offer Discount</span>
+                            <span id="summary-offer-discount" class="font-semibold text-green-600">-<%= formatCurrency(offerDiscountTotal || 0) %></span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Discounted Subtotal</span>
+                            <span id="summary-discounted-subtotal" class="font-semibold text-primary"><%= formatCurrency(subtotal) %></span>
                         </div>
                         <div class="flex items-center justify-between">
                             <span class="text-gray-500">GST (18%)</span>
@@ -331,6 +350,8 @@
         const headerCount = document.getElementById('cart-header-count');
         const summaryTotalItems = document.getElementById('summary-total-items');
         const summarySubtotal = document.getElementById('summary-subtotal');
+        const summaryOfferDiscount = document.getElementById('summary-offer-discount');
+        const summaryDiscountedSubtotal = document.getElementById('summary-discounted-subtotal');
         const summaryGst = document.getElementById('summary-gst');
         const summaryGrandTotal = document.getElementById('summary-grand-total');
         const checkoutButton = document.getElementById('checkout-button');
@@ -359,7 +380,10 @@
 
         const formatCurrency = (value) => {
             const amount = Number(value || 0);
-            return `₹ ${amount.toLocaleString('en-IN')}`;
+            return `₹ ${amount.toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            })}`;
         };
 
         const getMrp = (item) => {
@@ -375,9 +399,21 @@
         const getFinalPrice = (item) => {
             const mrp = getMrp(item);
             const discountPercentage = getDiscountPercentage(item);
+            if (item && item.finalUnitPrice) return Number(item.finalUnitPrice);
+            if (item && item.priceSnapshot) {
+                return Number(item.priceSnapshot) - Number(item.offerDiscountPerUnit || 0);
+            }
+            return mrp - ((mrp * discountPercentage) / 100);
+        };
+
+        const getBasePrice = (item) => {
+            const mrp = getMrp(item);
+            const discountPercentage = getDiscountPercentage(item);
             if (item && item.priceSnapshot) return Number(item.priceSnapshot);
             return mrp - ((mrp * discountPercentage) / 100);
         };
+
+        const getOfferDiscountPerUnit = (item) => Number(item && item.offerDiscountPerUnit ? item.offerDiscountPerUnit : 0);
 
         const getVariantLabel = (item) => {
             if (item && item.variant) {
@@ -411,12 +447,17 @@
 
         const updateSummary = () => {
             const totalItems = getTotalItems();
+            const baseSubtotal = cartState.items.reduce((sum, item) => sum + (getBasePrice(item) * Number(item.quantity || 0)), 0);
+            const offerDiscountTotal = cartState.items.reduce((sum, item) => sum + (getOfferDiscountPerUnit(item) * Number(item.quantity || 0)), 0);
+            const discountedSubtotal = Number(cartState.subtotal || 0);
             const subtotal = Number(cartState.subtotal || 0);
             const gst = Number(cartState.gst || 0);
             const totalPrice = Number(cartState.total || 0);
             if (headerCount) headerCount.textContent = String(totalItems);
             if (summaryTotalItems) summaryTotalItems.textContent = String(totalItems);
-            if (summarySubtotal) summarySubtotal.textContent = formatCurrency(subtotal);
+            if (summarySubtotal) summarySubtotal.textContent = formatCurrency(baseSubtotal);
+            if (summaryOfferDiscount) summaryOfferDiscount.textContent = `-${formatCurrency(offerDiscountTotal)}`;
+            if (summaryDiscountedSubtotal) summaryDiscountedSubtotal.textContent = formatCurrency(discountedSubtotal);
             if (summaryGst) summaryGst.textContent = formatCurrency(gst);
             if (summaryGrandTotal) summaryGrandTotal.textContent = formatCurrency(totalPrice);
 
@@ -434,9 +475,11 @@
                 const variant = item.variant || {};
                 const quantity = Number(item.quantity || 0);
                 const mrp = getMrp(item);
-                const discountPercentage = getDiscountPercentage(item);
+                const basePrice = getBasePrice(item);
+                const offerDiscountPerUnit = getOfferDiscountPerUnit(item);
                 const finalPrice = getFinalPrice(item);
                 const subtotal = finalPrice * quantity;
+                const savedTotal = offerDiscountPerUnit * quantity;
                 const title = product.title || 'Product unavailable';
                 const variantLabel = getVariantLabel(item);
                 const safeTitle = escapeHtml(title);
@@ -463,7 +506,7 @@
                     : '';
 
                 return `
-                    <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md ${isUnavailable ? 'opacity-60' : ''}" data-product-id="${item.productId || ''}" data-variant-id="${item.variantId || ''}">
+                    <article class="cart-item cursor-pointer rounded-xl border border-primary-light/45 bg-white p-4 shadow-sm transition hover:shadow-md ${isUnavailable ? 'opacity-60' : ''}" data-product-id="${item.productId || ''}" data-variant-id="${item.variantId || ''}" data-selected-offer-id="${item.selectedOfferId || ''}">
                         <div class="flex flex-col gap-4 sm:flex-row">
                             <div class="cart-product-media">
                                 <img src="${productImageUrl}" alt="${safeTitle || 'Cart product image'}" onerror="this.onerror=null;this.src='${placeholderImage}';">
@@ -489,16 +532,24 @@
                                     <div class="flex flex-col items-end text-sm">
                                         <div class="flex items-center gap-6">
                                             <div class="text-right">
-                                                <p class="text-gray-500">Price</p>
-                                                ${discountPercentage > 0
-                                                    ? `<p class="text-xs text-gray-400 line-through">${formatCurrency(mrp)}</p><p class="font-bold text-primary">${formatCurrency(finalPrice)}</p>`
-                                                    : `<p class="font-bold text-primary">${formatCurrency(mrp)}</p>`}
+                                                <p class="text-gray-500">MRP</p>
+                                                <p class="font-semibold text-primary">${formatCurrency(basePrice)}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-gray-500">Final Price</p>
+                                                <p class="font-bold text-primary">${formatCurrency(finalPrice)}</p>
+                                                ${savedTotal > 0
+                                                    ? `<p class="text-xs text-green-700">Saved: ${formatCurrency(savedTotal)}</p>`
+                                                    : ''}
                                             </div>
                                             <div class="text-right">
                                                 <p class="text-gray-500">Subtotal</p>
                                                 <p class="font-bold text-primary">${formatCurrency(subtotal)}</p>
                                             </div>
                                         </div>
+                                        ${offerDiscountPerUnit > 0
+                                            ? `<p class="mt-2 text-xs text-green-600">Offer Discount: -${formatCurrency(offerDiscountPerUnit)}</p>`
+                                            : ''}
                                     </div>
                                 </div>
                             </div>
@@ -673,6 +724,7 @@
 
             const productId = cartItem.getAttribute('data-product-id');
             const variantId = cartItem.getAttribute('data-variant-id');
+            const selectedOfferId = cartItem.getAttribute('data-selected-offer-id') || null;
 
             if (!productId || !variantId) {
                 showFeedback('Unable to identify cart item.');
@@ -695,7 +747,8 @@
                     const updatedCart = await sendCartRequest('/api/cart/item', 'PATCH', {
                         productId,
                         variantId,
-                        quantity
+                        quantity,
+                        selectedOfferId
                     });
                     replaceCart(updatedCart);
                 }
@@ -720,7 +773,8 @@
                     try {
                         const updatedCart = await sendCartRequest('/api/cart/item', 'DELETE', {
                             productId,
-                            variantId
+                            variantId,
+                            selectedOfferId
                         });
                         replaceCart(updatedCart);
                         await Swal.fire({

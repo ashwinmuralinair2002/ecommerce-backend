@@ -16,16 +16,12 @@
 </head>
 
 <body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+<%- include('../partials/user/currency-helper') %>
 <%
     const orderData = order || {};
     const items = Array.isArray(orderData.items) ? orderData.items : [];
     const pricing = orderData.pricing || {};
     const shippingAddress = orderData.shippingAddress || {};
-
-    const formatCurrency = (value) => {
-        const amount = Number(value || 0);
-        return `₹ ${amount.toLocaleString('en-IN')}`;
-    };
 
     const addressLine1 = shippingAddress.addressLine1 || 'Address not available';
     const locationLine = [shippingAddress.city, shippingAddress.state, shippingAddress.pincode].filter(Boolean).join(', ');

@@ -16,6 +16,7 @@
 </head>
 
 <body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+<%- include('../partials/user/currency-helper') %>
 <%
     const orderData = typeof order !== 'undefined' ? order : null;
     const checkoutData = typeof checkout !== 'undefined' ? checkout : null;
@@ -24,11 +25,6 @@
     const address = orderData?.shippingAddress || checkoutData?.address || null;
     const shippingAddress = address || {};
     const hasOrderData = Boolean(orderData && (orderData.orderId || items.length || Object.keys(pricing).length || Object.keys(shippingAddress).length));
-
-    const formatCurrency = (value) => {
-        const amount = Number(value || 0);
-        return `₹ ${amount.toLocaleString('en-IN')}`;
-    };
 
     const addressLine1 = shippingAddress.addressLine1 || 'Address not available';
     const locationLine = [shippingAddress.city, shippingAddress.state, shippingAddress.pincode].filter(Boolean).join(', ');

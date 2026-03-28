@@ -1,13 +1,19 @@
+const mongoose = require('mongoose');
 const Cart = require('../models/cart.model');
+const Offer = require('../models/offer.model');
 const Product = require('../models/Product');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const { getCachedOffers } = require('../utils/offer-cache');
 const { getBaseProductPrice } = require('../utils/pricing');
+const { calculatePricing } = require('../utils/pricing-engine');
 
 const MAX_CART_ITEM_QUANTITY = 5;
-const GST_RATE = 0.18;
-
-const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+const normalizeSelectedOfferId = (selectedOfferId) => (
+    selectedOfferId && mongoose.Types.ObjectId.isValid(selectedOfferId)
+        ? String(selectedOfferId)
+        : null
+);
 
 const getProductImageUrl = (product) => {
     const images = product && Array.isArray(product.images) ? product.images : [];
@@ -56,17 +62,18 @@ const validateRequestedQuantity = (quantity, stockCount) => {
     }
 };
 
-const findCartItemIndex = (items, productId, variantId) => {
+const findCartItemIndex = (items, productId, variantId, selectedOfferId = null) => {
     return items.findIndex((item) => (
         item.productId.toString() === productId.toString()
         && item.variantId.toString() === variantId.toString()
+        && String(item.selectedOfferId || '') === String(selectedOfferId || '')
     ));
 };
 
-const buildCartResponse = async (userId) => {
+const buildCartResponse = async (userId, req) => {
     const cart = await Cart.findOne({ userId }).populate({
         path: 'items.productId',
-        select: 'title price originalPrice discountPercentage isListed isDeleted variants images'
+        select: 'title price originalPrice discountPercentage isListed isDeleted variants images category brand'
     });
 
     if (!cart) {
@@ -106,6 +113,8 @@ const buildCartResponse = async (userId) => {
                 title: product.title,
                 price: product.price,
                 discountPercentage: product.discountPercentage,
+                category: product.category || null,
+                brand: product.brand || null,
                 computedPrice,
                 imageUrl: getProductImageUrl(product),
                 isListed: product.isListed,
@@ -129,6 +138,7 @@ const buildCartResponse = async (userId) => {
             },
             quantity: item.quantity,
             priceSnapshot: item.priceSnapshot,
+            selectedOfferId: item.selectedOfferId ? String(item.selectedOfferId) : null,
             hasPriceChanged: Boolean(product && savedPrice !== currentPrice),
             priceChange,
             isOutOfStock,
@@ -137,27 +147,56 @@ const buildCartResponse = async (userId) => {
         };
     });
 
-    const subtotal = roundCurrency(items.reduce((total, item) => (
-        total + ((Number(item.priceSnapshot) || Number(item.product ? getBaseProductPrice(item.product) : 0) || 0) * item.quantity)
-    ), 0));
-    const gst = roundCurrency(subtotal * GST_RATE);
-    const total = roundCurrency(subtotal + gst);
+    const activeOffers = await getCachedOffers(Offer);
 
+    const pricingItems = items.map((item) => ({
+        priceSnapshot: Number(item.priceSnapshot ?? (item.product ? getBaseProductPrice(item.product) : 0)),
+        quantity: item.quantity,
+        productId: item.product?._id || null,
+        categoryId: item.product?.category?._id || item.product?.category || null,
+        brandId: item.product?.brand?._id || item.product?.brand || null,
+        selectedOfferId: item.selectedOfferId || null
+    }));
+    const oldSubtotal = pricingItems.reduce((total, item) => (
+        total + (item.priceSnapshot * item.quantity)
+    ), 0);
+    const pricing = calculatePricing(pricingItems, activeOffers);
+    const enrichedItems = items.map((item, index) => {
+        const pricingItem = pricing.itemsWithOffers[index] || {};
+
+        return {
+            ...item,
+            finalUnitPrice: pricingItem.finalUnitPrice ?? item.priceSnapshot,
+            offerDiscountPerUnit: pricingItem.offerDiscountPerUnit ?? 0,
+            itemSubtotal: pricingItem.itemSubtotal ?? (item.priceSnapshot * item.quantity)
+        };
+    });
+
+    console.log('CART PRICING CHECK:', {
+        oldSubtotal,
+        newSubtotal: pricing.subtotal
+    });
     return {
         _id: cart._id,
         userId: cart.userId,
-        items,
-        totalItems: items.reduce((total, item) => total + item.quantity, 0),
-        subtotal,
-        gst,
-        total,
+        items: enrichedItems,
+        itemsWithOffers: pricing.itemsWithOffers,
+        offerDiscountTotal: pricing.offerDiscountTotal,
+        pricing: {
+            offerDiscountTotal: pricing.offerDiscountTotal
+        },
+        totalItems: pricing.totalItems,
+        subtotal: pricing.subtotal,
+        gst: pricing.gst,
+        total: pricing.finalTotal,
         createdAt: cart.createdAt,
         updatedAt: cart.updatedAt
     };
 };
 
-const addToCart = asyncHandler(async (userId, productId, variantId, quantity) => {
+const addToCart = asyncHandler(async (userId, productId, variantId, quantity, req, selectedOfferId = null) => {
     const { product, variant } = await getValidatedProductAndVariant(productId, variantId);
+    const normalizedSelectedOfferId = normalizeSelectedOfferId(selectedOfferId);
 
     validateRequestedQuantity(quantity, variant.stockCount);
 
@@ -170,7 +209,12 @@ const addToCart = asyncHandler(async (userId, productId, variantId, quantity) =>
         });
     }
 
-    const existingItemIndex = findCartItemIndex(cart.items, productId, variantId);
+    const existingItemIndex = findCartItemIndex(
+        cart.items,
+        productId,
+        variantId,
+        normalizedSelectedOfferId
+    );
 
     if (existingItemIndex !== -1) {
         const updatedQuantity = cart.items[existingItemIndex].quantity + quantity;
@@ -184,36 +228,41 @@ const addToCart = asyncHandler(async (userId, productId, variantId, quantity) =>
         }
 
         cart.items[existingItemIndex].quantity = updatedQuantity;
+        cart.items[existingItemIndex].selectedOfferId = normalizedSelectedOfferId;
     } else {
         cart.items.push({
             productId,
             variantId,
             quantity,
             priceSnapshot: getBaseProductPrice(product),
-            savedPrice: getBaseProductPrice(product)
+            savedPrice: getBaseProductPrice(product),
+            selectedOfferId: normalizedSelectedOfferId
         });
     }
 
     await cart.save();
 
-    return buildCartResponse(userId);
+    return buildCartResponse(userId, req);
 });
 
-const getCart = asyncHandler(async (userId) => {
-    return buildCartResponse(userId);
+const getCart = asyncHandler(async (userId, req) => {
+    return buildCartResponse(userId, req);
 });
 
-const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId, quantity) => {
+const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId, quantity, req, selectedOfferId = null) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
         throw new AppError('Cart not found', 404);
     }
 
-    const itemIndex = cart.items.findIndex((item) => (
-        item.productId.toString() === productId.toString()
-        && item.variantId.toString() === variantId.toString()
-    ));
+    const normalizedSelectedOfferId = normalizeSelectedOfferId(selectedOfferId);
+    const itemIndex = findCartItemIndex(
+        cart.items,
+        productId,
+        variantId,
+        normalizedSelectedOfferId
+    );
 
     if (itemIndex === -1) {
         throw new AppError('Cart item not found', 404);
@@ -234,20 +283,23 @@ const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId,
 
     await cart.save();
 
-    return buildCartResponse(userId);
+    return buildCartResponse(userId, req);
 });
 
-const removeCartItem = asyncHandler(async (userId, productId, variantId) => {
+const removeCartItem = asyncHandler(async (userId, productId, variantId, req, selectedOfferId = null) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
         throw new AppError('Cart not found', 404);
     }
 
-    const itemIndex = cart.items.findIndex((item) => (
-        item.productId.toString() === productId.toString()
-        && item.variantId.toString() === variantId.toString()
-    ));
+    const normalizedSelectedOfferId = normalizeSelectedOfferId(selectedOfferId);
+    const itemIndex = findCartItemIndex(
+        cart.items,
+        productId,
+        variantId,
+        normalizedSelectedOfferId
+    );
 
     if (itemIndex === -1) {
         throw new AppError('Cart item not found', 404);
@@ -257,7 +309,7 @@ const removeCartItem = asyncHandler(async (userId, productId, variantId) => {
 
     await cart.save();
 
-    return buildCartResponse(userId);
+    return buildCartResponse(userId, req);
 });
 
 module.exports = {

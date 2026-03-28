@@ -3,10 +3,10 @@ const cartService = require('../services/cart.service');
 
 const addToCart = async (req, res) => {
     const userId = req.session.userId;
-    const { productId, variantId, quantity } = req.body;
+    const { productId, variantId, quantity, selectedOfferId } = req.body;
 
     try {
-        const cart = await cartService.addToCart(userId, productId, variantId, Number(quantity));
+        const cart = await cartService.addToCart(userId, productId, variantId, Number(quantity), req, selectedOfferId);
         res.json({
             success: true,
             data: cart
@@ -38,10 +38,10 @@ const getCart = async (req, res) => {
 
 const updateQuantity = async (req, res) => {
     const userId = req.session.userId;
-    const { productId, variantId, quantity } = req.body;
+    const { productId, variantId, quantity, selectedOfferId } = req.body;
 
     try {
-        const cart = await cartService.updateCartItemQuantity(userId, productId, variantId, quantity);
+        const cart = await cartService.updateCartItemQuantity(userId, productId, variantId, quantity, req, selectedOfferId);
         res.json({
             success: true,
             data: cart
@@ -56,10 +56,10 @@ const updateQuantity = async (req, res) => {
 
 const removeItem = async (req, res) => {
     const userId = req.session.userId;
-    const { productId, variantId } = req.body;
+    const { productId, variantId, selectedOfferId } = req.body;
 
     try {
-        const cart = await cartService.removeCartItem(userId, productId, variantId);
+        const cart = await cartService.removeCartItem(userId, productId, variantId, req, selectedOfferId);
         res.json({
             success: true,
             data: cart
@@ -74,7 +74,7 @@ const removeItem = async (req, res) => {
 
 const buyNow = async (req, res) => {
     const userId = req.session.userId;
-    const { productId, variantId, quantity } = req.body;
+    const { productId, variantId, quantity, selectedOfferId } = req.body;
 
     try {
         await Cart.findOneAndUpdate(
@@ -83,7 +83,7 @@ const buyNow = async (req, res) => {
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        await cartService.addToCart(userId, productId, variantId, Number(quantity));
+        await cartService.addToCart(userId, productId, variantId, Number(quantity), req, selectedOfferId);
 
         res.json({
             success: true

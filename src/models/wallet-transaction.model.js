@@ -35,7 +35,6 @@ const walletTransactionSchema = new mongoose.Schema({
         type: String,
         required: false,
         default: null,
-        index: true,
         trim: true
     },
     razorpayPaymentId: {

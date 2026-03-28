@@ -1,8 +1,12 @@
 const mongoose = require('mongoose');
+const Offer = require('../models/offer.model');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
 const HeroBanner = require('../models/HeroBanner');
+const { getCachedOffers } = require('../utils/offer-cache');
+const { getApplicableOffers, getBestOffer, calculateOfferDiscount } = require('../utils/offer-engine');
+const { getBaseProductPrice } = require('../utils/pricing');
 const wishlistService = require('../services/wishlist.service');
 
 function asQueryArray(value) {
@@ -573,6 +577,24 @@ exports.getProductDetails = async (req, res) => {
             return res.status(404).render('user/product-unavailable', { homeUrl });
         }
 
+        const activeOffers = await getCachedOffers(Offer);
+        const productPricingContext = {
+            _id: product._id,
+            categoryId: product.category?._id || product.category || null,
+            brandId: product.brand?._id || product.brand || null,
+            priceSnapshot: Number(getBaseProductPrice(product))
+        };
+        const applicableOffers = getApplicableOffers(productPricingContext, activeOffers);
+        const bestOffer = getBestOffer(productPricingContext, applicableOffers);
+        const offerOptions = applicableOffers.map((offer) => ({
+            _id: String(offer._id),
+            name: offer.name,
+            type: offer.type,
+            discountType: offer.discountType,
+            discountPreview: calculateOfferDiscount(productPricingContext.priceSnapshot, offer)
+        }));
+        const bestOfferId = bestOffer?.offerId ? String(bestOffer.offerId) : '';
+
         await migrateLegacyProductImages(product);
         let wishlistVariantIds = [];
 
@@ -616,6 +638,8 @@ exports.getProductDetails = async (req, res) => {
         res.render('user/product-details', {
             title: product.title,
             product: product.toObject(),
+            offers: offerOptions,
+            bestOfferId,
             wishlistVariantIds,
             relatedProducts,
             alsoBought

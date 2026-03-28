@@ -24,6 +24,11 @@ const cartItemSchema = new mongoose.Schema({
         type: Number,
         default: null,
         min: 0
+    },
+    selectedOfferId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Offer',
+        default: null
     }
 }, {
     _id: false

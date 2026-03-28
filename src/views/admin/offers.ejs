@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900">
+    <title>SoundWave - Offers</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const formatDiscount = (type, value) => {
+            return type === 'PERCENTAGE' ? `${Number(value || 0)}%` : `Rs.${Number(value || 0)}`;
+        };
+
+        function handleSearch(e) {
+            if (e.key === 'Enter') {
+                applyFilters();
+            }
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const params = new URLSearchParams(window.location.search);
+            const search = document.getElementById('searchInput').value.trim();
+            const type = document.getElementById('typeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const sort = document.getElementById('sortFilter').value;
+
+            if (search) {
+                params.set('search', search);
+            } else {
+                params.delete('search');
+            }
+
+            if (type) {
+                params.set('type', type);
+            } else {
+                params.delete('type');
+            }
+
+            if (status) {
+                params.set('status', status);
+            } else {
+                params.delete('status');
+            }
+
+            if (sort && sort !== 'newest') {
+                params.set('sort', sort);
+            } else {
+                params.delete('sort');
+            }
+
+            const query = params.toString();
+            window.location.href = '/admin/offers' + (query ? `?${query}` : '');
+        }
+
+        function applyClientSearch() {
+            const searchValue = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+            const rows = document.querySelectorAll('[data-offer-row]');
+            const emptyState = document.getElementById('offers-empty-state');
+            let visibleCount = 0;
+
+            rows.forEach((row) => {
+                const name = row.dataset.offerName || '';
+                const type = row.dataset.offerType || '';
+                const status = row.dataset.offerStatus || '';
+                const matches = !searchValue
+                    || name.includes(searchValue)
+                    || type.includes(searchValue)
+                    || status.includes(searchValue);
+
+                row.classList.toggle('hidden', !matches);
+
+                if (matches) {
+                    visibleCount += 1;
+                }
+            });
+
+            if (emptyState) {
+                emptyState.classList.toggle('hidden', visibleCount !== 0);
+            }
+        }
+
+        async function toggleOffer(offerId, currentStatus) {
+            const result = await Swal.fire({
+                title: currentStatus ? 'Deactivate offer?' : 'Activate offer?',
+                text: 'This will update offer availability immediately.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#685BCB',
+                confirmButtonText: currentStatus ? 'Deactivate' : 'Activate'
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            const response = await fetch(`/admin/offers/${offerId}/toggle`, { method: 'PATCH' });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                return Swal.fire('Error', data.message || 'Failed to update offer', 'error');
+            }
+
+            window.location.reload();
+        }
+
+        async function deleteOffer(offerId) {
+            const result = await Swal.fire({
+                title: 'Delete offer?',
+                text: 'This will soft delete the offer.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Delete'
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            const response = await fetch(`/admin/offers/${offerId}`, { method: 'DELETE' });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                return Swal.fire('Error', data.message || 'Failed to delete offer', 'error');
+            }
+
+            window.location.reload();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const searchInput = document.getElementById('searchInput');
+
+            if (searchInput && !searchInput.value) {
+                searchInput.value = params.get('search') || '';
+            }
+
+            applyClientSearch();
+        });
+    </script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'offers' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="admin-page-container max-w-[1400px] mx-auto">
+                    <div class="flex flex-wrap justify-between gap-3 mb-6">
+                        <div class="flex min-w-72 flex-col gap-1">
+                            <h1 class="text-[32px] font-bold text-[#1F1F1F]">Offers</h1>
+                            <p class="text-[#685BCB] text-sm">Create and manage promotional offers for products, categories, and brands.</p>
+                        </div>
+                        <a href="/admin/offers/create"
+                            class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#685BCB] text-white text-sm font-bold hover:bg-[#5a4dc0] transition-colors">
+                            <span>Create Offer</span>
+                        </a>
+                    </div>
+
+                    <% if (typeof error === 'string' && error) { %>
+                        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><%= error %></div>
+                    <% } %>
+
+                    <div class="px-4 pt-1 pb-4">
+                        <div class="relative">
+                            <input
+                                id="searchInput"
+                                type="text"
+                                name="search"
+                                placeholder="Search offers..."
+                                onkeydown="handleSearch(event)"
+                                oninput="applyClientSearch()"
+                                class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
+                            <button onclick="clearSearch()"
+                                type="button"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full p-1 transition-colors"
+                                title="Clear Search">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                    viewBox="0 0 256 256">
+                                    <path
+                                        d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
+                                    </path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 px-4 pb-4">
+                        <select id="typeFilter" onchange="applyFilters()"
+                            class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                            <option value="" <%= !filters?.type ? 'selected' : '' %>>All Types</option>
+                            <option value="PRODUCT" <%= filters?.type === 'PRODUCT' ? 'selected' : '' %>>PRODUCT</option>
+                            <option value="CATEGORY" <%= filters?.type === 'CATEGORY' ? 'selected' : '' %>>CATEGORY</option>
+                            <option value="BRAND" <%= filters?.type === 'BRAND' ? 'selected' : '' %>>BRAND</option>
+                        </select>
+
+                        <select id="statusFilter" onchange="applyFilters()"
+                            class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                            <option value="" <%= !filters?.status ? 'selected' : '' %>>All Statuses</option>
+                            <option value="active" <%= filters?.status === 'active' ? 'selected' : '' %>>Active</option>
+                            <option value="inactive" <%= filters?.status === 'inactive' ? 'selected' : '' %>>Inactive</option>
+                        </select>
+
+                        <select id="sortFilter" onchange="applyFilters()"
+                            class="form-input rounded-xl border border-[#BCA6DB] bg-white text-[#1F1F1F] text-sm h-11 px-4 focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+                            <option value="newest" <%= filters?.sort === 'newest' ? 'selected' : '' %>>Newest First</option>
+                            <option value="oldest" <%= filters?.sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+                            <option value="discount_high" <%= filters?.sort === 'discount_high' ? 'selected' : '' %>>Discount High to Low</option>
+                        </select>
+                    </div>
+
+                    <div class="border-b border-[#BCA6DB] mx-4 mb-4"></div>
+
+                    <div class="px-4 py-2 @container">
+                        <div class="flex overflow-hidden rounded-lg border border-[#BCA6DB] bg-white">
+                            <table class="flex-1">
+                                <thead>
+                                    <tr class="bg-white">
+                                        <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Name</th>
+                                        <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Type</th>
+                                        <th class="px-4 py-3 text-left text-[#1F1F1F] text-sm font-medium leading-normal">Discount</th>
+                                        <th class="px-4 py-3 text-left text-[#1F1F1F] w-60 text-sm font-medium leading-normal">Status</th>
+                                        <th class="px-4 py-3 text-left text-[#1F1F1F] w-60 text-sm font-medium leading-normal">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr id="offers-empty-state" class="<%= offers.length ? 'hidden' : '' %>">
+                                        <td colspan="5" class="text-center py-4 text-sm text-[#685BCB]">No offers found</td>
+                                    </tr>
+                                <% if (!offers.length) { %>
+                                    
+                                <% } %>
+                                <% offers.forEach((offer) => { %>
+                                    <tr
+                                        data-offer-row
+                                        data-offer-name="<%= String(offer.name || '').toLowerCase() %>"
+                                        data-offer-type="<%= String(offer.type || '').toLowerCase() %>"
+                                        data-offer-status="<%= offer.isActive ? 'active' : 'inactive' %>"
+                                        onclick="window.location='/admin/offers/<%= offer._id %>'"
+                                        class="border-t border-t-[#BCA6DB] hover:bg-gray-50 cursor-pointer">
+                                        <td class="h-[72px] px-4 py-2 text-sm font-medium leading-normal text-[#1F1F1F]"><%= offer.name %></td>
+                                        <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal text-[#1F1F1F]"><%= offer.type %></td>
+                                        <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal text-[#1F1F1F]">
+                                            <%= offer.discountType === 'PERCENTAGE' ? `${offer.discountValue}%` : `Rs.${offer.discountValue}` %>
+                                        </td>
+                                        <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
+                                            <% if (offer.isActive) { %>
+                                                <button
+                                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none bg-[#e6f4ea] text-[#1e7e34]">
+                                                    <span class="truncate">Active</span>
+                                                </button>
+                                            <% } else { %>
+                                                <button
+                                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 text-sm font-medium leading-normal w-full user-select-none bg-[#f3f4f6] text-[#6b7280]">
+                                                    <span class="truncate">Inactive</span>
+                                                </button>
+                                            <% } %>
+                                        </td>
+                                        <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
+                                            <div class="flex items-center gap-2">
+                                                <a href="/admin/offers/<%= offer._id %>/edit"
+                                                    onclick="event.stopPropagation()"
+                                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#685BCB] text-white text-sm font-medium leading-normal hover:bg-[#5a4dc0] transition-colors">
+                                                    Edit
+                                                </a>
+                                                <button type="button"
+                                                    onclick="event.stopPropagation(); toggleOffer('<%= offer._id %>', <%= offer.isActive ? 'true' : 'false' %>)"
+                                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-white border border-[#BCA6DB] text-[#1F1F1F] text-sm font-medium leading-normal hover:bg-gray-50 transition-colors">
+                                                    <%= offer.isActive ? 'Deactivate' : 'Activate' %>
+                                                </button>
+                                                <button type="button"
+                                                    onclick="event.stopPropagation(); deleteOffer('<%= offer._id %>')"
+                                                    class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#ef4444] text-white text-sm font-medium leading-normal hover:bg-red-600 transition-colors">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

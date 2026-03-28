@@ -1,10 +1,12 @@
 const Product = require('../models/Product');
+const Offer = require('../models/offer.model');
 const User = require('../models/user.model');
 const AppError = require('./AppError');
+const { getCachedOffers } = require('./offer-cache');
 const { getBaseProductPrice } = require('./pricing');
+const { calculatePricing } = require('./pricing-engine');
 
 const MAX_CART_ITEM_QUANTITY = 5;
-const GST_RATE = 0.18;
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -53,7 +55,7 @@ const resolveBuyNowSelection = async (buyNowItem) => {
     };
 };
 
-const buildBuyNowCheckoutData = async (userId, buyNowItem) => {
+const buildBuyNowCheckoutData = async (userId, buyNowItem, req) => {
     const [{ product, variant, quantity, unitPrice }, user] = await Promise.all([
         resolveBuyNowSelection(buyNowItem),
         User.findById(userId).select('addresses').lean()
@@ -66,9 +68,17 @@ const buildBuyNowCheckoutData = async (userId, buyNowItem) => {
         throw new AppError('No delivery address selected', 400);
     }
 
-    const subtotal = roundCurrency(unitPrice * quantity);
-    const gst = roundCurrency(subtotal * GST_RATE);
-    const finalTotal = roundCurrency(subtotal + gst);
+    const activeOffers = await getCachedOffers(Offer);
+
+    const pricingItems = [{
+        priceSnapshot: Number(unitPrice ?? 0),
+        quantity: Number(quantity || 0),
+        productId: String(product._id),
+        categoryId: product.category?._id || product.category || null,
+        brandId: product.brand?._id || product.brand || null,
+        selectedOfferId: buyNowItem?.selectedOfferId || null
+    }];
+    const pricing = calculatePricing(pricingItems, activeOffers);
 
     return {
         items: [
@@ -90,14 +100,15 @@ const buildBuyNowCheckoutData = async (userId, buyNowItem) => {
                     images: Array.isArray(variant.images) ? variant.images : []
                 },
                 quantity,
-                priceSnapshot: unitPrice
+                priceSnapshot: unitPrice,
+                selectedOfferId: buyNowItem?.selectedOfferId || null
             }
         ],
         pricing: {
-            totalItems: quantity,
-            subtotal,
-            gst,
-            finalTotal
+            totalItems: pricing.totalItems,
+            subtotal: pricing.subtotal,
+            gst: pricing.gst,
+            finalTotal: pricing.finalTotal
         },
         address: selectedAddress
     };

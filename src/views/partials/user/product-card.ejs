@@ -28,14 +28,14 @@
             <div class="flex items-baseline gap-2">
                 <% if (Number(product.discountPercentage || 0) > 0) { %>
                     <span class="text-xs text-gray-400 line-through">
-                        ₹<%= Number(product.price || 0).toLocaleString('en-IN') %>
+                        <%= formatCurrency(product.price) %>
                     </span>
                     <span class="text-primary text-sm font-normal leading-normal">
-                        ₹<%= finalPrice.toLocaleString('en-IN') %>
+                        <%= formatCurrency(finalPrice) %>
                     </span>
                 <% } else { %>
                     <span class="text-primary text-sm font-normal leading-normal">
-                        ₹<%= Number(product.price || 0).toLocaleString('en-IN') %>
+                        <%= formatCurrency(product.price) %>
                     </span>
                 <% } %>
             </div>

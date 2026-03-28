@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900">
+    <title>SoundWave - <%= pageTitle || 'Create Offer' %></title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        function toggleMaxDiscount() {
+            const discountType = document.getElementById('discountType').value;
+            const wrapper = document.getElementById('maxDiscountWrapper');
+            wrapper.classList.toggle('hidden', discountType !== 'PERCENTAGE');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('create-offer-form');
+            toggleMaxDiscount();
+
+            const typeSelect = document.getElementById('type');
+            const discountTypeSelect = document.getElementById('discountType');
+            const discountValueInput = document.getElementById('discountValue');
+            const maxDiscountInput = document.getElementById('maxDiscount');
+            const nameInput = document.getElementById('name');
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            function toggleSections() {
+                const type = typeSelect.value;
+
+                document.getElementById('product-section').style.display = type === 'PRODUCT' ? 'block' : 'none';
+                document.getElementById('category-section').style.display = type === 'CATEGORY' ? 'block' : 'none';
+                document.getElementById('brand-section').style.display = type === 'BRAND' ? 'block' : 'none';
+            }
+
+            function setClientError(fieldName, message) {
+                const errorNode = document.getElementById(`${fieldName}-client-error`);
+                if (!errorNode) return;
+                errorNode.textContent = message || '';
+                errorNode.classList.toggle('hidden', !message);
+            }
+
+            function getCheckedCount(fieldName) {
+                return document.querySelectorAll(`input[name="${fieldName}"]:checked`).length;
+            }
+
+            function getLowestSelectedProductPrice() {
+                const checkedProducts = Array.from(document.querySelectorAll('input[name="applicableProducts"]:checked'));
+                if (!checkedProducts.length) return null;
+
+                return checkedProducts.reduce((lowestPrice, checkbox) => {
+                    const price = Number(checkbox.dataset.price || 0);
+                    return Math.min(lowestPrice, price);
+                }, Number.POSITIVE_INFINITY);
+            }
+
+            function validateName() {
+                const value = nameInput.value.trim();
+
+                if (value.length < 3) {
+                    setClientError('name', 'Name must be at least 3 characters');
+                    return false;
+                }
+
+                setClientError('name', '');
+                return true;
+            }
+
+            function validateDiscountValue() {
+                const discountType = discountTypeSelect.value;
+                const value = Number(discountValueInput.value);
+
+                if (!Number.isFinite(value) || value <= 0) {
+                    setClientError('discountValue', discountType === 'FLAT'
+                        ? 'Flat discount must be greater than 0'
+                        : 'Percentage discount must be greater than 0');
+                    return false;
+                }
+
+                if (discountType === 'PERCENTAGE' && value > 100) {
+                    setClientError('discountValue', 'Percentage discount cannot exceed 100');
+                    return false;
+                }
+
+                setClientError('discountValue', '');
+                return true;
+            }
+
+            function validateTargets() {
+                const type = typeSelect.value;
+                const fieldName = type === 'PRODUCT'
+                    ? 'applicableProducts'
+                    : type === 'CATEGORY'
+                        ? 'applicableCategories'
+                        : 'applicableBrands';
+
+                setClientError('applicableProducts', '');
+                setClientError('applicableCategories', '');
+                setClientError('applicableBrands', '');
+
+                if (getCheckedCount(fieldName) === 0) {
+                    setClientError(fieldName, 'At least one target must be selected');
+                    return false;
+                }
+
+                return true;
+            }
+
+            function validateDates() {
+                const startDate = startDateInput.value;
+                const endDate = endDateInput.value;
+                let isValid = true;
+
+                setClientError('startDate', '');
+                setClientError('endDate', '');
+
+                if (!startDate) {
+                    setClientError('startDate', 'Start date is required');
+                    isValid = false;
+                }
+
+                if (!endDate) {
+                    setClientError('endDate', 'End date is required');
+                    isValid = false;
+                }
+
+                if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
+                    setClientError('endDate', 'End date must be after start date');
+                    isValid = false;
+                }
+
+                return isValid;
+            }
+
+            function validateMaxDiscount() {
+                const maxDiscountValue = maxDiscountInput.value.trim();
+                const numericValue = Number(maxDiscountValue);
+
+                setClientError('maxDiscount', '');
+
+                if (!maxDiscountValue) {
+                    return true;
+                }
+
+                if (!Number.isFinite(numericValue) || numericValue <= 0) {
+                    setClientError('maxDiscount', 'Max discount must be greater than 0');
+                    return false;
+                }
+
+                if (typeSelect.value === 'PRODUCT') {
+                    const lowestSelectedPrice = getLowestSelectedProductPrice();
+
+                    if (lowestSelectedPrice == null) {
+                        setClientError('maxDiscount', 'Select at least one product before setting max discount');
+                        return false;
+                    }
+
+                    if (numericValue > lowestSelectedPrice) {
+                        setClientError('maxDiscount', 'Max discount cannot exceed the selected product price');
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            function validateForm() {
+                const validations = [
+                    validateName(),
+                    validateDiscountValue(),
+                    validateTargets(),
+                    validateDates(),
+                    validateMaxDiscount()
+                ];
+
+                return validations.every(Boolean);
+            }
+
+            typeSelect.addEventListener('change', toggleSections);
+            typeSelect.addEventListener('change', () => {
+                validateTargets();
+                validateMaxDiscount();
+            });
+            discountTypeSelect.addEventListener('change', () => {
+                toggleMaxDiscount();
+                validateDiscountValue();
+            });
+            nameInput.addEventListener('input', validateName);
+            discountValueInput.addEventListener('input', validateDiscountValue);
+            maxDiscountInput.addEventListener('input', validateMaxDiscount);
+            startDateInput.addEventListener('input', validateDates);
+            endDateInput.addEventListener('input', validateDates);
+            document.querySelectorAll('input[name="applicableProducts"]').forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    validateTargets();
+                    validateMaxDiscount();
+                });
+            });
+            document.querySelectorAll('input[name="applicableCategories"], input[name="applicableBrands"]').forEach((checkbox) => {
+                checkbox.addEventListener('change', validateTargets);
+            });
+            form.addEventListener('submit', (event) => {
+                if (!validateForm()) {
+                    event.preventDefault();
+                }
+            });
+            toggleSections();
+        });
+    </script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'offers' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="max-w-5xl mx-auto">
+                    <div class="mb-6">
+                        <a href="/admin/offers" class="text-sm text-[#685BCB] hover:underline">Offers</a>
+                        <h1 class="mt-2 text-[32px] font-bold text-[#1F1F1F]"><%= pageTitle || 'Create Offer' %></h1>
+                        <p class="text-sm text-[#685BCB]"><%= pageDescription || 'Set up a targeted offer and keep it ready for the pricing engine.' %></p>
+                    </div>
+
+                    <% if (formError) { %>
+                        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><%= formError %></div>
+                    <% } %>
+
+                    <% if (errors && errors.length) { %>
+                        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            Please fix the highlighted fields and try again.
+                        </div>
+                    <% } %>
+
+                    <form id="create-offer-form" action="<%= formAction || '/admin/offers/create' %>" method="POST" class="space-y-6 rounded-2xl border border-[#D8D0EC] bg-white p-6 shadow-sm" novalidate>
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label for="name" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Name</label>
+                                <input id="name" name="name" type="text" value="<%= oldInput.name %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.name ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="Weekend Brand Boost">
+                                <% if (fieldErrors.name) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.name %></p><% } %>
+                                <p id="name-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+
+                            <div>
+                                <label for="type" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Type</label>
+                                <select id="type" name="type"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.type ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
+                                    <option value="PRODUCT" <%= oldInput.type === 'PRODUCT' ? 'selected' : '' %>>PRODUCT</option>
+                                    <option value="CATEGORY" <%= oldInput.type === 'CATEGORY' ? 'selected' : '' %>>CATEGORY</option>
+                                    <option value="BRAND" <%= oldInput.type === 'BRAND' ? 'selected' : '' %>>BRAND</option>
+                                </select>
+                                <% if (fieldErrors.type) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.type %></p><% } %>
+                            </div>
+
+                            <div>
+                                <label for="discountType" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Discount Type</label>
+                                <select id="discountType" name="discountType" onchange="toggleMaxDiscount()"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.discountType ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
+                                    <option value="PERCENTAGE" <%= oldInput.discountType === 'PERCENTAGE' ? 'selected' : '' %>>Percentage</option>
+                                    <option value="FLAT" <%= oldInput.discountType === 'FLAT' ? 'selected' : '' %>>Flat</option>
+                                </select>
+                                <% if (fieldErrors.discountType) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.discountType %></p><% } %>
+                            </div>
+
+                            <div>
+                                <label for="discountValue" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Discount Value</label>
+                                <input id="discountValue" name="discountValue" type="number" step="0.01" min="0" value="<%= oldInput.discountValue %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.discountValue ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="10">
+                                <% if (fieldErrors.discountValue) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.discountValue %></p><% } %>
+                                <p id="discountValue-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+                        </div>
+
+                        <div id="maxDiscountWrapper" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label for="maxDiscount" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Max Discount</label>
+                                <input id="maxDiscount" name="maxDiscount" type="number" step="0.01" min="0" value="<%= oldInput.maxDiscount %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.maxDiscount ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="500">
+                                <% if (fieldErrors.maxDiscount) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.maxDiscount %></p><% } %>
+                                <p id="maxDiscount-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div id="product-section" class="rounded-xl border <%= fieldErrors.applicableProducts ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA] bg-[#FAF8FF]' %> p-4">
+                                <label class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Target Products</label>
+                                <p class="text-xs text-gray-500 mb-1">Select one or more targets</p>
+                                <div class="max-h-[220px] space-y-2 overflow-y-auto rounded-lg bg-white p-3">
+                                    <% products.forEach((product) => { %>
+                                        <label class="flex items-center gap-2 text-sm text-[#1F1F1F]">
+                                            <input
+                                                type="checkbox"
+                                                name="applicableProducts"
+                                                value="<%= product._id %>"
+                                                data-price="<%= Number(product.price || 0) %>"
+                                                class="accent-primary"
+                                                <%= oldInput.applicableProducts.includes(String(product._id)) ? 'checked' : '' %>
+                                            />
+                                            <span><%= product.title %></span>
+                                        </label>
+                                    <% }) %>
+                                </div>
+                                <% if (fieldErrors.applicableProducts) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.applicableProducts %></p><% } %>
+                                <p id="applicableProducts-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+
+                            <div id="category-section" class="rounded-xl border <%= fieldErrors.applicableCategories ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA] bg-[#FAF8FF]' %> p-4">
+                                <label class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Target Categories</label>
+                                <p class="text-xs text-gray-500 mb-1">Select one or more targets</p>
+                                <div class="max-h-[220px] space-y-2 overflow-y-auto rounded-lg bg-white p-3">
+                                    <% categories.forEach((category) => { %>
+                                        <label class="flex items-center gap-2 text-sm text-[#1F1F1F]">
+                                            <input
+                                                type="checkbox"
+                                                name="applicableCategories"
+                                                value="<%= category._id %>"
+                                                class="accent-primary"
+                                                <%= oldInput.applicableCategories.includes(String(category._id)) ? 'checked' : '' %>
+                                            />
+                                            <span><%= category.name %></span>
+                                        </label>
+                                    <% }) %>
+                                </div>
+                                <% if (fieldErrors.applicableCategories) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.applicableCategories %></p><% } %>
+                                <p id="applicableCategories-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+
+                            <div id="brand-section" class="rounded-xl border <%= fieldErrors.applicableBrands ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA] bg-[#FAF8FF]' %> p-4">
+                                <label class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Target Brands</label>
+                                <p class="text-xs text-gray-500 mb-1">Select one or more targets</p>
+                                <div class="max-h-[220px] space-y-2 overflow-y-auto rounded-lg bg-white p-3">
+                                    <% brands.forEach((brand) => { %>
+                                        <label class="flex items-center gap-2 text-sm text-[#1F1F1F]">
+                                            <input
+                                                type="checkbox"
+                                                name="applicableBrands"
+                                                value="<%= brand._id %>"
+                                                class="accent-primary"
+                                                <%= oldInput.applicableBrands.includes(String(brand._id)) ? 'checked' : '' %>
+                                            />
+                                            <span><%= brand.name %></span>
+                                        </label>
+                                    <% }) %>
+                                </div>
+                                <% if (fieldErrors.applicableBrands) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.applicableBrands %></p><% } %>
+                                <p id="applicableBrands-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label for="startDate" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Start Date</label>
+                                <input id="startDate" name="startDate" type="date" value="<%= oldInput.startDate %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.startDate ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
+                                <% if (fieldErrors.startDate) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.startDate %></p><% } %>
+                                <p id="startDate-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+
+                            <div>
+                                <label for="endDate" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">End Date</label>
+                                <input id="endDate" name="endDate" type="date" value="<%= oldInput.endDate %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.endDate ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
+                                <% if (fieldErrors.endDate) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.endDate %></p><% } %>
+                                <p id="endDate-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 pt-2">
+                            <button type="submit"
+                                class="inline-flex items-center justify-center rounded-lg h-11 px-5 bg-[#685BCB] text-white text-sm font-bold hover:bg-[#5a4dc0] transition-colors">
+                                <%= submitLabel || 'Create Offer' %>
+                            </button>
+                            <a href="/admin/offers"
+                                class="inline-flex items-center justify-center rounded-lg h-11 px-5 border border-[#CFC4EA] text-sm font-semibold text-[#4B4B4B] hover:bg-[#F7F4FF] transition-colors">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

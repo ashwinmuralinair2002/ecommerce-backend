@@ -16,13 +16,13 @@
 </head>
 
 <body>
+<%- include('../partials/user/currency-helper') %>
 <%
     const orderList = Array.isArray(orders) ? orders : [];
     const currentSearch = typeof search === 'string' ? search : '';
     const currentSort = typeof sort === 'string' && sort ? sort : 'newest';
     const currentDate = typeof date === 'string' ? date : '';
 
-    const formatCurrency = (value) => `₹ ${Number(value || 0).toLocaleString('en-IN')}`;
     const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',

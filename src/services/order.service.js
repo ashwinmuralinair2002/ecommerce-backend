@@ -5,6 +5,7 @@ const Product = require('../models/Product');
 const checkoutService = require('./checkout.service');
 const walletService = require('../services/wallet.service');
 const AppError = require('../utils/AppError');
+const { calculatePricing } = require('../utils/pricing-engine');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const generateOrderItemId = () => `ITEM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -66,11 +67,16 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}) => {
         session.startTransaction();
 
         const checkoutData = await checkoutService.prepareCheckout(userId);
+        const pricingItems = Array.isArray(checkoutData && checkoutData.items)
+            ? checkoutData.items.map((item) => ({
+                priceSnapshot: Number(item.priceSnapshot ?? 0),
+                quantity: Number(item.quantity || 0)
+            }))
+            : [];
+        const pricing = calculatePricing(pricingItems);
         const finalTotal = Number(
-            checkoutData
-            && checkoutData.pricing
-            && Number.isFinite(Number(checkoutData.pricing.finalTotal))
-                ? checkoutData.pricing.finalTotal
+            Number.isFinite(Number(pricing.finalTotal))
+                ? pricing.finalTotal
                 : 0
         );
         const normalizedPaymentMethod = typeof paymentMethod === 'string'
@@ -160,8 +166,8 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}) => {
 
         const itemGstAllocations = distributeItemGst(
             orderItems,
-            checkoutData && checkoutData.pricing ? checkoutData.pricing.subtotal : 0,
-            checkoutData && checkoutData.pricing ? checkoutData.pricing.gst : 0
+            pricing.subtotal,
+            pricing.gst
         );
 
         const pricedOrderItems = orderItems.map((item, index) => {
@@ -183,7 +189,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}) => {
             orderId,
             user: userId,
             items: pricedOrderItems,
-            pricing: checkoutData.pricing,
+            pricing,
             shippingAddress: buildShippingAddress(checkoutData.address),
             paymentMethod: resolvedPaymentMethod || 'COD',
             paymentStatus,

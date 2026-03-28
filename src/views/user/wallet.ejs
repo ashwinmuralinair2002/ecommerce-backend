@@ -16,6 +16,7 @@
 </head>
 
 <body>
+<%- include('../partials/user/currency-helper') %>
 <%
     const walletBalance = Number(balance || 0);
     const walletTransactions = Array.isArray(transactions) ? transactions : [];
@@ -24,10 +25,6 @@
     const currentWalletPage = Math.max(Number(currentPage || 1), 1);
     const walletTotalPages = Math.max(Number(totalPages || 1), 1);
 
-    const formatCurrency = (value) => `₹ ${Number(value || 0).toLocaleString('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    })}`;
     const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
@@ -73,7 +70,7 @@
                         <div>
                             <h2 class="text-lg font-semibold text-gray-600">Wallet Balance</h2>
                             <p class="mt-2 text-3xl font-bold text-green-600">
-                                ₹<%= walletBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                                <%= formatCurrency(walletBalance) %>
                             </p>
                         </div>
                         <button

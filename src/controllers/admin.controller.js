@@ -1,14 +1,243 @@
 // Admin management controller for customer and system operations
+const mongoose = require('mongoose');
+const Offer = require('../models/offer.model');
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+const Brand = require('../models/Brand');
 const User = require('../models/user.model');
 const Wallet = require('../models/wallet.model');
 const WalletTransaction = require('../models/wallet-transaction.model');
 const Order = require('../models/order.model');
 const { attachOrderIds } = require('./wallet.controller');
+const { createOfferSchema } = require('../validators/offer.validator');
+const { clearOfferCache } = require('../utils/offer-cache');
 const profileService = require('../services/profile.service');
 const { Parser } = require('json2csv');
 const bcrypt = require('bcryptjs');
 
 const ENABLE_ADMIN_USER_EDIT = process.env.ENABLE_ADMIN_USER_EDIT === 'true';
+const { Types } = mongoose;
+
+const mapIssuesToFields = (issues = []) => {
+    return issues.reduce((acc, issue) => {
+        const fieldName = Array.isArray(issue.path) && issue.path.length > 0 ? issue.path[0] : 'form';
+
+        if (!acc[fieldName]) {
+            acc[fieldName] = issue.message;
+        }
+
+        return acc;
+    }, {});
+};
+
+const normalizeSelectionArray = (value) => {
+    if (value == null || value === '') {
+        return [];
+    }
+
+    return Array.isArray(value) ? value : [value];
+};
+
+const normalizeToArray = (val) => {
+    if (!val) return [];
+    return Array.isArray(val) ? val : [val];
+};
+
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const toObjectIds = (arr) => (
+    normalizeToArray(arr)
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id))
+);
+
+const formatDateForInput = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return '';
+    }
+
+    return date.toISOString().split('T')[0];
+};
+
+const buildOfferFormState = async ({ errors = [], oldInput = {}, formError = null } = {}) => {
+    const [products, categories, brands] = await Promise.all([
+        Product.find({ isListed: true, isDeleted: false })
+            .select('title price')
+            .sort({ title: 1 })
+            .lean(),
+        Category.find({ isDeleted: false, isBlocked: false })
+            .select('name')
+            .sort({ name: 1 })
+            .lean(),
+        Brand.find({ isDeleted: false, isActive: true })
+            .select('name')
+            .sort({ name: 1 })
+            .lean()
+    ]);
+
+    const normalizedOldInput = {
+        name: oldInput?.name || '',
+        type: oldInput?.type || 'PRODUCT',
+        discountType: oldInput?.discountType || 'PERCENTAGE',
+        discountValue: oldInput?.discountValue || '',
+        maxDiscount: oldInput?.maxDiscount || '',
+        applicableProducts: normalizeSelectionArray(oldInput?.applicableProducts),
+        applicableCategories: normalizeSelectionArray(oldInput?.applicableCategories),
+        applicableBrands: normalizeSelectionArray(oldInput?.applicableBrands),
+        startDate: oldInput?.startDate || '',
+        endDate: oldInput?.endDate || ''
+    };
+
+    return {
+        products,
+        categories,
+        brands,
+        errors,
+        fieldErrors: mapIssuesToFields(errors),
+        oldInput: normalizedOldInput,
+        formError
+    };
+};
+
+const buildOfferFormView = async ({
+    errors = [],
+    oldInput = {},
+    formError = null,
+    offer = null,
+    formMode = 'create'
+} = {}) => {
+    const viewModel = await buildOfferFormState({ errors, oldInput, formError });
+
+    return {
+        ...viewModel,
+        formMode,
+        offer,
+        formAction: formMode === 'edit' ? `/admin/offers/${offer?._id}?_method=PATCH` : '/admin/offers/create',
+        pageTitle: formMode === 'edit' ? 'Edit Offer' : 'Create Offer',
+        pageDescription: formMode === 'edit'
+            ? 'Update the offer details while keeping the pricing engine in sync.'
+            : 'Set up a targeted offer and keep it ready for the pricing engine.',
+        submitLabel: formMode === 'edit' ? 'Update Offer' : 'Create Offer'
+    };
+};
+
+const getOfferOldInput = (offer = {}) => ({
+    name: offer?.name || '',
+    type: offer?.type || 'PRODUCT',
+    discountType: offer?.discountType || 'PERCENTAGE',
+    discountValue: offer?.discountValue ?? '',
+    maxDiscount: offer?.maxDiscount ?? '',
+    applicableProducts: normalizeSelectionArray((offer?.applicableProducts || []).map((id) => String(id))),
+    applicableCategories: normalizeSelectionArray((offer?.applicableCategories || []).map((id) => String(id))),
+    applicableBrands: normalizeSelectionArray((offer?.applicableBrands || []).map((id) => String(id))),
+    startDate: formatDateForInput(offer?.startDate),
+    endDate: formatDateForInput(offer?.endDate)
+});
+
+const validateOfferForm = async ({ body, offerId = null }) => {
+    const parsed = createOfferSchema.safeParse(body);
+
+    if (!parsed.success) {
+        return {
+            success: false,
+            status: 400,
+            errors: parsed.error.issues,
+            oldInput: body
+        };
+    }
+
+    const startDate = new Date(body.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(body.endDate);
+    endDate.setHours(23, 59, 59, 999);
+    const productIds = toObjectIds(body.applicableProducts);
+    const categoryIds = toObjectIds(body.applicableCategories);
+    const brandIds = toObjectIds(body.applicableBrands);
+    const existing = await Offer.findOne({
+        name: new RegExp(`^${escapeRegex(body.name)}$`, 'i'),
+        isDeleted: false,
+        ...(offerId ? { _id: { $ne: offerId } } : {})
+    }).lean();
+
+    if (
+        (parsed.data.type === 'PRODUCT' && productIds.length === 0)
+        || (parsed.data.type === 'CATEGORY' && categoryIds.length === 0)
+        || (parsed.data.type === 'BRAND' && brandIds.length === 0)
+    ) {
+        const errorPath = parsed.data.type === 'PRODUCT'
+            ? 'applicableProducts'
+            : parsed.data.type === 'CATEGORY'
+                ? 'applicableCategories'
+                : 'applicableBrands';
+
+        return {
+            success: false,
+            status: 400,
+            errors: [{ path: [errorPath], message: 'Invalid or missing target selection' }],
+            oldInput: body
+        };
+    }
+
+    if (existing) {
+        return {
+            success: false,
+            status: 400,
+            errors: [{ path: ['name'], message: 'Offer name already exists' }],
+            oldInput: body,
+            formError: 'Offer name already exists'
+        };
+    }
+
+    if (endDate <= startDate) {
+        return {
+            success: false,
+            status: 400,
+            oldInput: body,
+            formError: 'Invalid date range'
+        };
+    }
+
+    if (parsed.data.type === 'PRODUCT' && parsed.data.maxDiscount != null && parsed.data.maxDiscount !== '') {
+        const selectedProducts = await Product.find({
+            _id: { $in: productIds },
+            isListed: true,
+            isDeleted: false
+        }).select('price').lean();
+        const lowestSelectedPrice = selectedProducts.reduce((minPrice, product) => {
+            const price = Number(product?.price || 0);
+            return Math.min(minPrice, price);
+        }, Number.POSITIVE_INFINITY);
+
+        if (!selectedProducts.length || parsed.data.maxDiscount > lowestSelectedPrice) {
+            return {
+                success: false,
+                status: 400,
+                errors: [{
+                    path: ['maxDiscount'],
+                    message: 'Max discount cannot exceed the selected product price'
+                }],
+                oldInput: body,
+                formError: 'Max discount is invalid for the selected product'
+            };
+        }
+    }
+
+    return {
+        success: true,
+        payload: {
+            ...parsed.data,
+            name: body.name.toLowerCase(),
+            applicableProducts: productIds,
+            applicableCategories: categoryIds,
+            applicableBrands: brandIds,
+            startDate,
+            endDate
+        }
+    };
+};
 
 // @desc    Get Customers Page (with Pagination)
 // @route   GET /admin/customers
@@ -590,6 +819,362 @@ const addCustomer = async (req, res) => {
     }
 };
 
+// @desc    Get Offers Page
+// @route   GET /admin/offers
+const getOffersPage = async (req, res) => {
+    try {
+        const { type = '', status = '', sort = 'newest' } = req.query;
+        const query = { isDeleted: false };
+
+        if (['PRODUCT', 'CATEGORY', 'BRAND'].includes(type)) {
+            query.type = type;
+        }
+
+        if (status === 'active') {
+            query.isActive = true;
+        }
+
+        if (status === 'inactive') {
+            query.isActive = false;
+        }
+
+        let sortOption = { createdAt: -1 };
+
+        if (sort === 'oldest') {
+            sortOption = { createdAt: 1 };
+        }
+
+        if (sort === 'discount_high') {
+            sortOption = { discountValue: -1, createdAt: -1 };
+        }
+
+        const offers = await Offer.find(query)
+            .sort(sortOption)
+            .lean();
+
+        return res.render('admin/offers', {
+            offers,
+            filters: {
+                type,
+                status,
+                sort
+            }
+        });
+    } catch (error) {
+        return res.render('admin/offers', {
+            offers: [],
+            filters: {
+                type: '',
+                status: '',
+                sort: 'newest'
+            },
+            error: 'Failed to load offers'
+        });
+    }
+};
+
+// @desc    Get Offer Details Page
+// @route   GET /admin/offers/:id
+const getOfferDetailsPage = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).render('admin/offer-details', {
+                offer: null,
+                error: 'Offer not found'
+            });
+        }
+
+        const offer = await Offer.findOne({
+            _id: req.params.id,
+            isDeleted: false
+        })
+            .populate('applicableBrands', 'name')
+            .populate('applicableProducts', 'title')
+            .populate('applicableCategories', 'name')
+            .lean();
+
+        if (!offer) {
+            return res.status(404).render('admin/offer-details', {
+                offer: null,
+                error: 'Offer not found'
+            });
+        }
+
+        return res.render('admin/offer-details', {
+            offer,
+            error: null
+        });
+    } catch (error) {
+        return res.status(500).render('admin/offer-details', {
+            offer: null,
+            error: 'Failed to load offer details'
+        });
+    }
+};
+
+// @desc    Get Create Offer Page
+// @route   GET /admin/offers/create
+const getCreateOfferPage = async (req, res) => {
+    try {
+        const viewModel = await buildOfferFormView();
+
+        return res.render('admin/create-offer', viewModel);
+    } catch (error) {
+        return res.status(500).render('admin/create-offer', {
+            products: [],
+            categories: [],
+            brands: [],
+            errors: [],
+            fieldErrors: {},
+            oldInput: {
+                name: '',
+                type: 'PRODUCT',
+                discountType: 'PERCENTAGE',
+                discountValue: '',
+                maxDiscount: '',
+                applicableProducts: [],
+                applicableCategories: [],
+                applicableBrands: [],
+                startDate: '',
+                endDate: ''
+            },
+            formError: 'Failed to load offer form',
+            formMode: 'create',
+            offer: null,
+            formAction: '/admin/offers/create',
+            pageTitle: 'Create Offer',
+            pageDescription: 'Set up a targeted offer and keep it ready for the pricing engine.',
+            submitLabel: 'Create Offer'
+        });
+    }
+};
+
+// @desc    Get Edit Offer Page
+// @route   GET /admin/offers/:id/edit
+const getEditOfferPage = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).render('admin/offer-details', {
+                offer: null,
+                error: 'Offer not found'
+            });
+        }
+
+        const offer = await Offer.findOne({
+            _id: req.params.id,
+            isDeleted: false
+        }).lean();
+
+        if (!offer) {
+            return res.status(404).render('admin/offer-details', {
+                offer: null,
+                error: 'Offer not found'
+            });
+        }
+
+        const viewModel = await buildOfferFormView({
+            oldInput: getOfferOldInput(offer),
+            offer,
+            formMode: 'edit'
+        });
+
+        return res.render('admin/create-offer', viewModel);
+    } catch (error) {
+        return res.status(500).render('admin/offer-details', {
+            offer: null,
+            error: 'Failed to load offer for editing'
+        });
+    }
+};
+
+// @desc    Create Offer
+// @route   POST /admin/offers/create
+const createOffer = async (req, res) => {
+    try {
+        const body = {
+            ...req.body,
+            applicableProducts: normalizeToArray(req.body.applicableProducts),
+            applicableCategories: normalizeToArray(req.body.applicableCategories),
+            applicableBrands: normalizeToArray(req.body.applicableBrands)
+        };
+        body.name = String(body.name || '').trim();
+        const validation = await validateOfferForm({ body });
+
+        if (!validation.success) {
+            const viewModel = await buildOfferFormView({
+                errors: validation.errors,
+                oldInput: validation.oldInput,
+                formError: validation.formError
+            });
+
+            return res.status(validation.status).render('admin/create-offer', viewModel);
+        }
+
+        const offer = new Offer(validation.payload);
+
+        await offer.save();
+        clearOfferCache();
+
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('Offer created:', offer._id);
+        }
+
+        return res.redirect('/admin/offers');
+    } catch (error) {
+        if (error?.code === 11000) {
+            const viewModel = await buildOfferFormView({
+                errors: [{ path: ['name'], message: 'Offer name already exists' }],
+                oldInput: {
+                    ...req.body,
+                    applicableProducts: normalizeToArray(req.body.applicableProducts),
+                    applicableCategories: normalizeToArray(req.body.applicableCategories),
+                    applicableBrands: normalizeToArray(req.body.applicableBrands)
+                },
+                formError: 'Offer name already exists'
+            });
+
+            return res.status(400).render('admin/create-offer', viewModel);
+        }
+
+        const viewModel = await buildOfferFormView({
+            oldInput: {
+                ...req.body,
+                applicableProducts: normalizeToArray(req.body.applicableProducts),
+                applicableCategories: normalizeToArray(req.body.applicableCategories),
+                applicableBrands: normalizeToArray(req.body.applicableBrands)
+            },
+            formError: 'Failed to create offer. Please try again.'
+        });
+
+        return res.status(500).render('admin/create-offer', viewModel);
+    }
+};
+
+// @desc    Update Offer
+// @route   PATCH /admin/offers/:id
+const updateOffer = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).render('admin/offer-details', {
+                offer: null,
+                error: 'Offer not found'
+            });
+        }
+
+        const offer = await Offer.findOne({
+            _id: req.params.id,
+            isDeleted: false
+        });
+
+        if (!offer) {
+            return res.status(404).render('admin/offer-details', {
+                offer: null,
+                error: 'Offer not found'
+            });
+        }
+
+        const body = {
+            ...req.body,
+            applicableProducts: normalizeToArray(req.body.applicableProducts),
+            applicableCategories: normalizeToArray(req.body.applicableCategories),
+            applicableBrands: normalizeToArray(req.body.applicableBrands)
+        };
+        body.name = String(body.name || '').trim();
+
+        const validation = await validateOfferForm({
+            body,
+            offerId: offer._id
+        });
+
+        if (!validation.success) {
+            const viewModel = await buildOfferFormView({
+                errors: validation.errors,
+                oldInput: validation.oldInput,
+                formError: validation.formError,
+                offer: {
+                    ...offer.toObject(),
+                    _id: offer._id
+                },
+                formMode: 'edit'
+            });
+
+            return res.status(validation.status).render('admin/create-offer', viewModel);
+        }
+
+        Object.assign(offer, validation.payload);
+        await offer.save();
+        clearOfferCache();
+
+        return res.redirect(`/admin/offers/${offer._id}`);
+    } catch (error) {
+        const existingOffer = mongoose.Types.ObjectId.isValid(req.params.id)
+            ? await Offer.findOne({ _id: req.params.id, isDeleted: false }).lean()
+            : null;
+        const viewModel = await buildOfferFormView({
+            oldInput: {
+                ...req.body,
+                applicableProducts: normalizeToArray(req.body.applicableProducts),
+                applicableCategories: normalizeToArray(req.body.applicableCategories),
+                applicableBrands: normalizeToArray(req.body.applicableBrands)
+            },
+            formError: 'Failed to update offer. Please try again.',
+            offer: existingOffer,
+            formMode: 'edit'
+        });
+
+        return res.status(500).render('admin/create-offer', viewModel);
+    }
+};
+
+// @desc    Toggle Offer
+// @route   PATCH /admin/offers/:id/toggle
+const toggleOffer = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ success: false, message: 'Invalid ID' });
+        }
+
+        const offer = await Offer.findById(req.params.id);
+
+        if (!offer || offer.isDeleted) {
+            return res.status(404).json({ success: false, message: 'Offer not found' });
+        }
+
+        offer.isActive = !offer.isActive;
+        await offer.save();
+        clearOfferCache();
+
+        return res.json({ success: true, isActive: offer.isActive });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to toggle offer' });
+    }
+};
+
+// @desc    Soft Delete Offer
+// @route   DELETE /admin/offers/:id
+const deleteOffer = async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ success: false, message: 'Invalid ID' });
+        }
+
+        const offer = await Offer.findById(req.params.id);
+
+        if (!offer) {
+            return res.status(404).json({ success: false, message: 'Offer not found' });
+        }
+
+        offer.isDeleted = true;
+        await offer.save();
+
+        clearOfferCache();
+
+        return res.json({ success: true });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Failed to delete offer' });
+    }
+};
+
 module.exports = {
     getCustomersPage,
     toggleBlockUser,
@@ -604,5 +1189,13 @@ module.exports = {
     getChangePasswordPage,
     changeAdminPassword,
     renderAddCustomerPage,
-    addCustomer
+    addCustomer,
+    getOffersPage,
+    getOfferDetailsPage,
+    getCreateOfferPage,
+    getEditOfferPage,
+    createOffer,
+    updateOffer,
+    toggleOffer,
+    deleteOffer
 };

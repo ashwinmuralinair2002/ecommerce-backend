@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900">
+    <title>SoundWave - Offer Details</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        async function toggleOffer(offerId, currentStatus) {
+            const result = await Swal.fire({
+                title: currentStatus ? 'Deactivate offer?' : 'Activate offer?',
+                text: 'This will update offer availability immediately.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#685BCB',
+                confirmButtonText: currentStatus ? 'Deactivate' : 'Activate'
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            const response = await fetch(`/admin/offers/${offerId}/toggle`, { method: 'PATCH' });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                return Swal.fire('Error', data.message || 'Failed to update offer', 'error');
+            }
+
+            window.location.reload();
+        }
+
+        async function deleteOffer(offerId) {
+            const result = await Swal.fire({
+                title: 'Delete offer?',
+                text: 'This will soft delete the offer.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Delete'
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            const response = await fetch(`/admin/offers/${offerId}`, { method: 'DELETE' });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                return Swal.fire('Error', data.message || 'Failed to delete offer', 'error');
+            }
+
+            window.location.href = '/admin/offers';
+        }
+    </script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'offers' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="w-full px-6 py-4">
+                    <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <a href="/admin/offers" class="text-sm text-[#685BCB] hover:underline">Offers</a>
+                            <h1 class="mt-1 text-[32px] font-bold text-[#1F1F1F]"><%= offer?.name || 'Offer Details' %></h1>
+                        </div>
+                        <% if (offer) { %>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="/admin/offers/<%= offer._id %>/edit"
+                                    class="inline-flex items-center justify-center rounded-lg h-10 px-4 bg-[#685BCB] text-sm font-bold text-white hover:bg-[#5a4dc0] transition-colors">
+                                    Edit
+                                </a>
+                                <button type="button"
+                                    onclick="toggleOffer('<%= offer._id %>', <%= offer.isActive ? 'true' : 'false' %>)"
+                                    class="inline-flex items-center justify-center rounded-lg h-10 px-4 border border-[#BCA6DB] bg-white text-sm font-semibold text-[#1F1F1F] hover:bg-[#F7F4FF] transition-colors">
+                                    <%= offer.isActive ? 'Deactivate' : 'Activate' %>
+                                </button>
+                                <button type="button"
+                                    onclick="deleteOffer('<%= offer._id %>')"
+                                    class="inline-flex items-center justify-center rounded-lg h-10 px-4 bg-red-500 text-sm font-bold text-white hover:bg-red-600 transition-colors">
+                                    Delete
+                                </button>
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <% if (error) { %>
+                        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><%= error %></div>
+                    <% } else if (offer) { %>
+                        <% 
+                            const isDeleted = Boolean(offer.isDeleted);
+                            const statusLabel = isDeleted ? 'Deleted' : (offer.isActive ? 'Active' : 'Inactive');
+                            const statusClasses = isDeleted
+                                ? 'bg-red-100 text-red-700'
+                                : offer.isActive
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-gray-100 text-gray-600';
+                        %>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-lg shadow p-5 space-y-2">
+                                <h2 class="text-lg font-semibold text-[#1F1F1F]">Basic Info</h2>
+                                <div class="pt-2 space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-500">Name</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800"><%= offer.name %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Type</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800"><%= offer.type %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Start Date</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800"><%= new Date(offer.startDate).toLocaleDateString('en-IN') %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">End Date</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800"><%= new Date(offer.endDate).toLocaleDateString('en-IN') %></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-5 space-y-2">
+                                <h2 class="text-lg font-semibold text-[#1F1F1F]">Status</h2>
+                                <div class="pt-2 space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-500">Current Status</label>
+                                        <div class="mt-2">
+                                            <span class="inline-flex rounded-full px-4 py-2 text-sm font-medium <%= statusClasses %>">
+                                                <%= statusLabel %>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Created</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800"><%= offer.createdAt ? new Date(offer.createdAt).toLocaleDateString('en-IN') : 'Not available' %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Last Updated</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800"><%= offer.updatedAt ? new Date(offer.updatedAt).toLocaleDateString('en-IN') : 'Not available' %></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-5 space-y-2">
+                                <h2 class="text-lg font-semibold text-[#1F1F1F]">Discount Info</h2>
+                                <div class="pt-2 space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-500">Discount Type</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800"><%= offer.discountType %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Discount Value</label>
+                                        <p class="mt-1 text-sm font-medium text-gray-800">
+                                            <%= offer.discountType === 'PERCENTAGE' ? `${offer.discountValue}%` : `Rs.${offer.discountValue}` %>
+                                        </p>
+                                    </div>
+                                    <% if (offer.maxDiscount != null) { %>
+                                        <div>
+                                            <label class="text-sm text-gray-500">Max Discount</label>
+                                            <p class="mt-1 text-sm font-medium text-gray-800">Rs.<%= offer.maxDiscount %></p>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-5 space-y-2">
+                                <% if (offer.type === 'BRAND') { %>
+                                    <h3 class="text-lg font-semibold mb-2 text-[#1F1F1F]">Brands Affected</h3>
+                                <% } %>
+
+                                <% if (offer.type === 'CATEGORY') { %>
+                                    <h3 class="text-lg font-semibold mb-2 text-[#1F1F1F]">Categories Affected</h3>
+                                <% } %>
+
+                                <% if (offer.type === 'PRODUCT') { %>
+                                    <h3 class="text-lg font-semibold mb-2 text-[#1F1F1F]">Products Affected</h3>
+                                <% } %>
+
+                                <div class="pt-2">
+                                    <% if (offer.type === 'BRAND') { %>
+                                        <% if (Array.isArray(offer.applicableBrands) && offer.applicableBrands.length) { %>
+                                            <ul class="space-y-2 text-sm text-[#1F1F1F]">
+                                                <% offer.applicableBrands.forEach((brand) => { %>
+                                                    <li class="font-semibold"><%= brand.name || brand %></li>
+                                                <% }) %>
+                                            </ul>
+                                        <% } else { %>
+                                            <p class="text-sm font-semibold text-[#1F1F1F]">No brands selected</p>
+                                        <% } %>
+                                    <% } %>
+
+                                    <% if (offer.type === 'PRODUCT') { %>
+                                        <% if (Array.isArray(offer.applicableProducts) && offer.applicableProducts.length) { %>
+                                            <ul class="space-y-2 text-sm text-[#1F1F1F]">
+                                                <% offer.applicableProducts.forEach((product) => { %>
+                                                    <li class="font-semibold"><%= product.title || product %></li>
+                                                <% }) %>
+                                            </ul>
+                                        <% } else { %>
+                                            <p class="text-sm font-semibold text-[#1F1F1F]">No products selected</p>
+                                        <% } %>
+                                    <% } %>
+
+                                    <% if (offer.type === 'CATEGORY') { %>
+                                        <% if (Array.isArray(offer.applicableCategories) && offer.applicableCategories.length) { %>
+                                            <ul class="space-y-2 text-sm text-[#1F1F1F]">
+                                                <% offer.applicableCategories.forEach((category) => { %>
+                                                    <li class="font-semibold"><%= category.name || category %></li>
+                                                <% }) %>
+                                            </ul>
+                                        <% } else { %>
+                                            <p class="text-sm font-semibold text-[#1F1F1F]">No categories selected</p>
+                                        <% } %>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

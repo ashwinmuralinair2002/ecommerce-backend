@@ -15,6 +15,7 @@
 </head>
 
 <body class="bg-background-soft" style='font-family: "Space Grotesk", "Noto Sans", sans-serif;'>
+    <%- include('../partials/user/currency-helper') %>
     <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
         <div class="layout-container flex h-full grow flex-col">
 
@@ -330,12 +331,12 @@
                                         <div class="pb-3 border-b border-primary-light/30">
                                             <% const productFinalPrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
                                             <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">
-                                                ₹<%= productFinalPrice.toLocaleString('en-IN') %>
+                                                <%= formatCurrency(productFinalPrice) %>
                                             </h2>
                                             <% if (Number(product.discountPercentage || 0) > 0) { %>
                                                 <div class="flex items-center gap-2 mt-1">
                                                     <span class="text-gray-500 line-through text-sm">
-                                                        ₹<%= Number(product.price || 0).toLocaleString('en-IN') %>
+                                                        <%= formatCurrency(product.price) %>
                                                     </span>
                                                     <span
                                                         class="rounded-md bg-accent px-2 py-1 text-xs font-bold text-black">
@@ -376,7 +377,49 @@
                                             </div>
                                         <% } %>
 
+                                        <% const selectedOffer = Array.isArray(offers) ? offers.find((offer) => String(offer._id) === String(bestOfferId || '')) : null; %>
+                                        <% const savings = Number(selectedOffer?.discountPreview || 0); %>
+                                        <% if (Array.isArray(offers) && offers.length > 0) { %>
+                                            <div class="rounded-lg border border-primary-light/45 bg-[#faf8ff] p-3">
+                                                <h4 class="text-sm font-semibold text-primary mb-2">Available Offers</h4>
+                                                <div class="space-y-2">
+                                                    <% offers.forEach((offer) => { %>
+                                                        <label class="offer-option flex items-start gap-3 rounded-lg border border-primary-light/35 bg-white px-3 py-2 cursor-pointer hover:border-primary transition <%= String(offer._id) === String(bestOfferId || '') ? 'border-primary bg-purple-50' : '' %>">
+                                                            <% const basePrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
+                                                            <% const finalPrice = basePrice - Number(offer.discountPreview || 0); %>
+                                                            <input
+                                                                type="radio"
+                                                                name="selectedOffer"
+                                                                value="<%= offer._id %>"
+                                                                class="mt-1 text-primary focus:ring-primary"
+                                                                data-discount-preview="<%= offer.discountPreview || 0 %>"
+                                                                <%= String(offer._id) === String(bestOfferId || '') ? 'checked' : '' %> />
+                                                            <span class="text-sm text-primary">
+                                                                <span class="font-semibold"><%= offer.name %></span>
+                                                                <% if (String(offer._id) === String(bestOfferId || '')) { %>
+                                                                    <span class="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                                                        Best Offer
+                                                                    </span>
+                                                                <% } %>
+                                                                <span class="text-gray-600"> - Save <%= formatCurrency(offer.discountPreview || 0) %></span>
+                                                                <span class="block text-xs text-gray-500">
+                                                                    Final price: <%= formatCurrency(finalPrice) %>
+                                                                </span>
+                                                            </span>
+                                                        </label>
+                                                    <% }) %>
+                                                </div>
+                                            </div>
+                                        <% } else { %>
+                                            <div class="rounded-lg border border-primary-light/45 bg-[#faf8ff] p-3 text-sm text-gray-600">
+                                                No offers available for this product
+                                            </div>
+                                        <% } %>
+
                                         <div class="space-y-3">
+                                            <div id="offer-summary" class="text-sm text-green-600 font-medium mt-2">
+                                                You save <span id="offer-save-amount"><%= formatCurrency(savings) %></span> with this offer
+                                            </div>
                                             <div class="flex items-center border border-primary-light/45 rounded-lg">
                                                 <button type="button" id="decrementQuantityButton"
                                                     class="px-3 py-2 text-primary hover:bg-primary-light/35 font-bold">-</button>
@@ -457,11 +500,11 @@
                                                             <% const relFinalPrice = Number(relProduct.price || 0) - ((Number(relProduct.price || 0) * Number(relProduct.discountPercentage || 0)) / 100); %>
                                                             <% if (Number(relProduct.discountPercentage || 0) > 0) { %>
                                                                 <div class="space-y-1">
-                                                                    <p class="text-xs text-gray-400 line-through">₹ <%= Number(relProduct.price || 0).toLocaleString('en-IN') %></p>
-                                                                    <p class="text-primary text-sm font-normal leading-normal">₹ <%= relFinalPrice.toLocaleString('en-IN') %></p>
+                                                                    <p class="text-xs text-gray-400 line-through"><%= formatCurrency(relProduct.price) %></p>
+                                                                    <p class="text-primary text-sm font-normal leading-normal"><%= formatCurrency(relFinalPrice) %></p>
                                                                 </div>
                                                             <% } else { %>
-                                                                <p class="text-primary text-sm font-normal leading-normal">₹ <%= Number(relProduct.price || 0).toLocaleString('en-IN') %></p>
+                                                                <p class="text-primary text-sm font-normal leading-normal"><%= formatCurrency(relProduct.price) %></p>
                                                             <% } %>
                                                         </div>
                                                     </div>
@@ -500,11 +543,11 @@
                                                             <% const abFinalPrice = Number(abProduct.price || 0) - ((Number(abProduct.price || 0) * Number(abProduct.discountPercentage || 0)) / 100); %>
                                                             <% if (Number(abProduct.discountPercentage || 0) > 0) { %>
                                                                 <div class="space-y-1">
-                                                                    <p class="text-xs text-gray-400 line-through">₹ <%= Number(abProduct.price || 0).toLocaleString('en-IN') %></p>
-                                                                    <p class="text-primary text-sm font-normal leading-normal">₹ <%= abFinalPrice.toLocaleString('en-IN') %></p>
+                                                                    <p class="text-xs text-gray-400 line-through"><%= formatCurrency(abProduct.price) %></p>
+                                                                    <p class="text-primary text-sm font-normal leading-normal"><%= formatCurrency(abFinalPrice) %></p>
                                                                 </div>
                                                             <% } else { %>
-                                                                <p class="text-primary text-sm font-normal leading-normal">₹ <%= Number(abProduct.price || 0).toLocaleString('en-IN') %></p>
+                                                                <p class="text-primary text-sm font-normal leading-normal"><%= formatCurrency(abProduct.price) %></p>
                                                             <% } %>
                                                         </div>
                                                     </div>
@@ -549,9 +592,34 @@
                         const wishlistButtons = Array.from(document.querySelectorAll('[data-add-to-wishlist]'));
                         const wishlistVariantIds = new Set(<%- JSON.stringify(Array.isArray(wishlistVariantIds) ? wishlistVariantIds.map(String) : []) %>);
                         const colorChips = Array.from(document.querySelectorAll(".variant-chip"));
+                        const offerRadios = Array.from(document.querySelectorAll('input[name="selectedOffer"]'));
+                        const offerSummary = document.getElementById('offer-summary');
+                        const offerSaveAmount = document.getElementById('offer-save-amount');
                         const thumbnailStrip = document.querySelector(".thumbnail-image")?.parentElement || null;
                         const isProductUnavailable = <%- JSON.stringify(product.isListed === false || product.isDeleted === true) %>;
                         const MAX_QUANTITY = 5;
+
+                        function updateOfferSummary(selectedRadio) {
+                            if (!offerSummary || !offerSaveAmount) return;
+
+                            if (!selectedRadio) {
+                                offerSaveAmount.innerText = formatCurrency(0);
+                                return;
+                            }
+
+                            const savings = Number(selectedRadio.dataset.discountPreview || 0);
+                            offerSaveAmount.innerText = formatCurrency(savings);
+
+                            const selectedLabel = selectedRadio.closest('label');
+
+                            document.querySelectorAll('.offer-option').forEach((option) => {
+                                option.classList.remove('border-primary', 'bg-purple-50');
+                            });
+
+                            if (selectedLabel) {
+                                selectedLabel.classList.add('border-primary', 'bg-purple-50');
+                            }
+                        }
 
                         function syncNavbarCartCount(count) {
                             if (typeof window.syncNavbarCartCount === 'function') {
@@ -838,6 +906,19 @@
                             });
                         }
 
+                        offerRadios.forEach((radio) => {
+                            radio.addEventListener('change', () => {
+                                updateOfferSummary(radio);
+                            });
+                        });
+
+                        const checkedOfferRadio = offerRadios.find((radio) => radio.checked);
+                        if (checkedOfferRadio) {
+                            checkedOfferRadio.dispatchEvent(new Event('change'));
+                        } else {
+                            updateOfferSummary(null);
+                        }
+
                         if (addToCartButton) {
                             addToCartButton.addEventListener('click', async () => {
                                 if (addToCartButton.disabled || isAddingToCart) return;
@@ -857,6 +938,7 @@
                                 isAddingToCart = true;
                                 addToCartButton.disabled = true;
                                 showAddToCartFeedback('', 'success');
+                                const selectedOfferId = document.querySelector('input[name="selectedOffer"]:checked')?.value || null;
 
                                 try {
                                     const response = await fetch('/api/cart/add', {
@@ -868,7 +950,8 @@
                                         body: JSON.stringify({
                                             productId,
                                             variantId,
-                                            quantity: selectedQuantity
+                                            quantity: selectedQuantity,
+                                            selectedOfferId
                                         })
                                     });
 
@@ -920,6 +1003,7 @@
 
                                 isAddingToCart = true;
                                 buyNowButton.disabled = true;
+                                const selectedOfferId = document.querySelector('input[name="selectedOffer"]:checked')?.value || null;
 
                                 try {
                                     const response = await fetch('/api/checkout/buy-now', {
@@ -931,7 +1015,8 @@
                                         body: JSON.stringify({
                                             productId,
                                             variantId,
-                                            quantity: selectedQuantity
+                                            quantity: selectedQuantity,
+                                            selectedOfferId
                                         })
                                     });
 

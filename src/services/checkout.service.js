@@ -1,19 +1,11 @@
 const cartService = require('./cart.service');
+const Offer = require('../models/offer.model');
 const User = require('../models/user.model');
 const AppError = require('../utils/AppError');
+const { getCachedOffers } = require('../utils/offer-cache');
+const { calculatePricing } = require('../utils/pricing-engine');
 
-const GST_RATE = 0.18;
 const MAX_CART_ITEM_QUANTITY = 5;
-
-const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
-
-const getItemUnitPrice = (item) => {
-    if (item && Number.isFinite(item.priceSnapshot)) {
-        return item.priceSnapshot;
-    }
-
-    throw new Error('Invalid price snapshot during checkout');
-};
 
 const hasInvalidCartItem = (item) => {
     const product = item ? item.product : null;
@@ -33,9 +25,9 @@ const hasInvalidCartItem = (item) => {
     );
 };
 
-const prepareCheckout = async (userId) => {
+const prepareCheckout = async (userId, req) => {
     try {
-        const cart = await cartService.getCart(userId);
+        const cart = await cartService.getCart(userId, req);
 
         if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
             throw new AppError('Cart is empty', 400);
@@ -53,20 +45,36 @@ const prepareCheckout = async (userId) => {
             throw new AppError('No delivery address selected', 400);
         }
 
-        const totalItems = cart.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-        const subtotal = roundCurrency(cart.items.reduce((sum, item) => {
-            return sum + (getItemUnitPrice(item) * Number(item.quantity || 0));
-        }, 0));
-        const gst = roundCurrency(subtotal * GST_RATE);
-        const finalTotal = roundCurrency(subtotal + gst);
+        const activeOffers = await getCachedOffers(Offer);
+
+        const pricingItems = cart.items.map((item) => {
+            if (item.priceSnapshot == null) {
+                console.warn('Missing priceSnapshot in checkout item', {
+                    itemId: item?._id || null,
+                    productId: item?.product?._id || null
+                });
+            }
+
+            return {
+                priceSnapshot: item.priceSnapshot != null
+                    ? Number(item.priceSnapshot)
+                    : 0,
+                quantity: Number(item.quantity || 0),
+                productId: item.product?._id || null,
+                categoryId: item.product?.category?._id || item.product?.category || null,
+                brandId: item.product?.brand?._id || item.product?.brand || null,
+                selectedOfferId: item.selectedOfferId || null
+            };
+        });
+        const pricing = calculatePricing(pricingItems, activeOffers);
 
         return {
             items: cart.items,
             pricing: {
-                totalItems,
-                subtotal,
-                gst,
-                finalTotal
+                totalItems: pricing.totalItems,
+                subtotal: pricing.subtotal,
+                gst: pricing.gst,
+                finalTotal: pricing.finalTotal
             },
             address: selectedAddress
         };

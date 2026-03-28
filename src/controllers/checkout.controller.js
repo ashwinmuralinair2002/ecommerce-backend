@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const checkoutService = require('../services/checkout.service');
 const walletService = require('../services/wallet.service');
@@ -36,7 +37,7 @@ const getCheckoutPage = async (req, res, next) => {
 };
 
 const buyNow = async (req, res) => {
-    const { productId, variantId, quantity } = req.body;
+    const { productId, variantId, quantity, selectedOfferId } = req.body;
 
     try {
         const product = await Product.findById(productId).select('isListed isDeleted variants').lean();
@@ -84,7 +85,8 @@ const buyNow = async (req, res) => {
         req.session.buyNowItem = {
             productId: String(productId),
             variantId: String(variantId),
-            quantity: normalizedQuantity
+            quantity: normalizedQuantity,
+            selectedOfferId: mongoose.Types.ObjectId.isValid(selectedOfferId) ? String(selectedOfferId) : null
         };
 
         return res.json({

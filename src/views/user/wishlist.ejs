@@ -17,10 +17,10 @@
 </head>
 
 <body class="min-h-screen bg-white" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+<%- include('../partials/user/currency-helper') %>
 <%
     const wishlistData = (typeof wishlist !== 'undefined' && wishlist) ? wishlist : { items: [] };
     const wishlistItems = Array.isArray(wishlistData.items) ? wishlistData.items : [];
-    const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
 %>
 
     <%- include('../partials/user/navbar') %>
@@ -87,17 +87,17 @@
                             <% const wishlistFinalPrice = wishlistMrp - ((wishlistMrp * wishlistDiscount) / 100); %>
                             <% if (wishlistDiscount > 0) { %>
                                 <div class="mt-2">
-                                    <p class="text-sm text-gray-400 line-through">₹<%= wishlistMrp.toLocaleString('en-IN') %></p>
-                                    <p class="text-xl font-semibold text-primary">₹<%= wishlistFinalPrice.toLocaleString('en-IN') %></p>
+                                    <p class="text-sm text-gray-400 line-through"><%= formatCurrency(wishlistMrp) %></p>
+                                    <p class="text-xl font-semibold text-primary"><%= formatCurrency(wishlistFinalPrice) %></p>
                                 </div>
                             <% } else { %>
-                                <p class="mt-2 text-xl font-semibold text-primary">₹<%= wishlistMrp.toLocaleString('en-IN') %></p>
+                                <p class="mt-2 text-xl font-semibold text-primary"><%= formatCurrency(wishlistMrp) %></p>
                             <% } %>
                             <% if ((product.priceChange || 0) > 0) { %>
-                                <p class="mt-2 text-sm font-medium text-red-600">↑ Price increased by ₹<%= Math.abs(product.priceChange || 0) %></p>
+                                <p class="mt-2 text-sm font-medium text-red-600">↑ Price increased by <%= formatCurrency(Math.abs(product.priceChange || 0)) %></p>
                             <% } %>
                             <% if ((product.priceChange || 0) < 0) { %>
-                                <p class="mt-2 text-sm font-medium text-green-600">↓ Price dropped by ₹<%= Math.abs(product.priceChange || 0) %></p>
+                                <p class="mt-2 text-sm font-medium text-green-600">↓ Price dropped by <%= formatCurrency(Math.abs(product.priceChange || 0)) %></p>
                             <% } %>
                         </div>
                     </a>
