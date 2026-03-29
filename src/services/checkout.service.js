@@ -54,6 +54,7 @@ const prepareCheckout = async (userId, req) => {
             .trim()
             .toUpperCase();
         let coupon = null;
+        let couponValidationReason = '';
         const now = new Date();
 
         if (couponCode) {
@@ -64,6 +65,10 @@ const prepareCheckout = async (userId, req) => {
                 startDate: { $lte: now },
                 endDate: { $gte: now }
             }).lean();
+
+            if (!coupon) {
+                couponValidationReason = 'INVALID_COUPON';
+            }
         }
 
         const couponMeta = coupon
@@ -94,6 +99,7 @@ const prepareCheckout = async (userId, req) => {
             };
         });
         const pricing = await calculatePricing(pricingItems, activeOffers, coupon, userId);
+        const finalCouponValidationReason = pricing.couponValidationReason || couponValidationReason;
         const subtotal = Number(pricing.subtotal || 0);
         const availableCoupons = await getCachedCoupons(Coupon);
         const applicableCoupons = (await Promise.all(availableCoupons.map(async (entry, index) => {
@@ -160,7 +166,7 @@ const prepareCheckout = async (userId, req) => {
                 couponDiscount: pricing.couponDiscount,
                 discountedSubtotal: pricing.discountedSubtotal,
                 couponApplied: pricing.couponApplied,
-                couponValidationReason: pricing.couponValidationReason
+                couponValidationReason: finalCouponValidationReason
             },
             coupon: couponMeta,
             availableCoupons: applicableCoupons,

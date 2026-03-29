@@ -4,6 +4,28 @@ const checkoutService = require('../services/checkout.service');
 const walletService = require('../services/wallet.service');
 const { buildBuyNowCheckoutData } = require('../utils/buy-now-checkout');
 
+const buildBuyNowContextItem = (buyNowItem, price = null) => ({
+    productId: String(buyNowItem.productId),
+    variantId: String(buyNowItem.variantId),
+    quantity: Number(buyNowItem.quantity),
+    price: Number.isFinite(Number(price)) ? Number(price) : null,
+    selectedOfferId: mongoose.Types.ObjectId.isValid(buyNowItem.selectedOfferId) ? String(buyNowItem.selectedOfferId) : null
+});
+
+const syncBuyNowSessionState = (req, buyNowContextItem) => {
+    req.session.buyNowItem = {
+        productId: buyNowContextItem.productId,
+        variantId: buyNowContextItem.variantId,
+        quantity: buyNowContextItem.quantity,
+        selectedOfferId: buyNowContextItem.selectedOfferId
+    };
+
+    req.session.checkoutContext = {
+        type: 'buyNow',
+        item: buyNowContextItem
+    };
+};
+
 const getCheckoutPage = async (req, res, next) => {
     if (!req.session.userId) {
         return res.redirect('/login');
@@ -12,9 +34,11 @@ const getCheckoutPage = async (req, res, next) => {
     const userId = req.session.userId;
 
     try {
-        const checkoutData = req.session.buyNowItem
-            ? await buildBuyNowCheckoutData(userId, req.session.buyNowItem, req)
-            : await checkoutService.prepareCheckout(userId, req);
+        req.session.checkoutContext = {
+            type: 'cart'
+        };
+
+        const checkoutData = await checkoutService.prepareCheckout(userId, req);
         const wallet = await walletService.getWallet(userId);
 
         res.render('user/checkout', {
@@ -28,6 +52,59 @@ const getCheckoutPage = async (req, res, next) => {
             error.message === 'Cart is empty' ||
             error.message === 'Invalid cart items present' ||
             error.message === 'No delivery address selected'
+        ) {
+            return res.redirect(`/cart?error=${encodeURIComponent(error.message || 'checkout')}`);
+        }
+
+        return next(error);
+    }
+};
+
+const getBuyNowCheckoutPage = async (req, res, next) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+
+    const userId = req.session.userId;
+    const context = req.session.checkoutContext;
+
+    if (!context || context.type !== 'buyNow' || !context.item) {
+        return res.redirect('/cart');
+    }
+
+    try {
+        syncBuyNowSessionState(req, buildBuyNowContextItem(context.item, context.item.price));
+
+        const checkoutData = await buildBuyNowCheckoutData(userId, req.session.buyNowItem, req);
+        const currentItem = checkoutData && Array.isArray(checkoutData.items) ? checkoutData.items[0] : null;
+
+        if (currentItem) {
+            syncBuyNowSessionState(req, buildBuyNowContextItem({
+                ...context.item,
+                productId: currentItem.productId,
+                variantId: currentItem.variantId,
+                quantity: currentItem.quantity,
+                selectedOfferId: currentItem.selectedOfferId
+            }, currentItem.priceSnapshot));
+        }
+
+        const wallet = await walletService.getWallet(userId);
+
+        return res.render('user/checkout', {
+            checkout: checkoutData,
+            walletBalance: Number(wallet && wallet.balance ? wallet.balance : 0),
+            razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
+            RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || ''
+        });
+    } catch (error) {
+        if (
+            error.message === 'Product not available'
+            || error.message === 'Variant not found'
+            || error.message === 'Out of stock'
+            || error.message === 'Quantity exceeds available stock'
+            || error.message === 'No delivery address selected'
+            || error.message === 'Invalid product selection'
+            || error.message === 'Invalid quantity'
         ) {
             return res.redirect(`/cart?error=${encodeURIComponent(error.message || 'checkout')}`);
         }
@@ -82,12 +159,12 @@ const buyNow = async (req, res) => {
             });
         }
 
-        req.session.buyNowItem = {
-            productId: String(productId),
-            variantId: String(variantId),
+        syncBuyNowSessionState(req, buildBuyNowContextItem({
+            productId,
+            variantId,
             quantity: normalizedQuantity,
-            selectedOfferId: mongoose.Types.ObjectId.isValid(selectedOfferId) ? String(selectedOfferId) : null
-        };
+            selectedOfferId
+        }));
 
         return res.json({
             success: true
@@ -103,6 +180,9 @@ const buyNow = async (req, res) => {
 const clearBuyNow = async (req, res) => {
     if (req.session) {
         delete req.session.buyNowItem;
+        if (req.session.checkoutContext && req.session.checkoutContext.type === 'buyNow') {
+            delete req.session.checkoutContext;
+        }
     }
 
     return res.json({
@@ -110,8 +190,24 @@ const clearBuyNow = async (req, res) => {
     });
 };
 
+const retryCheckout = (req, res) => {
+    const context = req.session.checkoutContext;
+
+    if (!context || !context.type) {
+        return res.redirect('/cart');
+    }
+
+    if (context.type === 'buyNow') {
+        return res.redirect('/checkout/buy-now');
+    }
+
+    return res.redirect('/checkout');
+};
+
 module.exports = {
     getCheckoutPage,
+    getBuyNowCheckoutPage,
     buyNow,
-    clearBuyNow
+    clearBuyNow,
+    retryCheckout
 };

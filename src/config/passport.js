@@ -35,17 +35,26 @@ const configurePassport = () => {
                         return done(null, user);
                     }
 
-                    // Step 2: Find active (non-deleted) user by email — link Google account
+                    // Step 2: Find active (non-deleted) user by email and preserve the stored role
                     if (email) {
-                        user = await User.findOne({ email: email, isDeleted: { $ne: true } });
+                        user = await User.findOne({ email: email.toLowerCase().trim(), isDeleted: { $ne: true } });
 
                         if (user) {
                             if (user.isBlocked) return done(new Error('User account is blocked'), null);
-                            user.googleId = profile.id;
+
+                            if (!user.googleId) {
+                                user.googleId = profile.id;
+                            }
+
                             // Update profile image if empty or default
                             if (googlePhoto && !user.profileImage) {
                                 user.profileImage = googlePhoto;
                             }
+
+                            if (!user.isVerified) {
+                                user.isVerified = true;
+                            }
+
                             await user.save();
                             return done(null, user);
                         }
@@ -62,8 +71,9 @@ const configurePassport = () => {
                     user = await User.create({
                         googleId: profile.id,
                         name: profile.displayName,
-                        email: email,
+                        email: email ? email.toLowerCase().trim() : email,
                         profileImage: googlePhoto || null,
+                        role: 'user',
                         isVerified: true,
                         isDeleted: false,
                         isBlocked: false,

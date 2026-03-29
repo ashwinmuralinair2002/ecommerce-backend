@@ -433,19 +433,14 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
                 throw new AppError('Refund already in progress', 409);
             }
 
-            if (
-                String(order.paymentMethod || '').toUpperCase() === 'COD'
-                && String(order.paymentStatus || '').toLowerCase() !== 'paid'
-            ) {
-                throw new AppError('Refund not allowed for unpaid COD orders', 400);
-            }
-
             if (!Number.isFinite(Number(item.finalPrice)) || Number(item.finalPrice) < 0) {
                 throw new AppError('Invalid refund amount', 500);
             }
 
             const refundAmount = Number(item.finalPrice);
             const transactionRef = `refund:${order.orderId}:${item.itemId}`;
+            const paymentMethod = String(order.paymentMethod || '').toUpperCase();
+            const isCOD = paymentMethod === 'COD';
 
             console.log('REFUND DEBUG:', {
                 itemId,
@@ -455,25 +450,30 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
                 gstAmount: item.gstAmount
             });
 
-            item.refundStatus = 'processing';
-            await order.save({ session, validateBeforeSave: false });
-
-            try {
-                await walletService.creditWallet(
-                    userId,
-                    refundAmount,
-                    'refund_cancelled',
-                    transactionRef,
-                    order.orderId
-                );
-            } catch (err) {
-                item.refundStatus = 'failed';
+            if (!isCOD) {
+                item.refundStatus = 'processing';
                 await order.save({ session, validateBeforeSave: false });
-                throw new AppError('Wallet refund failed. Cancellation aborted.', 500);
-            }
 
-            item.refundStatus = 'processed';
-            item.refundedAt = new Date();
+                try {
+                    await walletService.creditWallet(
+                        userId,
+                        refundAmount,
+                        'refund_cancelled',
+                        transactionRef,
+                        order.orderId,
+                        { session }
+                    );
+                } catch (err) {
+                    item.refundStatus = 'failed';
+                    await order.save({ session, validateBeforeSave: false });
+                    throw new AppError('Wallet refund failed. Cancellation aborted.', 500);
+                }
+
+                item.refundStatus = 'processed';
+                item.refundedAt = new Date();
+            } else {
+                item.refundStatus = 'none';
+            }
 
             await order.save({ session });
 

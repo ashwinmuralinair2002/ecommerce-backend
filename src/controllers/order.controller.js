@@ -38,6 +38,7 @@ const onlineSchema = z.object({
 const placeOrder = async (req, res) => {
     try {
         const userId = req.session.userId;
+        const checkoutContext = req.session.checkoutContext || null;
         const {
             paymentMethod,
             razorpay_payment_id,
@@ -54,7 +55,14 @@ const placeOrder = async (req, res) => {
         }
 
         const parsedPaymentMethod = baseParse.data.paymentMethod || 'COD';
-        const buyNowItem = req.session.buyNowItem || null;
+        const buyNowItem = checkoutContext && checkoutContext.type === 'buyNow' && checkoutContext.item
+            ? {
+                productId: checkoutContext.item.productId,
+                variantId: checkoutContext.item.variantId,
+                quantity: checkoutContext.item.quantity,
+                selectedOfferId: checkoutContext.item.selectedOfferId || null
+            }
+            : null;
 
         if (parsedPaymentMethod === 'online') {
             const onlineParse = onlineSchema.safeParse(req.body);
@@ -80,6 +88,7 @@ const placeOrder = async (req, res) => {
             if (existingOrder) {
                 console.warn('Duplicate online payment attempt:', razorpay_payment_id);
                 delete req.session.buyNowItem;
+                delete req.session.checkoutContext;
                 return res.json({
                     success: true,
                     message: 'Order already processed',
@@ -135,6 +144,7 @@ const placeOrder = async (req, res) => {
         }
 
         delete req.session.buyNowItem;
+        delete req.session.checkoutContext;
 
         return res.json({
             success: true,

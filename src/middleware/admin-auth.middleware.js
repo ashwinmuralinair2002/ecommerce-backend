@@ -1,14 +1,6 @@
-// Admin authentication middleware ensuring admin session
-const User = require('../models/user.model');
+// Admin authentication middleware ensuring admin role access
+const { requireAdmin } = require('./role-auth.middleware');
 
-const ensureAdminAuthenticated = async (req, res, next) => {
-    // Strict Admin Session Check
-    if (req.session && req.session.userId && req.session.role === 'admin') {
-        return next();
-    }
-
-    // Auth Failed
-    res.redirect('/login');
-};
+const ensureAdminAuthenticated = (req, res, next) => requireAdmin(req, res, next);
 
 module.exports = { ensureAdminAuthenticated };

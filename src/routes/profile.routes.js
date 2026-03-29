@@ -4,8 +4,10 @@ const router = express.Router();
 const profileController = require('../controllers/profile.controller');
 const profileUpload = require('../middleware/profile-upload.middleware');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
+const { requireUser } = require('../middleware/role-auth.middleware');
 
-router.use(ensureAuthenticated); // Apply strict session check to all profile routes
+router.use(ensureAuthenticated);
+router.use(requireUser);
 
 router.get('/', profileController.getProfile);
 router.put('/', profileController.updateProfile);

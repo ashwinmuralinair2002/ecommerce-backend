@@ -3,6 +3,7 @@ const paymentService = require('../services/payment.service');
 const createRazorpayOrderController = async (req, res) => {
     try {
         const userId = req.session && req.session.userId;
+        const checkoutContext = req.session && req.session.checkoutContext ? req.session.checkoutContext : null;
 
         if (!userId) {
             return res.status(401).json({
@@ -11,7 +12,24 @@ const createRazorpayOrderController = async (req, res) => {
             });
         }
 
-        const razorpayOrder = await paymentService.createRazorpayOrder(userId, req.session.buyNowItem || null, req);
+        if (checkoutContext && checkoutContext.type === 'cart') {
+            req.session.checkoutContext = {
+                type: 'cart'
+            };
+        }
+
+        const razorpayOrder = await paymentService.createRazorpayOrder(
+            userId,
+            checkoutContext && checkoutContext.type === 'buyNow' && checkoutContext.item
+                ? {
+                    productId: checkoutContext.item.productId,
+                    variantId: checkoutContext.item.variantId,
+                    quantity: checkoutContext.item.quantity,
+                    selectedOfferId: checkoutContext.item.selectedOfferId || null
+                }
+                : null,
+            req
+        );
 
         return res.json({
             success: true,

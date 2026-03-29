@@ -227,14 +227,14 @@ const handleGoogleAuthCallback = (req, res, next) => {
 
             // Standardize Session
             req.session.userId = req.user._id.toString();
-            req.session.role = req.user.role || 'user';
+            req.session.role = req.user.role;
 
             req.session.save((saveError) => {
                 if (saveError) {
                     console.error('Google Auth Session Save Error:', saveError);
                     return res.redirect('/login');
                 }
-                return res.redirect('/');
+                return res.redirect(req.user.role === 'admin' ? '/admin/dashboard' : '/');
             });
         });
     })(req, res, next);

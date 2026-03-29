@@ -116,9 +116,8 @@
                             const variant = item.variant || {};
                             const quantity = Number(item.quantity || 0);
                             const basePrice = Number(item.priceSnapshot || 0);
-                            const offerDiscountPerUnit = Number(item.offerDiscountPerUnit || 0);
-                            const finalPrice = Number(item.finalUnitPrice || (basePrice - offerDiscountPerUnit) || 0);
-                            const subtotal = finalPrice * quantity;
+                            const offerDiscount = Number(item.offerDiscount || (Number(item.offerDiscountPerUnit || 0) * quantity) || 0);
+                            const finalSubtotal = Number(item.finalSubtotal || item.itemSubtotal || 0);
                             const variantImages = Array.isArray(variant.images) ? variant.images : [];
                             const variantImage = variantImages[0];
                             const productImageUrl = variantImage && variantImage.url ? variantImage.url : placeholderImage;
@@ -142,16 +141,16 @@
                                                 <div class="text-right">
                                                     <p class="text-gray-500">Price Breakdown</p>
                                                     <p class="font-semibold text-primary"><%= formatCurrency(basePrice) %></p>
-                                                    <% if (offerDiscountPerUnit > 0) { %>
-                                                        <p class="text-xs text-green-600">- <%= formatCurrency(offerDiscountPerUnit) %></p>
-                                                        <p class="text-xs text-green-700">You saved <%= formatCurrency(offerDiscountPerUnit) %> with this offer</p>
+                                                    <% if (offerDiscount > 0) { %>
+                                                        <p class="text-xs text-green-600">- <%= formatCurrency(offerDiscount) %></p>
+                                                        <p class="text-xs text-green-700">You saved <%= formatCurrency(offerDiscount) %> with this offer</p>
                                                     <% } %>
-                                                    <p class="font-bold text-primary">= <%= formatCurrency(finalPrice) %></p>
+                                                    <p class="font-bold text-primary">= <%= formatCurrency(finalSubtotal) %></p>
                                                 </div>
 
                                                 <div class="text-right">
                                                     <p class="text-gray-500">Subtotal</p>
-                                                    <p class="font-bold text-primary"><%= formatCurrency(subtotal) %></p>
+                                                    <p class="font-bold text-primary"><%= formatCurrency(finalSubtotal) %></p>
                                                 </div>
                                             </div>
                                     </div>
@@ -819,12 +818,7 @@
                                 contact: '9999999999'
                             },
                             modal: {
-                                ondismiss: async function () {
-                                    try {
-                                        await fetch('/api/checkout/clear-buy-now', { method: 'POST' });
-                                    } catch (error) {
-                                        console.error('Failed to clear Buy Now session:', error);
-                                    }
+                                ondismiss: function () {
                                     window.location.href = "/payment-failure";
                                 }
                             },
@@ -855,13 +849,8 @@
                         console.log("RAZORPAY KEY FINAL:", options.key);
 
                         const rzp = new Razorpay(options);
-                        rzp.on('payment.failed', async function (response) {
+                        rzp.on('payment.failed', function (response) {
                             console.error('RAZORPAY FAILURE:', response.error);
-                            try {
-                                await fetch('/api/checkout/clear-buy-now', { method: 'POST' });
-                            } catch (error) {
-                                console.error('Failed to clear Buy Now session:', error);
-                            }
                             window.location.href = "/payment-failure";
                         });
                         rzp.open();

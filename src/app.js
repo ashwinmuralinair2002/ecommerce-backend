@@ -25,6 +25,7 @@ const requestLogger = require('./middleware/request-logger.middleware');
 const attachSessionUser = require('./middleware/session-user.middleware');
 const injectDevOtp = require('./middleware/dev-otp-inject.middleware');
 const globalErrorHandler = require('./middleware/error-handler.middleware');
+const redirectAdminHome = require('./middleware/admin-home-redirect.middleware');
 require('dotenv').config();
 
 const app = express();
@@ -80,7 +81,7 @@ app.use('/api', orderRoutes);
 
 // View Routes
 app.use(addressRoutes);
-app.get('/', getHomePage);
+app.get('/', redirectAdminHome, getHomePage);
 app.use(homeRoutes);
 app.use('/account', accountRoutes);
 app.use(authPagesRoutes);
