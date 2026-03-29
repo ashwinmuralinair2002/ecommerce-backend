@@ -1,5 +1,6 @@
 const Product = require('../models/Product');
 const Offer = require('../models/offer.model');
+const Coupon = require('../models/coupon.model');
 const User = require('../models/user.model');
 const AppError = require('./AppError');
 const { getCachedOffers } = require('./offer-cache');
@@ -69,6 +70,30 @@ const buildBuyNowCheckoutData = async (userId, buyNowItem, req) => {
     }
 
     const activeOffers = await getCachedOffers(Offer);
+    const couponCodeRaw = req?.body?.couponCode || req?.query?.couponCode || '';
+    const couponCode = String(couponCodeRaw)
+        .trim()
+        .toUpperCase();
+    let coupon = null;
+    const now = new Date();
+
+    if (couponCode) {
+        coupon = await Coupon.findOne({
+            code: couponCode,
+            isDeleted: false,
+            isActive: true,
+            startDate: { $lte: now },
+            endDate: { $gte: now }
+        }).lean();
+    }
+
+    const couponMeta = coupon
+        ? {
+            code: coupon.code,
+            discountType: coupon.discountType,
+            discountValue: coupon.discountValue
+        }
+        : null;
 
     const pricingItems = [{
         priceSnapshot: Number(unitPrice ?? 0),
@@ -78,7 +103,7 @@ const buildBuyNowCheckoutData = async (userId, buyNowItem, req) => {
         brandId: product.brand?._id || product.brand || null,
         selectedOfferId: buyNowItem?.selectedOfferId || null
     }];
-    const pricing = calculatePricing(pricingItems, activeOffers);
+    const pricing = await calculatePricing(pricingItems, activeOffers, coupon, userId);
 
     return {
         items: [
@@ -108,8 +133,14 @@ const buildBuyNowCheckoutData = async (userId, buyNowItem, req) => {
             totalItems: pricing.totalItems,
             subtotal: pricing.subtotal,
             gst: pricing.gst,
-            finalTotal: pricing.finalTotal
+            finalTotal: pricing.finalTotal,
+            offerDiscountTotal: pricing.offerDiscountTotal,
+            couponDiscount: pricing.couponDiscount,
+            discountedSubtotal: pricing.discountedSubtotal,
+            couponApplied: pricing.couponApplied,
+            couponValidationReason: pricing.couponValidationReason
         },
+        coupon: couponMeta,
         address: selectedAddress
     };
 };

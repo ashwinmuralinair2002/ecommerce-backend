@@ -11,7 +11,7 @@ const createRazorpayOrderController = async (req, res) => {
             });
         }
 
-        const razorpayOrder = await paymentService.createRazorpayOrder(userId, req.session.buyNowItem || null);
+        const razorpayOrder = await paymentService.createRazorpayOrder(userId, req.session.buyNowItem || null, req);
 
         return res.json({
             success: true,

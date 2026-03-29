@@ -1,6 +1,8 @@
 // Admin management controller for customer and system operations
 const mongoose = require('mongoose');
 const Offer = require('../models/offer.model');
+const Coupon = require('../models/coupon.model');
+const CouponUsage = require('../models/coupon-usage.model');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
@@ -10,6 +12,7 @@ const WalletTransaction = require('../models/wallet-transaction.model');
 const Order = require('../models/order.model');
 const { attachOrderIds } = require('./wallet.controller');
 const { createOfferSchema } = require('../validators/offer.validator');
+const { createCouponSchema, couponValidationRules } = require('../validators/coupon.validator');
 const { clearOfferCache } = require('../utils/offer-cache');
 const profileService = require('../services/profile.service');
 const { Parser } = require('json2csv');
@@ -121,6 +124,44 @@ const buildOfferFormView = async ({
             ? 'Update the offer details while keeping the pricing engine in sync.'
             : 'Set up a targeted offer and keep it ready for the pricing engine.',
         submitLabel: formMode === 'edit' ? 'Update Offer' : 'Create Offer'
+    };
+};
+
+const buildCouponFormView = ({
+    errors = [],
+    oldInput = {},
+    formError = null,
+    coupon = null,
+    isEditMode = false
+} = {}) => {
+    const normalizedOldInput = {
+        code: oldInput?.code || '',
+        discountType: oldInput?.discountType || 'PERCENTAGE',
+        discountValue: oldInput?.discountValue || '',
+        maxDiscount: oldInput?.maxDiscount || '',
+        minOrderValue: oldInput?.minOrderValue ?? '',
+        usageLimit: oldInput?.usageLimit || '',
+        usagePerUser: oldInput?.usagePerUser || '',
+        startDate: formatDateForInput(oldInput?.startDate),
+        endDate: formatDateForInput(oldInput?.endDate),
+        isActive: oldInput?.isActive === false
+            ? false
+            : String(oldInput?.isActive || 'true') !== 'false'
+    };
+
+    return {
+        errors,
+        fieldErrors: mapIssuesToFields(errors),
+        oldInput: normalizedOldInput,
+        formData: normalizedOldInput,
+        couponId: coupon?._id || null,
+        formError,
+        validationRules: couponValidationRules,
+        isEditMode,
+        coupon,
+        pageTitle: isEditMode ? 'Edit Coupon' : 'Create Coupon',
+        formAction: isEditMode ? `/admin/coupons/${coupon?._id}/edit` : '/admin/coupons/create',
+        submitLabel: isEditMode ? 'Update Coupon' : 'Create Coupon'
     };
 };
 
@@ -873,6 +914,356 @@ const getOffersPage = async (req, res) => {
     }
 };
 
+// @desc    Get Coupons Page
+// @route   GET /admin/coupons
+const getCouponsPage = async (req, res) => {
+    try {
+        const {
+            page = 1,
+            search: rawSearch = '',
+            status = '',
+            discountType = ''
+        } = req.query;
+        const search = String(rawSearch || '').trim();
+
+        const query = {
+            isDeleted: false
+        };
+
+        if (search) {
+            query.code = { $regex: escapeRegex(search), $options: 'i' };
+        }
+
+        if (status === 'active') {
+            query.isActive = true;
+        } else if (status === 'inactive') {
+            query.isActive = false;
+        }
+
+        if (discountType === 'FLAT' || discountType === 'PERCENTAGE') {
+            query.discountType = discountType;
+        }
+
+        const currentPage = Math.max(Number(page) || 1, 1);
+        const limit = 10;
+        const skip = (currentPage - 1) * limit;
+
+        const [coupons, total] = await Promise.all([
+            Coupon.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Coupon.countDocuments(query)
+        ]);
+
+        return res.render('admin/coupons', {
+            coupons,
+            currentPage,
+            totalPages: Math.max(Math.ceil(total / limit), 1),
+            filters: {
+                search,
+                status,
+                discountType
+            },
+            formError: null
+        });
+    } catch (error) {
+        return res.status(500).render('admin/coupons', {
+            coupons: [],
+            currentPage: 1,
+            totalPages: 1,
+            filters: {
+                search: '',
+                status: '',
+                discountType: ''
+            },
+            formError: 'Failed to load coupons'
+        });
+    }
+};
+
+// @desc    Get Create Coupon Page
+// @route   GET /admin/coupons/create
+const getCreateCouponPage = async (req, res) => {
+    return res.render('admin/create-coupon', buildCouponFormView());
+};
+
+// @desc    Check Coupon Code Availability
+// @route   GET /admin/coupons/check-code
+const checkCouponCode = async (req, res) => {
+    try {
+        const code = String(req.query.code || '').trim().toUpperCase();
+        const excludeId = req.query.excludeId;
+
+        if (!code) {
+            return res.json({ exists: false });
+        }
+
+        const query = {
+            code,
+            isDeleted: false
+        };
+
+        if (excludeId && mongoose.Types.ObjectId.isValid(excludeId)) {
+            query._id = { $ne: excludeId };
+        }
+
+        const existing = await Coupon.exists(query);
+
+        return res.json({ exists: Boolean(existing) });
+    } catch (error) {
+        return res.status(500).json({ exists: false, error: true });
+    }
+};
+
+// @desc    Get Edit Coupon Page
+// @route   GET /admin/coupons/:id/edit
+const getEditCouponPage = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.redirect('/admin/coupons');
+        }
+
+        const [coupon, totalUsage, uniqueUsers] = await Promise.all([
+            Coupon.findOne({
+                _id: id,
+                isDeleted: false
+            }).lean(),
+            CouponUsage.countDocuments({ couponId: id }),
+            CouponUsage.distinct('userId', { couponId: id })
+        ]);
+
+        if (!coupon) {
+            return res.redirect('/admin/coupons');
+        }
+
+        return res.render('admin/create-coupon', buildCouponFormView({
+            oldInput: coupon,
+            coupon,
+            isEditMode: true
+        }));
+    } catch (error) {
+        return res.redirect('/admin/coupons');
+    }
+};
+
+// @desc    Create Coupon
+// @route   POST /admin/coupons/create
+const createCoupon = async (req, res) => {
+    try {
+        const normalizeDate = (value) => {
+            if (!value) return undefined;
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                return value;
+            }
+
+            const parts = String(value).split('/');
+            if (parts.length === 3) {
+                const [day, month, year] = parts;
+                return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+
+            return value;
+        };
+
+        const normalizedBody = {
+            ...req.body,
+            discountValue: Number(req.body.discountValue || 0),
+            minOrderValue: Number(req.body.minOrderValue || 0),
+            usageLimit: req.body.usageLimit ? Number(req.body.usageLimit) : undefined,
+            usagePerUser: req.body.usagePerUser ? Number(req.body.usagePerUser) : undefined,
+            maxDiscount:
+                req.body.maxDiscount && Number(req.body.maxDiscount) > 0
+                    ? Number(req.body.maxDiscount)
+                    : undefined,
+            startDate: normalizeDate(req.body.startDate),
+            endDate: normalizeDate(req.body.endDate),
+            code: String(req.body.code || '').trim().toUpperCase(),
+            isActive: req.body.isActive === 'false' ? false : Boolean(req.body.isActive)
+        };
+        const body = normalizedBody;
+
+        const parsed = createCouponSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+                errors: parsed.error.issues,
+                oldInput: body,
+                formError: null
+            }));
+        }
+
+        const existing = await Coupon.findOne({
+            code: body.code,
+            isDeleted: false
+        });
+
+        if (existing) {
+            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+                errors: [{ path: ['code'], message: 'Coupon already exists' }],
+                oldInput: body,
+                formError: 'Duplicate coupon code'
+            }));
+        }
+
+        const coupon = new Coupon(parsed.data);
+        console.log('FINAL DATA BEFORE SAVE:', parsed.data);
+        await coupon.save();
+
+        return res.redirect('/admin/coupons');
+    } catch (error) {
+        console.error('========================');
+        console.error('COUPON CREATE FAILURE');
+        console.error('ERROR NAME:', error.name);
+        console.error('ERROR MESSAGE:', error.message);
+        console.error('ERROR STACK:', error.stack);
+        console.error('ERROR ERRORS:', error.errors);
+        console.error('FULL ERROR OBJECT:', error);
+        console.error('========================');
+
+        return res.render('admin/create-coupon', {
+            formError: error.message || 'Failed to create coupon',
+            formData: req.body,
+            errors: []
+        });
+    }
+};
+
+// @desc    Update Coupon
+// @route   POST /admin/coupons/:id/edit
+const updateCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.redirect('/admin/coupons');
+        }
+
+        const body = {
+            ...req.body,
+            maxDiscount:
+                req.body.maxDiscount && Number(req.body.maxDiscount) > 0
+                    ? Number(req.body.maxDiscount)
+                    : undefined,
+            code: String(req.body.code || '').trim().toUpperCase(),
+            isActive: req.body.isActive === 'false' ? false : req.body.isActive === 'true' || req.body.isActive === 'on'
+        };
+
+        const parsed = createCouponSchema.safeParse(body);
+
+        if (!parsed.success) {
+            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+                errors: parsed.error.issues,
+                oldInput: body,
+                coupon: { _id: id },
+                isEditMode: true
+            }));
+        }
+
+        const existing = await Coupon.findOne({
+            code: parsed.data.code,
+            isDeleted: false,
+            _id: { $ne: id }
+        });
+
+        if (existing) {
+            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+                errors: [{ path: ['code'], message: 'Coupon already exists' }],
+                oldInput: body,
+                formError: 'Duplicate coupon code',
+                coupon: { _id: id },
+                isEditMode: true
+            }));
+        }
+
+        await Coupon.updateOne(
+            { _id: id, isDeleted: false },
+            { $set: parsed.data }
+        );
+
+        return res.redirect(`/admin/coupons/${id}`);
+    } catch (error) {
+        return res.redirect('/admin/coupons');
+    }
+};
+
+// @desc    Get Coupon Details Page
+// @route   GET /admin/coupons/:id
+const getCouponDetailsPage = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.redirect('/admin/coupons');
+        }
+
+        const [coupon, totalUsage, uniqueUsers] = await Promise.all([
+            Coupon.findOne({
+                _id: id,
+                isDeleted: false
+            }).lean(),
+            CouponUsage.countDocuments({ couponId: id }),
+            CouponUsage.distinct('userId', { couponId: id })
+        ]);
+
+        if (!coupon) {
+            return res.redirect('/admin/coupons');
+        }
+
+        return res.render('admin/coupon-details', {
+            coupon,
+            usageStats: {
+                totalUsage,
+                uniqueUsers: uniqueUsers.length
+            },
+            now: new Date()
+        });
+    } catch (error) {
+        return res.redirect('/admin/coupons');
+    }
+};
+
+const toggleCouponStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const coupon = await Coupon.findOne({
+            _id: id,
+            isDeleted: false
+        });
+
+        if (!coupon) {
+            return res.redirect('/admin/coupons');
+        }
+
+        coupon.isActive = !coupon.isActive;
+        await coupon.save();
+
+        return res.redirect('/admin/coupons');
+    } catch (error) {
+        return res.redirect('/admin/coupons');
+    }
+};
+
+const deleteCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await Coupon.updateOne(
+            { _id: id, isDeleted: false },
+            { $set: { isDeleted: true } }
+        );
+
+        return res.redirect('/admin/coupons');
+    } catch (error) {
+        return res.redirect('/admin/coupons');
+    }
+};
+
 // @desc    Get Offer Details Page
 // @route   GET /admin/offers/:id
 const getOfferDetailsPage = async (req, res) => {
@@ -1191,6 +1582,15 @@ module.exports = {
     renderAddCustomerPage,
     addCustomer,
     getOffersPage,
+    getCouponsPage,
+    getCreateCouponPage,
+    checkCouponCode,
+    createCoupon,
+    getEditCouponPage,
+    updateCoupon,
+    getCouponDetailsPage,
+    toggleCouponStatus,
+    deleteCoupon,
     getOfferDetailsPage,
     getCreateOfferPage,
     getEditOfferPage,

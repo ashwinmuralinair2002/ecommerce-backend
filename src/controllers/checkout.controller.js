@@ -13,8 +13,8 @@ const getCheckoutPage = async (req, res, next) => {
 
     try {
         const checkoutData = req.session.buyNowItem
-            ? await buildBuyNowCheckoutData(userId, req.session.buyNowItem)
-            : await checkoutService.prepareCheckout(userId);
+            ? await buildBuyNowCheckoutData(userId, req.session.buyNowItem, req)
+            : await checkoutService.prepareCheckout(userId, req);
         const wallet = await walletService.getWallet(userId);
 
         res.render('user/checkout', {

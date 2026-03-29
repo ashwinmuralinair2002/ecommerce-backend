@@ -19,15 +19,15 @@ const verifyRazorpaySignature = (orderId, paymentId, signature) => {
     return expectedSignature === signature;
 };
 
-const createRazorpayOrder = async (userId, buyNowItem = null) => {
+const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
     try {
         if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
             throw new AppError('Razorpay is not configured', 500);
         }
 
         const checkoutData = buyNowItem
-            ? await buildBuyNowCheckoutData(userId, buyNowItem)
-            : await checkoutService.prepareCheckout(userId);
+            ? await buildBuyNowCheckoutData(userId, buyNowItem, req)
+            : await checkoutService.prepareCheckout(userId, req);
 
         if (!checkoutData || !checkoutData.pricing) {
             throw new Error('Invalid checkout state');

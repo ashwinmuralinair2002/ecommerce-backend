@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900">
+    <title>SoundWave - Coupon Details</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
+
+        <%
+            const formatCurrency = (value) => {
+                const amount = Number(value || 0);
+
+                return `₹ ${amount.toLocaleString('en-IN', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                })}`;
+            };
+
+            const getCouponStatus = (couponData, referenceTime) => {
+                const currentTime = referenceTime ? new Date(referenceTime) : new Date();
+                const start = couponData?.startDate ? new Date(couponData.startDate) : null;
+                const end = couponData?.endDate ? new Date(couponData.endDate) : null;
+
+                if (!couponData?.isActive) {
+                    return {
+                        label: 'Inactive',
+                        classes: 'bg-gray-100 text-gray-600',
+                        start,
+                        end
+                    };
+                }
+
+                if (start && currentTime < start) {
+                    return {
+                        label: 'Scheduled',
+                        classes: 'bg-amber-100 text-amber-700',
+                        start,
+                        end
+                    };
+                }
+
+                if (end && currentTime > end) {
+                    return {
+                        label: 'Expired',
+                        classes: 'bg-red-100 text-red-700',
+                        start,
+                        end
+                    };
+                }
+
+                return {
+                    label: 'Active',
+                    classes: 'bg-green-100 text-green-700',
+                    start,
+                    end
+                };
+            };
+        %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'coupons' }) %>
+            </aside>
+
+            <section class="flex-1 p-5 md:p-6">
+                <div class="w-full px-4 py-3">
+                    <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <a href="/admin/coupons" class="text-sm text-[#685BCB] hover:underline">Coupons</a>
+                            <h1 class="mt-1 text-[32px] font-bold text-[#1F1F1F]"><%= coupon?.code || 'Coupon Details' %></h1>
+                            <p class="mt-1 text-sm text-[#685BCB]">Coupon Details</p>
+                        </div>
+                        <a href="/admin/coupons/<%= coupon?._id %>/edit"
+                            class="inline-flex items-center justify-center rounded-lg h-10 px-4 bg-[#685BCB] text-sm font-bold text-white hover:bg-[#5a4dc0] transition-colors">
+                            Edit
+                        </a>
+                    </div>
+
+                    <% if (coupon) { %>
+                        <%
+                            const couponStatus = getCouponStatus(coupon, now);
+                            const start = couponStatus.start;
+                            const end = couponStatus.end;
+                        %>
+
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div class="rounded-lg bg-white p-5 shadow">
+                                <h2 class="text-lg font-semibold text-[#1F1F1F]">Basic Info</h2>
+                                <div class="pt-2 space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-500">Code</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= coupon?.code || '—' %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Discount Type</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= coupon?.discountType || '—' %></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg bg-white p-5 shadow">
+                                <h2 class="text-lg font-semibold text-[#1F1F1F]">Discount Info</h2>
+                                <div class="pt-2 space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-500">Discount Value</label>
+                                        <p class="mt-1 text-sm text-gray-800">
+                                            <%= coupon?.discountType === 'PERCENTAGE' ? `${Number(coupon?.discountValue || 0)}%` : formatCurrency(coupon?.discountValue || 0) %>
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Min Order Value</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= formatCurrency(coupon?.minOrderValue || 0) %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Max Discount</label>
+                                        <p class="mt-1 text-sm text-gray-800">
+                                            <%= coupon?.maxDiscount == null ? '—' : formatCurrency(coupon.maxDiscount) %>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg bg-white p-5 shadow">
+                                <h2 class="text-lg font-semibold text-[#1F1F1F]">Usage Info</h2>
+                                <div class="pt-2 space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-500">Used Count</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= Number(coupon?.usedCount || 0) %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Total Uses</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= usageStats?.totalUsage || 0 %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Unique Users</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= usageStats?.uniqueUsers || 0 %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Usage Limit</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= coupon?.usageLimit == null ? '∞' : Number(coupon.usageLimit) %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Per User Limit</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= coupon?.usagePerUser == null ? '∞' : Number(coupon.usagePerUser) %></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg bg-white p-5 shadow">
+                                <h2 class="text-lg font-semibold text-[#1F1F1F]">Timeline + Status</h2>
+                                <div class="pt-2 space-y-4">
+                                    <div>
+                                        <label class="text-sm text-gray-500">Current Status</label>
+                                        <div class="mt-2">
+                                            <span class="inline-flex rounded-full px-4 py-2 text-sm font-medium <%= couponStatus.classes %>">
+                                                <%= couponStatus.label %>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Start Date</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= start ? start.toLocaleDateString('en-IN') : '—' %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">End Date</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= end ? end.toLocaleDateString('en-IN') : '—' %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Created</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= coupon?.createdAt ? new Date(coupon.createdAt).toLocaleDateString('en-IN') : '—' %></p>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm text-gray-500">Last Updated</label>
+                                        <p class="mt-1 text-sm text-gray-800"><%= coupon?.updatedAt ? new Date(coupon.updatedAt).toLocaleDateString('en-IN') : '—' %></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -160,7 +160,7 @@ const buildCartResponse = async (userId, req) => {
     const oldSubtotal = pricingItems.reduce((total, item) => (
         total + (item.priceSnapshot * item.quantity)
     ), 0);
-    const pricing = calculatePricing(pricingItems, activeOffers);
+    const pricing = await calculatePricing(pricingItems, activeOffers);
     const enrichedItems = items.map((item, index) => {
         const pricingItem = pricing.itemsWithOffers[index] || {};
 

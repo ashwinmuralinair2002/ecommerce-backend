@@ -1,9 +1,12 @@
 const cartService = require('./cart.service');
 const Offer = require('../models/offer.model');
+const Coupon = require('../models/coupon.model');
 const User = require('../models/user.model');
 const AppError = require('../utils/AppError');
 const { getCachedOffers } = require('../utils/offer-cache');
+const { getCachedCoupons } = require('../utils/coupon-cache');
 const { calculatePricing } = require('../utils/pricing-engine');
+const { validateCoupon, calculateCouponDiscount } = require('../utils/coupon-engine');
 
 const MAX_CART_ITEM_QUANTITY = 5;
 
@@ -46,6 +49,30 @@ const prepareCheckout = async (userId, req) => {
         }
 
         const activeOffers = await getCachedOffers(Offer);
+        const couponCodeRaw = req?.body?.couponCode || req?.query?.couponCode || '';
+        const couponCode = String(couponCodeRaw)
+            .trim()
+            .toUpperCase();
+        let coupon = null;
+        const now = new Date();
+
+        if (couponCode) {
+            coupon = await Coupon.findOne({
+                code: couponCode,
+                isDeleted: false,
+                isActive: true,
+                startDate: { $lte: now },
+                endDate: { $gte: now }
+            }).lean();
+        }
+
+        const couponMeta = coupon
+            ? {
+                code: coupon.code,
+                discountType: coupon.discountType,
+                discountValue: coupon.discountValue
+            }
+            : null;
 
         const pricingItems = cart.items.map((item) => {
             if (item.priceSnapshot == null) {
@@ -66,7 +93,61 @@ const prepareCheckout = async (userId, req) => {
                 selectedOfferId: item.selectedOfferId || null
             };
         });
-        const pricing = calculatePricing(pricingItems, activeOffers);
+        const pricing = await calculatePricing(pricingItems, activeOffers, coupon, userId);
+        const subtotal = Number(pricing.subtotal || 0);
+        const availableCoupons = await getCachedCoupons(Coupon);
+        const applicableCoupons = (await Promise.all(availableCoupons.map(async (entry, index) => {
+                if (couponMeta && entry && entry.code === couponMeta.code) {
+                    return null;
+                }
+
+                try {
+                    const validation = await validateCoupon(entry, userId, subtotal);
+
+                    if (!validation.valid) {
+                        return null;
+                    }
+
+                    const discount = calculateCouponDiscount(subtotal, entry);
+
+                    if (!discount || discount <= 0) {
+                        return null;
+                    }
+
+                    return {
+                        code: entry.code,
+                        discount,
+                        minOrderValue: Number(entry.minOrderValue || 0),
+                        originalIndex: index
+                    };
+                } catch (error) {
+                    console.warn('Failed to validate cached coupon for checkout suggestions', {
+                        couponId: entry?._id || null,
+                        userId,
+                        error: error?.message || error
+                    });
+
+                    return null;
+                }
+            })))
+            .filter(Boolean)
+            .sort((a, b) => {
+                const discountDifference = Number(b.discount || 0) - Number(a.discount || 0);
+
+                if (discountDifference !== 0) {
+                    return discountDifference;
+                }
+
+                const minOrderDifference = Number(a.minOrderValue || 0) - Number(b.minOrderValue || 0);
+
+                if (minOrderDifference !== 0) {
+                    return minOrderDifference;
+                }
+
+                return Number(a.originalIndex || 0) - Number(b.originalIndex || 0);
+            })
+            .slice(0, 3)
+            .map(({ originalIndex, ...entry }) => entry);
 
         return {
             items: cart.items,
@@ -74,8 +155,15 @@ const prepareCheckout = async (userId, req) => {
                 totalItems: pricing.totalItems,
                 subtotal: pricing.subtotal,
                 gst: pricing.gst,
-                finalTotal: pricing.finalTotal
+                finalTotal: pricing.finalTotal,
+                offerDiscountTotal: pricing.offerDiscountTotal,
+                couponDiscount: pricing.couponDiscount,
+                discountedSubtotal: pricing.discountedSubtotal,
+                couponApplied: pricing.couponApplied,
+                couponValidationReason: pricing.couponValidationReason
             },
+            coupon: couponMeta,
+            availableCoupons: applicableCoupons,
             address: selectedAddress
         };
     } catch (error) {

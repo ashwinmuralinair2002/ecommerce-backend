@@ -17,6 +17,15 @@ router.get('/dashboard', (req, res) => {
 });
 
 router.get('/offers', adminController.getOffersPage);
+router.get('/coupons', adminController.getCouponsPage);
+router.get('/coupons/create', adminController.getCreateCouponPage);
+router.get('/coupons/check-code', adminController.checkCouponCode);
+router.post('/coupons/create', adminController.createCoupon);
+router.get('/coupons/:id/edit', adminController.getEditCouponPage);
+router.post('/coupons/:id/edit', adminController.updateCoupon);
+router.post('/coupons/:id/toggle-status', adminController.toggleCouponStatus);
+router.post('/coupons/:id/delete', adminController.deleteCoupon);
+router.get('/coupons/:id', adminController.getCouponDetailsPage);
 router.get('/offers/create', adminController.getCreateOfferPage);
 router.get('/offers/:id', adminController.getOfferDetailsPage);
 router.get('/offers/:id/edit', adminController.getEditOfferPage);

@@ -1,4 +1,5 @@
 const { getApplicableOffers, getBestOffer, calculateOfferDiscount } = require('./offer-engine');
+const { validateCoupon, calculateCouponDiscount } = require('./coupon-engine');
 
 const GST_RATE = Number(process.env.GST_RATE || 0.18);
 
@@ -20,7 +21,7 @@ const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 1
 // Duplication exists today because each flow computes pricing locally. This
 // utility is meant to become the future single source of truth during a later,
 // separate integration phase.
-const calculatePricing = (cartItems = [], offers = []) => {
+const calculatePricing = async (cartItems = [], offers = [], coupon = null, userId = null) => {
     if (!Array.isArray(cartItems)) {
         console.warn('Invalid cartItems passed to pricing engine');
 
@@ -30,6 +31,10 @@ const calculatePricing = (cartItems = [], offers = []) => {
             gst: 0,
             finalTotal: 0,
             offerDiscountTotal: 0,
+            couponDiscount: 0,
+            discountedSubtotal: 0,
+            couponApplied: false,
+            couponValidationReason: '',
             itemsWithOffers: []
         };
     }
@@ -100,8 +105,39 @@ const calculatePricing = (cartItems = [], offers = []) => {
 
         return sum + (discountPerUnit * qty);
     }, 0));
-    const gst = roundCurrency(subtotal * GST_RATE);
-    const finalTotal = roundCurrency(subtotal + gst);
+    let couponDiscount = 0;
+    let couponApplied = false;
+    let couponValidationReason = '';
+
+    if (coupon && typeof coupon === 'object') {
+        try {
+            const validation = await validateCoupon(coupon, userId, subtotal);
+
+            if (validation.valid) {
+                couponDiscount = calculateCouponDiscount(subtotal, coupon);
+                couponApplied = true;
+            } else {
+                couponValidationReason = validation.reason || 'INVALID_COUPON';
+            }
+        } catch (error) {
+            console.warn('Failed to validate coupon during pricing calculation', {
+                couponId: coupon?._id || null,
+                userId: userId || null,
+                error: error?.message || error
+            });
+            couponApplied = false;
+            couponDiscount = 0;
+            couponValidationReason = 'INVALID_COUPON';
+        }
+    }
+
+    couponDiscount = roundCurrency(Math.min(Math.max(0, Number(couponDiscount) || 0), subtotal));
+
+    const discountedSubtotal = roundCurrency(
+        Math.max(0, subtotal - couponDiscount)
+    );
+    const gst = roundCurrency(discountedSubtotal * GST_RATE);
+    const finalTotal = roundCurrency(discountedSubtotal + gst);
 
     return {
         totalItems,
@@ -109,6 +145,10 @@ const calculatePricing = (cartItems = [], offers = []) => {
         gst,
         finalTotal,
         offerDiscountTotal,
+        couponDiscount,
+        discountedSubtotal,
+        couponApplied,
+        couponValidationReason,
         itemsWithOffers
     };
 };

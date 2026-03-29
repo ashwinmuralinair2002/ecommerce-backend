@@ -122,7 +122,7 @@ const placeOrder = async (req, res) => {
             );
 
             try {
-                orderId = await orderService.placeOrder(userId, parsedPaymentMethod, req.paymentData);
+                orderId = await orderService.placeOrder(userId, parsedPaymentMethod, req.paymentData, req);
             } finally {
                 await Cart.findOneAndUpdate(
                     { userId },
@@ -131,7 +131,7 @@ const placeOrder = async (req, res) => {
                 );
             }
         } else {
-            orderId = await orderService.placeOrder(userId, parsedPaymentMethod, req.paymentData);
+            orderId = await orderService.placeOrder(userId, parsedPaymentMethod, req.paymentData, req);
         }
 
         delete req.session.buyNowItem;

@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900">
+    <title>SoundWave - Create Coupon</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('create-coupon-form');
+            const currentCouponId = <%- JSON.stringify(couponId || null) %>;
+            const rules = <%- JSON.stringify(validationRules || {}) %>;
+            const serverFieldErrors = <%- JSON.stringify(fieldErrors || {}) %>;
+            let codeCheckTimeout = null;
+            let latestCodeRequestId = 0;
+            let isCheckingCode = false;
+            const inputs = {
+                code: document.getElementById('code'),
+                discountType: document.querySelectorAll('input[name="discountType"]'),
+                discountValue: document.getElementById('discountValue'),
+                maxDiscount: document.getElementById('maxDiscount'),
+                minOrderValue: document.getElementById('minOrderValue'),
+                usageLimit: document.getElementById('usageLimit'),
+                usagePerUser: document.getElementById('usagePerUser'),
+                startDate: document.getElementById('startDate'),
+                endDate: document.getElementById('endDate'),
+                isActive: document.getElementById('isActive'),
+                isActiveHidden: document.getElementById('isActiveHidden')
+            };
+            const numericInputs = [
+                inputs.discountValue,
+                inputs.minOrderValue,
+                inputs.maxDiscount,
+                inputs.usageLimit,
+                inputs.usagePerUser
+            ].filter(Boolean);
+            const submitBtn = document.getElementById('submitBtn');
+            const fieldErrors = Object.keys(serverFieldErrors).reduce((acc, key) => {
+                acc[key] = true;
+                return acc;
+            }, {});
+            const initialRequiredFields = {
+                code: !String(inputs.code.value || '').trim(),
+                discountValue: !String(inputs.discountValue.value || '').trim(),
+                startDate: !String(inputs.startDate.value || '').trim(),
+                endDate: !String(inputs.endDate.value || '').trim()
+            };
+
+            Object.entries(initialRequiredFields).forEach(([field, isInvalid]) => {
+                if (!(field in fieldErrors)) {
+                    fieldErrors[field] = isInvalid;
+                }
+            });
+
+            const getSelectedDiscountType = () => {
+                const checked = Array.from(inputs.discountType).find((input) => input.checked);
+                return checked ? checked.value : 'PERCENTAGE';
+            };
+
+            const getErrorNode = (fieldName) => document.getElementById(`${fieldName}-client-error`);
+            const getSuccessNode = (fieldName) => document.getElementById(`${fieldName}-success`);
+            const getFieldName = (input) => input?.dataset?.field || input?.name || input?.id;
+
+            const setFieldInvalid = (field, isInvalid) => {
+                fieldErrors[field] = Boolean(isInvalid);
+                updateSubmitState();
+            };
+
+            const updateSubmitState = () => {
+                const hasErrors = Object.values(fieldErrors).some(Boolean) || isCheckingCode;
+                submitBtn.disabled = hasErrors;
+                submitBtn.classList.toggle('opacity-60', hasErrors);
+                submitBtn.classList.toggle('cursor-not-allowed', hasErrors);
+            };
+
+            const setClientError = (fieldName, message) => {
+                const node = getErrorNode(fieldName);
+                if (!node) return;
+                node.textContent = message || '';
+                node.classList.toggle('hidden', !message);
+                setFieldInvalid(fieldName, Boolean(message));
+
+                if (message) {
+                    setClientSuccess(fieldName, '');
+                }
+            };
+
+            const setClientSuccess = (fieldName, message) => {
+                const node = getSuccessNode(fieldName);
+                if (!node) return;
+                node.textContent = message || '';
+                node.classList.toggle('hidden', !message);
+            };
+
+            const showError = (input, message) => {
+                const fieldName = getFieldName(input);
+                if (!fieldName) return;
+                setClientError(fieldName, message);
+            };
+
+            const clearError = (input) => {
+                const fieldName = getFieldName(input);
+                if (!fieldName) return;
+                setClientError(fieldName, '');
+            };
+
+            const normalizeNumber = (value) => {
+                if (value == null || String(value).trim() === '') {
+                    return null;
+                }
+
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : NaN;
+            };
+
+            const normalizeCodeValue = (value) => String(value || '').trim().toUpperCase();
+
+            const toggleMaxDiscount = () => {
+                const wrapper = inputs.maxDiscount.closest('.form-group');
+                const shouldShow = getSelectedDiscountType() === 'PERCENTAGE';
+                wrapper.style.display = shouldShow ? 'block' : 'none';
+                if (!shouldShow) {
+                    inputs.maxDiscount.value = '';
+                    clearError(inputs.maxDiscount);
+                    setFieldInvalid('maxDiscount', false);
+                }
+            };
+
+            const syncActiveValue = () => {
+                inputs.isActiveHidden.value = inputs.isActive.checked ? 'true' : 'false';
+            };
+
+            const validateCode = () => {
+                const value = normalizeCodeValue(inputs.code.value);
+                inputs.code.value = value;
+                setClientSuccess('code', '');
+
+                if (!value) {
+                    showError(inputs.code, 'Coupon code is required');
+                    return false;
+                }
+
+                if (value.length < rules.code.minLength) {
+                    showError(inputs.code, `Coupon code must be at least ${rules.code.minLength} characters`);
+                    return false;
+                }
+
+                if (value.length > rules.code.maxLength) {
+                    showError(inputs.code, `Coupon code cannot exceed ${rules.code.maxLength} characters`);
+                    return false;
+                }
+
+                if (/\s/.test(value)) {
+                    showError(inputs.code, 'Coupon code cannot contain spaces');
+                    return false;
+                }
+
+                if (!(new RegExp(rules.code.pattern).test(value))) {
+                    showError(inputs.code, 'Coupon code must be uppercase letters, numbers, underscores, or hyphens only');
+                    return false;
+                }
+
+                clearError(inputs.code);
+                return true;
+            };
+
+            const checkCodeAvailability = () => {
+                clearTimeout(codeCheckTimeout);
+                codeCheckTimeout = setTimeout(async () => {
+                    const code = normalizeCodeValue(inputs.code.value);
+
+                    if (!code || code.length < rules.code.minLength) {
+                        return;
+                    }
+
+                    const requestId = ++latestCodeRequestId;
+                    isCheckingCode = true;
+                    updateSubmitState();
+
+                    try {
+                        const response = await fetch(`/admin/coupons/check-code?code=${encodeURIComponent(code)}&excludeId=${encodeURIComponent(currentCouponId || '')}`);
+                        const data = await response.json();
+
+                        if (requestId !== latestCodeRequestId) {
+                            return;
+                        }
+
+                        if (data.error) {
+                            setClientSuccess('code', '');
+                            return;
+                        }
+
+                        if (data.exists) {
+                            showError(inputs.code, 'Coupon already exists');
+                            setFieldInvalid('code', true);
+                            return;
+                        }
+
+                        clearError(inputs.code);
+                        setFieldInvalid('code', false);
+                        setClientSuccess('code', 'Coupon code is available');
+                    } catch (error) {
+                        if (requestId !== latestCodeRequestId) {
+                            return;
+                        }
+
+                        setClientSuccess('code', '');
+                    } finally {
+                        if (requestId === latestCodeRequestId) {
+                            isCheckingCode = false;
+                            updateSubmitState();
+                        }
+                    }
+                }, 300);
+            };
+
+            const validateDiscountValue = () => {
+                const discountType = getSelectedDiscountType();
+                const value = normalizeNumber(inputs.discountValue.value);
+
+                if (value == null || Number.isNaN(value) || value <= rules.discountValue.min) {
+                    showError(inputs.discountValue, 'Discount value must be greater than 0');
+                    return false;
+                }
+
+                if (discountType === 'PERCENTAGE' && value > rules.percentageDiscountMax) {
+                    showError(inputs.discountValue, `Percentage discount cannot exceed ${rules.percentageDiscountMax}`);
+                    return false;
+                }
+
+                clearError(inputs.discountValue);
+                return true;
+            };
+
+            const validateMaxDiscount = () => {
+                const discountType = getSelectedDiscountType();
+                const value = normalizeNumber(inputs.maxDiscount.value);
+
+                if (discountType !== 'PERCENTAGE') {
+                    clearError(inputs.maxDiscount);
+                    return true;
+                }
+
+                if (value == null) {
+                    clearError(inputs.maxDiscount);
+                    return true;
+                }
+
+                if (Number.isNaN(value) || value < rules.maxDiscount.min) {
+                    showError(inputs.maxDiscount, 'Max discount cannot be negative');
+                    return false;
+                }
+
+                clearError(inputs.maxDiscount);
+                return true;
+            };
+
+            const validateMinOrderValue = () => {
+                const value = normalizeNumber(inputs.minOrderValue.value);
+
+                if (value == null) {
+                    clearError(inputs.minOrderValue);
+                    return true;
+                }
+
+                if (Number.isNaN(value) || value < rules.minOrderValue.min) {
+                    showError(inputs.minOrderValue, 'Minimum order value cannot be negative');
+                    return false;
+                }
+
+                clearError(inputs.minOrderValue);
+                return true;
+            };
+
+            const validatePositiveIntField = (fieldName, input, messagePrefix) => {
+                const value = normalizeNumber(input.value);
+
+                if (value == null) {
+                    clearError(input);
+                    return true;
+                }
+
+                if (Number.isNaN(value) || !Number.isInteger(value)) {
+                    showError(input, `${messagePrefix} must be a whole number`);
+                    return false;
+                }
+
+                if (value < 1) {
+                    showError(input, `${messagePrefix} must be greater than 0`);
+                    return false;
+                }
+
+                clearError(input);
+                return true;
+            };
+
+            const validateDates = () => {
+                const startDate = inputs.startDate.value.trim();
+                const endDate = inputs.endDate.value.trim();
+                let isValid = true;
+
+                clearError(inputs.startDate);
+                clearError(inputs.endDate);
+
+                if (!startDate) {
+                    showError(inputs.startDate, 'Start date is required');
+                    isValid = false;
+                }
+
+                if (!endDate) {
+                    showError(inputs.endDate, 'End date is required');
+                    isValid = false;
+                }
+
+                const start = startDate ? new Date(startDate) : null;
+                const end = endDate ? new Date(endDate) : null;
+
+                if (startDate && (!start || Number.isNaN(start.getTime()))) {
+                    showError(inputs.startDate, 'Start date is invalid');
+                    isValid = false;
+                }
+
+                if (endDate && (!end || Number.isNaN(end.getTime()))) {
+                    showError(inputs.endDate, 'End date is invalid');
+                    isValid = false;
+                }
+
+                if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end <= start) {
+                    showError(inputs.endDate, 'End date must be after start date');
+                    isValid = false;
+                }
+
+                return isValid;
+            };
+
+            const normalizeNumericInputOnInput = (input) => {
+                let value = input.value.replace(/[^\d.]/g, '');
+                const parts = value.split('.');
+
+                if (parts.length > 2) {
+                    value = parts[0] + '.' + parts.slice(1).join('');
+                }
+
+                input.value = value;
+            };
+
+            const normalizeNumericInputOnBlur = (input) => {
+                if (!input.value.trim()) {
+                    if (input === inputs.usageLimit || input === inputs.usagePerUser || input === inputs.maxDiscount) {
+                        input.value = '';
+                        return;
+                    }
+
+                    input.value = '0';
+                    return;
+                }
+
+                input.value = String(Number(input.value || 0));
+            };
+
+            const today = new Date().toISOString().split('T')[0];
+            inputs.startDate.setAttribute('min', today);
+            inputs.endDate.setAttribute('min', today);
+
+            inputs.startDate.addEventListener('change', () => {
+                inputs.endDate.setAttribute('min', inputs.startDate.value || today);
+                validateDates();
+            });
+
+            const validateForm = () => {
+                const validations = [
+                    validateCode(),
+                    validateDiscountValue(),
+                    validateMaxDiscount(),
+                    validateMinOrderValue(),
+                    validatePositiveIntField('usageLimit', inputs.usageLimit, 'Usage limit'),
+                    validatePositiveIntField('usagePerUser', inputs.usagePerUser, 'Usage per user'),
+                    validateDates()
+                ];
+
+                return validations.every(Boolean);
+            };
+
+            inputs.code.addEventListener('input', () => {
+                validateCode();
+                checkCodeAvailability();
+            });
+            inputs.code.addEventListener('blur', checkCodeAvailability);
+            inputs.startDate.addEventListener('input', validateDates);
+            inputs.endDate.addEventListener('input', validateDates);
+            inputs.discountType.forEach((input) => {
+                input.addEventListener('change', () => {
+                    toggleMaxDiscount();
+                    validateDiscountValue();
+                    validateMaxDiscount();
+                });
+            });
+            numericInputs.forEach((input) => {
+                input.addEventListener('input', () => {
+                    normalizeNumericInputOnInput(input);
+
+                    if (input === inputs.discountValue) validateDiscountValue();
+                    if (input === inputs.minOrderValue) validateMinOrderValue();
+                    if (input === inputs.maxDiscount) validateMaxDiscount();
+                    if (input === inputs.usageLimit) validatePositiveIntField('usageLimit', inputs.usageLimit, 'Usage limit');
+                    if (input === inputs.usagePerUser) validatePositiveIntField('usagePerUser', inputs.usagePerUser, 'Usage per user');
+                });
+
+                input.addEventListener('blur', () => {
+                    normalizeNumericInputOnBlur(input);
+
+                    if (input === inputs.discountValue) validateDiscountValue();
+                    if (input === inputs.minOrderValue) validateMinOrderValue();
+                    if (input === inputs.maxDiscount) validateMaxDiscount();
+                    if (input === inputs.usageLimit) validatePositiveIntField('usageLimit', inputs.usageLimit, 'Usage limit');
+                    if (input === inputs.usagePerUser) validatePositiveIntField('usagePerUser', inputs.usagePerUser, 'Usage per user');
+                });
+            });
+
+            form.addEventListener('submit', (event) => {
+                syncActiveValue();
+                if (Object.values(fieldErrors).some(Boolean) || isCheckingCode || !validateForm()) {
+                    event.preventDefault();
+                }
+            });
+
+            inputs.isActive.addEventListener('change', syncActiveValue);
+            toggleMaxDiscount();
+            inputs.endDate.setAttribute('min', inputs.startDate.value || today);
+            syncActiveValue();
+            updateSubmitState();
+        });
+    </script>
+</head>
+
+<body>
+    <%
+        const isEdit = typeof locals.isEditMode !== 'undefined' ? locals.isEditMode : false;
+        const formDataSafe = typeof locals.formData !== 'undefined' && locals.formData
+            ? locals.formData
+            : (typeof locals.oldInput !== 'undefined' ? locals.oldInput : {});
+        const errorsSafe = Array.isArray(locals.errors) ? locals.errors : [];
+
+        const getError = (field) =>
+            errorsSafe.find((e) => Array.isArray(e.path) && e.path[0] === field)?.message;
+    %>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'coupons' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="max-w-5xl mx-auto">
+                    <div class="mb-6 flex flex-wrap justify-between gap-3">
+                        <div>
+                            <a href="/admin/coupons" class="text-sm text-[#685BCB] hover:underline">Coupons</a>
+                            <h1 class="mt-2 text-[32px] font-bold text-[#1F1F1F]"><%= pageTitle || (isEdit ? 'Edit Coupon' : 'Create Coupon') %></h1>
+                            <p class="text-sm text-[#685BCB]">Set up a coupon with strict validation and consistent checkout rules.</p>
+                        </div>
+                    </div>
+
+                    <% if (formError) { %>
+                        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"><%= formError %></div>
+                    <% } %>
+
+                    <% if (errorsSafe && errorsSafe.length) { %>
+                        <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                            Please fix the highlighted fields and try again.
+                        </div>
+                    <% } %>
+
+                    <form id="create-coupon-form" action="<%= formAction || (isEdit ? `/admin/coupons/${coupon?._id}/edit` : '/admin/coupons/create') %>" method="POST" class="space-y-6 rounded-2xl border border-[#D8D0EC] bg-white p-6 shadow-sm" novalidate>
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label for="code" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Code</label>
+                                <input id="code" name="code" type="text" value="<%= formDataSafe.code || '' %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.code ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="SAVE20" autocomplete="off">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('code') || '' %></p>
+                                <p id="code-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                                <p id="code-success" class="text-green-600 text-xs mt-1 hidden"></p>
+                            </div>
+
+                            <div>
+                                <label for="discountValue" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Discount Value</label>
+                                <input id="discountValue" name="discountValue" type="number" step="0.01" min="0" value="<%= formDataSafe.discountValue || '' %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.discountValue ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="10">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('discountValue') || '' %></p>
+                                <p id="discountValue-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Discount Type</label>
+                            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                <label class="flex items-center gap-3 rounded-xl border border-[#CFC4EA] bg-[#FAF8FF] px-4 py-3 text-sm text-[#1F1F1F]">
+                                    <input type="radio" name="discountType" value="FLAT" class="accent-[#685BCB]" <%= formDataSafe.discountType === 'FLAT' ? 'checked' : '' %>>
+                                    <span>FLAT</span>
+                                </label>
+                                <label class="flex items-center gap-3 rounded-xl border border-[#CFC4EA] bg-[#FAF8FF] px-4 py-3 text-sm text-[#1F1F1F]">
+                                    <input type="radio" name="discountType" value="PERCENTAGE" class="accent-[#685BCB]" <%= formDataSafe.discountType !== 'FLAT' ? 'checked' : '' %>>
+                                    <span>PERCENTAGE</span>
+                                </label>
+                            </div>
+                            <p class="text-red-500 text-xs mt-1"><%= getError('discountType') || '' %></p>
+                        </div>
+
+                        <div id="maxDiscountWrapper" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div class="form-group">
+                                <label for="maxDiscount" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Max Discount</label>
+                                <input id="maxDiscount" name="maxDiscount" type="number" step="0.01" min="0" value="<%= formDataSafe.maxDiscount || '' %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.maxDiscount ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="500">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('maxDiscount') || '' %></p>
+                                <p id="maxDiscount-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label for="minOrderValue" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Min Order Value</label>
+                                <input id="minOrderValue" name="minOrderValue" type="number" step="0.01" min="0" value="<%= formDataSafe.minOrderValue %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.minOrderValue ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="0">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('minOrderValue') || '' %></p>
+                                <p id="minOrderValue-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+
+                            <div>
+                                <label for="usageLimit" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Usage Limit</label>
+                                <input id="usageLimit" name="usageLimit" type="number" step="1" min="1" value="<%= formDataSafe.usageLimit || '' %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.usageLimit ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="Leave blank for unlimited">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('usageLimit') || '' %></p>
+                                <p id="usageLimit-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+
+                            <div>
+                                <label for="usagePerUser" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Per User Limit</label>
+                                <input id="usagePerUser" name="usagePerUser" type="number" step="1" min="1" value="<%= formDataSafe.usagePerUser || '' %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.usagePerUser ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="Leave blank for unlimited">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('usagePerUser') || '' %></p>
+                                <p id="usagePerUser-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div>
+                                <label for="startDate" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Start Date</label>
+                                <input id="startDate" name="startDate" type="date" value="<%= formDataSafe.startDate || '' %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.startDate ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('startDate') || '' %></p>
+                                <p id="startDate-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+
+                            <div>
+                                <label for="endDate" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">End Date</label>
+                                <input id="endDate" name="endDate" type="date" value="<%= formDataSafe.endDate || '' %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.endDate ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
+                                <p class="text-red-500 text-xs mt-1"><%= getError('endDate') || '' %></p>
+                                <p id="endDate-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Status</label>
+                            <label class="flex items-center justify-between rounded-xl border border-[#CFC4EA] bg-[#FAF8FF] px-4 py-3">
+                                <span class="text-sm text-[#1F1F1F]">Coupon is active</span>
+                                <input id="isActiveHidden" name="isActive" type="hidden" value="<%= formDataSafe.isActive ? 'true' : 'false' %>">
+                                <input id="isActive" type="checkbox" value="true" class="h-5 w-5 rounded border-[#CFC4EA] text-[#685BCB] focus:ring-[#685BCB]" <%= formDataSafe.isActive ? 'checked' : '' %>>
+                            </label>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3 pt-2">
+                            <button id="submitBtn" type="submit"
+                                class="inline-flex items-center justify-center rounded-lg h-11 px-5 bg-[#685BCB] text-white text-sm font-bold hover:bg-[#5a4dc0] transition-colors">
+                                <%= submitLabel || (isEdit ? 'Update Coupon' : 'Create Coupon') %>
+                            </button>
+                            <a href="/admin/coupons"
+                                class="inline-flex items-center justify-center rounded-lg h-11 px-5 border border-[#CFC4EA] text-sm font-semibold text-[#4B4B4B] hover:bg-[#F7F4FF] transition-colors">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

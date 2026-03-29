@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 const Cart = require('../models/cart.model');
+const Coupon = require('../models/coupon.model');
+const CouponUsage = require('../models/coupon-usage.model');
 const Order = require('../models/order.model');
 const Product = require('../models/Product');
 const checkoutService = require('./checkout.service');
 const walletService = require('../services/wallet.service');
 const AppError = require('../utils/AppError');
-const { calculatePricing } = require('../utils/pricing-engine');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const generateOrderItemId = () => `ITEM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -60,33 +61,34 @@ const buildShippingAddress = (address) => {
     };
 };
 
-const placeOrder = async (userId, paymentMethod, paymentData = {}) => {
+const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) => {
     const session = await mongoose.startSession();
+    const normalizedPaymentMethod = typeof paymentMethod === 'string'
+        ? paymentMethod.trim()
+        : '';
+    const isOnlinePayment = normalizedPaymentMethod.toLowerCase() === 'online';
 
     try {
         session.startTransaction();
 
-        const checkoutData = await checkoutService.prepareCheckout(userId);
-        const pricingItems = Array.isArray(checkoutData && checkoutData.items)
-            ? checkoutData.items.map((item) => ({
-                priceSnapshot: Number(item.priceSnapshot ?? 0),
-                quantity: Number(item.quantity || 0)
-            }))
-            : [];
-        const pricing = calculatePricing(pricingItems);
+        const checkoutData = await checkoutService.prepareCheckout(userId, req);
+        const pricing = checkoutData && checkoutData.pricing ? checkoutData.pricing : {};
         const finalTotal = Number(
             Number.isFinite(Number(pricing.finalTotal))
                 ? pricing.finalTotal
                 : 0
         );
-        const normalizedPaymentMethod = typeof paymentMethod === 'string'
-            ? paymentMethod.trim()
-            : '';
+        const couponCodeRaw = req?.body?.couponCode || req?.query?.couponCode || null;
+        const couponCode = couponCodeRaw
+            ? String(couponCodeRaw).trim().toUpperCase()
+            : null;
+        const appliedCoupon = couponCode
+            ? await Coupon.findOne({ code: couponCode, isDeleted: false }).session(session)
+            : null;
         const resolvedPaymentMethod = normalizedPaymentMethod.toLowerCase() === 'cod'
             ? 'COD'
             : normalizedPaymentMethod;
         const isWalletPayment = normalizedPaymentMethod.toLowerCase() === 'wallet';
-        const isOnlinePayment = normalizedPaymentMethod.toLowerCase() === 'online';
         const paymentStatus = isOnlinePayment || isWalletPayment ? 'paid' : 'pending';
         const razorpayPaymentId = isOnlinePayment && paymentData && paymentData.razorpayPaymentId
             ? String(paymentData.razorpayPaymentId)
@@ -200,6 +202,15 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}) => {
             totalAmount: finalTotal
         });
 
+        order.set('coupon', appliedCoupon
+            ? {
+                code: appliedCoupon.code,
+                discountType: appliedCoupon.discountType,
+                discountValue: appliedCoupon.discountValue
+            }
+            : null, { strict: false });
+        order.set('couponDiscount', Number(pricing.couponDiscount || 0), { strict: false });
+
         if (isWalletPayment) {
             try {
                 await walletService.debitWallet(
@@ -224,6 +235,62 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}) => {
         );
 
         await session.commitTransaction();
+
+        if (appliedCoupon && appliedCoupon._id && pricing.couponApplied) {
+            const usageSession = await mongoose.startSession();
+
+            try {
+                await usageSession.withTransaction(async () => {
+                    const usageCount = await CouponUsage.countDocuments({
+                        couponId: appliedCoupon._id,
+                        userId
+                    }).session(usageSession);
+
+                    if (
+                        appliedCoupon.usagePerUser
+                        && usageCount >= appliedCoupon.usagePerUser
+                    ) {
+                        throw new Error('USER_LIMIT_EXCEEDED');
+                    }
+
+                    let usageInserted = false;
+
+                    try {
+                        await CouponUsage.create([{
+                            couponId: appliedCoupon._id,
+                            userId,
+                            orderId: order._id
+                        }], { session: usageSession });
+                        usageInserted = true;
+                    } catch (error) {
+                        if (error?.code !== 11000) {
+                            throw error;
+                        }
+                    }
+
+                    if (usageInserted) {
+                        await Coupon.updateOne(
+                            { _id: appliedCoupon._id },
+                            { $inc: { usedCount: 1 } },
+                            { session: usageSession }
+                        );
+                    }
+                });
+            } catch (error) {
+                if (error?.message === 'USER_LIMIT_EXCEEDED') {
+                    throw new AppError('Coupon usage limit reached for your account', 400);
+                }
+
+                console.warn('Failed to record coupon usage after order creation', {
+                    couponId: appliedCoupon._id,
+                    userId,
+                    orderId: order._id,
+                    error: error?.message || error
+                });
+            } finally {
+                await usageSession.endSession();
+            }
+        }
 
         console.log(`Order ${order.orderId} created with payment: ${resolvedPaymentMethod || 'COD'}`);
 
