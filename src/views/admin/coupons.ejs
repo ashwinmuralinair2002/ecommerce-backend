@@ -11,15 +11,18 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         function clearSearch() {
-            const searchInput = document.getElementById('searchInput');
-            const filtersForm = document.getElementById('couponFiltersForm');
+            const searchInput = document.getElementById('couponSearch');
 
-            if (!searchInput || !filtersForm) {
+            if (!searchInput) {
                 return;
             }
 
             searchInput.value = '';
-            filtersForm.requestSubmit();
+
+            const url = new URL(window.location.href);
+            url.searchParams.delete('search');
+            url.searchParams.delete('page');
+            window.location.href = url.toString();
         }
 
         function submitCouponFilters() {
@@ -102,14 +105,14 @@
                 };
             }
 
-            if (startDate && startDate > now) {
+            if (startDate && now < startDate) {
                 return {
                     label: 'Scheduled',
                     classes: 'bg-[#fff7e6] text-[#b45309]'
                 };
             }
 
-            if (endDate && endDate < now) {
+            if (endDate && now > endDate) {
                 return {
                     label: 'Expired',
                     classes: 'bg-[#fef2f2] text-[#b91c1c]'
@@ -168,10 +171,10 @@
                         <div class="px-4 pt-1 pb-4">
                             <div class="relative">
                                 <input
-                                    id="searchInput"
+                                    id="couponSearch"
                                     type="text"
                                     name="search"
-                                    value="<%= filters?.search || '' %>"
+                                    value="<%= searchQuery || '' %>"
                                     placeholder="Search coupons..."
                                     class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
                                 <button onclick="clearSearch()"
@@ -322,30 +325,27 @@
     </div>
     <script>
         (() => {
-            const searchInput = document.querySelector('input[name="search"]');
-            if (!searchInput || !searchInput.form) return;
+            const searchInput = document.getElementById('couponSearch');
+            if (!searchInput) return;
 
-            const form = searchInput.form;
-            let isSubmitting = false;
-
-            let timeout;
-
-            form.addEventListener('submit', (event) => {
-                if (isSubmitting) {
-                    event.preventDefault();
-                    return;
-                }
-
-                isSubmitting = true;
-            });
+            let debounceTimer;
 
             searchInput.addEventListener('input', () => {
-                clearTimeout(timeout);
-                isSubmitting = false;
-                timeout = setTimeout(() => {
-                    if (isSubmitting) return;
-                    form.requestSubmit();
-                }, 300);
+                clearTimeout(debounceTimer);
+
+                debounceTimer = setTimeout(() => {
+                    const query = searchInput.value.trim();
+                    const url = new URL(window.location.href);
+
+                    if (query) {
+                        url.searchParams.set('search', query);
+                    } else {
+                        url.searchParams.delete('search');
+                    }
+
+                    url.searchParams.delete('page');
+                    window.location.href = url.toString();
+                }, 500);
             });
         })();
     </script>

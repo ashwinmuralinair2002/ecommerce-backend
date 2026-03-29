@@ -44,10 +44,15 @@ const offerSchema = new Schema({
         default: 0,
         min: 0
     },
+    maxDiscountAmount: {
+        type: Number,
+        default: null,
+        min: 0
+    },
     maxDiscount: {
         type: Number,
         default: null,
-        min: 0.01
+        min: 0
     },
     startDate: {
         type: Date,
@@ -68,6 +73,33 @@ const offerSchema = new Schema({
 }, {
     timestamps: true
 });
+
+offerSchema.pre('validate', function alignOfferGuardrails() {
+    const discountType = String(this.discountType || '').toUpperCase();
+
+    if (discountType === 'FLAT') {
+        this.maxDiscountAmount = null;
+        this.maxDiscount = null;
+    } else if (discountType === 'PERCENTAGE') {
+        if (this.maxDiscountAmount == null && this.maxDiscount != null) {
+            this.maxDiscountAmount = this.maxDiscount;
+        }
+
+        if (this.maxDiscount == null && this.maxDiscountAmount != null) {
+            this.maxDiscount = this.maxDiscountAmount;
+        }
+    }
+});
+
+offerSchema.path('maxDiscountAmount').validate(function validatePercentageMaxDiscount(value) {
+    const discountType = String(this.discountType || '').toUpperCase();
+
+    if (discountType === 'PERCENTAGE') {
+        return Number.isFinite(Number(value)) && Number(value) > 0;
+    }
+
+    return value == null;
+}, 'Max discount amount is required for percentage offers and must be empty for flat offers.');
 
 offerSchema.index({ type: 1 });
 offerSchema.index({ isActive: 1 });

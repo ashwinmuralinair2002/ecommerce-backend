@@ -89,6 +89,12 @@ const calculateOfferDiscount = (productPrice, offer) => {
         return 0;
     }
 
+    const minOrderValue = Math.max(0, Number(offer.minOrderValue ?? 0));
+
+    if (minOrderValue > 0 && safePrice < minOrderValue) {
+        return 0;
+    }
+
     const discountValue = Number(offer.discountValue);
 
     if (!Number.isFinite(discountValue) || discountValue <= 0) {
@@ -99,15 +105,22 @@ const calculateOfferDiscount = (productPrice, offer) => {
 
     if (offer.discountType === 'PERCENTAGE') {
         discount = safePrice * (discountValue / 100);
-        const maxDiscount = Number(offer.maxDiscount);
-
-        if (Number.isFinite(maxDiscount) && maxDiscount > 0) {
-            discount = Math.min(discount, maxDiscount);
-        }
     }
 
     if (offer.discountType === 'FLAT') {
         discount = discountValue;
+    }
+
+    if (offer.discountType === 'PERCENTAGE') {
+        const maxDiscountAmount = Number(
+            offer.maxDiscountAmount != null
+                ? offer.maxDiscountAmount
+                : offer.maxDiscount
+        );
+
+        if (Number.isFinite(maxDiscountAmount) && maxDiscountAmount > 0) {
+            discount = Math.min(discount, maxDiscountAmount);
+        }
     }
 
     if (!Number.isFinite(discount) || discount <= 0) {

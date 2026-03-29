@@ -12,7 +12,12 @@
         function toggleMaxDiscount() {
             const discountType = document.getElementById('discountType').value;
             const wrapper = document.getElementById('maxDiscountWrapper');
+            const maxDiscountAmountInput = document.getElementById('maxDiscountAmount');
             wrapper.classList.toggle('hidden', discountType !== 'PERCENTAGE');
+
+            if (discountType !== 'PERCENTAGE' && maxDiscountAmountInput) {
+                maxDiscountAmountInput.value = '';
+            }
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -22,7 +27,8 @@
             const typeSelect = document.getElementById('type');
             const discountTypeSelect = document.getElementById('discountType');
             const discountValueInput = document.getElementById('discountValue');
-            const maxDiscountInput = document.getElementById('maxDiscount');
+            const maxDiscountAmountInput = document.getElementById('maxDiscountAmount');
+            const minOrderValueInput = document.getElementById('minOrderValue');
             const nameInput = document.getElementById('name');
             const startDateInput = document.getElementById('startDate');
             const endDateInput = document.getElementById('endDate');
@@ -84,6 +90,17 @@
                     return false;
                 }
 
+                const minOrderValue = Number(minOrderValueInput.value);
+
+                if (
+                    discountType === 'FLAT'
+                    && Number.isFinite(minOrderValue)
+                    && value >= minOrderValue
+                ) {
+                    setClientError('discountValue', 'Discount must be less than minimum order value');
+                    return false;
+                }
+
                 setClientError('discountValue', '');
                 return true;
             }
@@ -135,17 +152,23 @@
             }
 
             function validateMaxDiscount() {
-                const maxDiscountValue = maxDiscountInput.value.trim();
+                const discountType = discountTypeSelect.value;
+                const maxDiscountValue = maxDiscountAmountInput.value.trim();
                 const numericValue = Number(maxDiscountValue);
 
-                setClientError('maxDiscount', '');
+                setClientError('maxDiscountAmount', '');
 
-                if (!maxDiscountValue) {
+                if (discountType !== 'PERCENTAGE') {
                     return true;
                 }
 
+                if (!maxDiscountValue) {
+                    setClientError('maxDiscountAmount', 'Max discount is required for percentage offers');
+                    return false;
+                }
+
                 if (!Number.isFinite(numericValue) || numericValue <= 0) {
-                    setClientError('maxDiscount', 'Max discount must be greater than 0');
+                    setClientError('maxDiscountAmount', 'Max discount amount must be greater than 0');
                     return false;
                 }
 
@@ -153,14 +176,33 @@
                     const lowestSelectedPrice = getLowestSelectedProductPrice();
 
                     if (lowestSelectedPrice == null) {
-                        setClientError('maxDiscount', 'Select at least one product before setting max discount');
+                        setClientError('maxDiscountAmount', 'Select at least one product before setting max discount');
                         return false;
                     }
 
                     if (numericValue > lowestSelectedPrice) {
-                        setClientError('maxDiscount', 'Max discount cannot exceed the selected product price');
+                        setClientError('maxDiscountAmount', 'Max discount cannot exceed the selected product price');
                         return false;
                     }
+                }
+
+                return true;
+            }
+
+            function validateMinOrderValue() {
+                const minOrderValue = minOrderValueInput.value.trim();
+
+                setClientError('minOrderValue', '');
+
+                if (!minOrderValue) {
+                    return true;
+                }
+
+                const numericValue = Number(minOrderValue);
+
+                if (!Number.isFinite(numericValue) || numericValue < 0) {
+                    setClientError('minOrderValue', 'Minimum order value cannot be negative');
+                    return false;
                 }
 
                 return true;
@@ -172,7 +214,8 @@
                     validateDiscountValue(),
                     validateTargets(),
                     validateDates(),
-                    validateMaxDiscount()
+                    validateMaxDiscount(),
+                    validateMinOrderValue()
                 ];
 
                 return validations.every(Boolean);
@@ -186,10 +229,15 @@
             discountTypeSelect.addEventListener('change', () => {
                 toggleMaxDiscount();
                 validateDiscountValue();
+                validateMaxDiscount();
             });
             nameInput.addEventListener('input', validateName);
             discountValueInput.addEventListener('input', validateDiscountValue);
-            maxDiscountInput.addEventListener('input', validateMaxDiscount);
+            maxDiscountAmountInput.addEventListener('input', validateMaxDiscount);
+            minOrderValueInput.addEventListener('input', () => {
+                validateMinOrderValue();
+                validateDiscountValue();
+            });
             startDateInput.addEventListener('input', validateDates);
             endDateInput.addEventListener('input', validateDates);
             document.querySelectorAll('input[name="applicableProducts"]').forEach((checkbox) => {
@@ -280,14 +328,23 @@
                             </div>
                         </div>
 
-                        <div id="maxDiscountWrapper" class="grid grid-cols-1 gap-5 md:grid-cols-2">
-                            <div>
-                                <label for="maxDiscount" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Max Discount</label>
-                                <input id="maxDiscount" name="maxDiscount" type="number" step="0.01" min="0" value="<%= oldInput.maxDiscount %>"
-                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.maxDiscount ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            <div id="maxDiscountWrapper">
+                                <label for="maxDiscountAmount" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Max Discount Amount</label>
+                                <input id="maxDiscountAmount" name="maxDiscountAmount" type="number" step="0.01" min="0" value="<%= oldInput.maxDiscountAmount %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.maxDiscountAmount ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
                                     placeholder="500">
-                                <% if (fieldErrors.maxDiscount) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.maxDiscount %></p><% } %>
-                                <p id="maxDiscount-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                                <% if (fieldErrors.maxDiscountAmount) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.maxDiscountAmount %></p><% } %>
+                                <p id="maxDiscountAmount-client-error" class="mt-1 hidden text-xs text-red-600"></p>
+                            </div>
+
+                            <div>
+                                <label for="minOrderValue" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Min Order Value</label>
+                                <input id="minOrderValue" name="minOrderValue" type="number" step="0.01" min="0" value="<%= oldInput.minOrderValue %>"
+                                    class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.minOrderValue ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
+                                    placeholder="1000">
+                                <% if (fieldErrors.minOrderValue) { %><p class="mt-1 text-xs text-red-600"><%= fieldErrors.minOrderValue %></p><% } %>
+                                <p id="minOrderValue-client-error" class="mt-1 hidden text-xs text-red-600"></p>
                             </div>
                         </div>
 

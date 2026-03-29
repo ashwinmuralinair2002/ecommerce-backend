@@ -14,6 +14,7 @@ const { attachOrderIds } = require('./wallet.controller');
 const { createOfferSchema } = require('../validators/offer.validator');
 const { createCouponSchema, couponValidationRules } = require('../validators/coupon.validator');
 const { clearOfferCache } = require('../utils/offer-cache');
+const AppError = require('../utils/AppError');
 const profileService = require('../services/profile.service');
 const { Parser } = require('json2csv');
 const bcrypt = require('bcryptjs');
@@ -46,6 +47,61 @@ const normalizeToArray = (val) => {
     return Array.isArray(val) ? val : [val];
 };
 
+const normalizeOfferDataForSave = (data) => {
+    if (data.discountType === 'FLAT') {
+        data.maxDiscountAmount = null;
+    }
+
+    if (data.discountType === 'PERCENTAGE') {
+        if (!data.maxDiscountAmount || Number(data.maxDiscountAmount) <= 0) {
+            throw new AppError('Max discount amount is required for percentage offers', 400);
+        }
+    }
+
+    return data;
+};
+
+const getApplicableOfferProducts = async (data) => {
+    const query = {
+        isListed: true,
+        isDeleted: false
+    };
+
+    if (data.type === 'PRODUCT') {
+        query._id = { $in: data.applicableProducts || [] };
+    } else if (data.type === 'CATEGORY') {
+        query.category = { $in: data.applicableCategories || [] };
+    } else if (data.type === 'BRAND') {
+        query.brand = { $in: data.applicableBrands || [] };
+    } else {
+        return [];
+    }
+
+    return Product.find(query).select('price').lean();
+};
+
+const enforceOfferSafetyRules = async (data) => {
+    if (data.discountType !== 'FLAT') {
+        return data;
+    }
+
+    if (Number(data.discountValue) >= Number(data.minOrderValue)) {
+        throw new AppError('Discount must be less than minimum order value', 400);
+    }
+
+    const applicableProducts = await getApplicableOfferProducts(data);
+
+    if (applicableProducts.length > 0) {
+        const cheapest = Math.min(...applicableProducts.map((product) => Number(product?.price || 0)));
+
+        if (Number(data.discountValue) >= cheapest) {
+            throw new AppError('Discount exceeds cheapest product price in selection', 400);
+        }
+    }
+
+    return data;
+};
+
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const toObjectIds = (arr) => (
@@ -63,6 +119,70 @@ const formatDateForInput = (value) => {
     }
 
     return date.toISOString().split('T')[0];
+};
+
+const normalizeAdminDateInput = (value) => {
+    if (!value) return '';
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return value;
+    }
+
+    const parts = String(value).split('/');
+
+    if (parts.length === 3) {
+        const [day, month, year] = parts;
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+
+    return String(value);
+};
+
+const normalizeDateToUTC = (dateString, isEnd = false) => {
+    if (!dateString) return null;
+
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    if (isEnd) {
+        date.setHours(23, 59, 59, 999);
+    } else {
+        date.setHours(0, 0, 0, 0);
+    }
+
+    return new Date(date.toISOString());
+};
+
+const normalizeCouponDatesForSave = (data) => {
+    const normalizedStartDate = normalizeDateToUTC(data.startDate);
+    const normalizedEndDate = normalizeDateToUTC(data.endDate, true);
+    const now = new Date();
+
+    data.startDate = normalizedStartDate;
+    data.endDate = normalizedEndDate;
+
+    if (data.startDate) {
+        const start = new Date(data.startDate);
+        const rawStartDate = normalizeAdminDateInput(data.rawStartDate || data.startDate);
+        const selectedStartDate = rawStartDate ? new Date(rawStartDate) : null;
+        const isSameDay = selectedStartDate
+            && !Number.isNaN(selectedStartDate.getTime())
+            && selectedStartDate.getFullYear() === now.getFullYear()
+            && selectedStartDate.getMonth() === now.getMonth()
+            && selectedStartDate.getDate() === now.getDate();
+
+        if (isSameDay && start < now) {
+            data.startDate = now;
+        }
+    }
+
+    delete data.rawStartDate;
+    delete data.rawEndDate;
+
+    return data;
 };
 
 const buildOfferFormState = async ({ errors = [], oldInput = {}, formError = null } = {}) => {
@@ -86,7 +206,8 @@ const buildOfferFormState = async ({ errors = [], oldInput = {}, formError = nul
         type: oldInput?.type || 'PRODUCT',
         discountType: oldInput?.discountType || 'PERCENTAGE',
         discountValue: oldInput?.discountValue || '',
-        maxDiscount: oldInput?.maxDiscount || '',
+        maxDiscountAmount: oldInput?.maxDiscountAmount ?? oldInput?.maxDiscount ?? '',
+        minOrderValue: oldInput?.minOrderValue ?? '',
         applicableProducts: normalizeSelectionArray(oldInput?.applicableProducts),
         applicableCategories: normalizeSelectionArray(oldInput?.applicableCategories),
         applicableBrands: normalizeSelectionArray(oldInput?.applicableBrands),
@@ -170,7 +291,8 @@ const getOfferOldInput = (offer = {}) => ({
     type: offer?.type || 'PRODUCT',
     discountType: offer?.discountType || 'PERCENTAGE',
     discountValue: offer?.discountValue ?? '',
-    maxDiscount: offer?.maxDiscount ?? '',
+    maxDiscountAmount: offer?.maxDiscountAmount ?? offer?.maxDiscount ?? '',
+    minOrderValue: offer?.minOrderValue ?? '',
     applicableProducts: normalizeSelectionArray((offer?.applicableProducts || []).map((id) => String(id))),
     applicableCategories: normalizeSelectionArray((offer?.applicableCategories || []).map((id) => String(id))),
     applicableBrands: normalizeSelectionArray((offer?.applicableBrands || []).map((id) => String(id))),
@@ -197,6 +319,9 @@ const validateOfferForm = async ({ body, offerId = null }) => {
     const productIds = toObjectIds(body.applicableProducts);
     const categoryIds = toObjectIds(body.applicableCategories);
     const brandIds = toObjectIds(body.applicableBrands);
+    const resolvedMaxDiscountAmount = parsed.data.maxDiscountAmount !== ''
+        ? parsed.data.maxDiscountAmount
+        : parsed.data.maxDiscount;
     const existing = await Offer.findOne({
         name: new RegExp(`^${escapeRegex(body.name)}$`, 'i'),
         isDeleted: false,
@@ -241,7 +366,12 @@ const validateOfferForm = async ({ body, offerId = null }) => {
         };
     }
 
-    if (parsed.data.type === 'PRODUCT' && parsed.data.maxDiscount != null && parsed.data.maxDiscount !== '') {
+    if (
+        parsed.data.type === 'PRODUCT'
+        && parsed.data.discountType === 'PERCENTAGE'
+        && resolvedMaxDiscountAmount != null
+        && resolvedMaxDiscountAmount !== ''
+    ) {
         const selectedProducts = await Product.find({
             _id: { $in: productIds },
             isListed: true,
@@ -252,12 +382,12 @@ const validateOfferForm = async ({ body, offerId = null }) => {
             return Math.min(minPrice, price);
         }, Number.POSITIVE_INFINITY);
 
-        if (!selectedProducts.length || parsed.data.maxDiscount > lowestSelectedPrice) {
+        if (!selectedProducts.length || resolvedMaxDiscountAmount > lowestSelectedPrice) {
             return {
                 success: false,
                 status: 400,
                 errors: [{
-                    path: ['maxDiscount'],
+                    path: ['maxDiscountAmount'],
                     message: 'Max discount cannot exceed the selected product price'
                 }],
                 oldInput: body,
@@ -271,6 +401,13 @@ const validateOfferForm = async ({ body, offerId = null }) => {
         payload: {
             ...parsed.data,
             name: body.name.toLowerCase(),
+            minOrderValue: Number(parsed.data.minOrderValue || 0),
+            maxDiscountAmount: parsed.data.discountType === 'PERCENTAGE' && resolvedMaxDiscountAmount !== '' && resolvedMaxDiscountAmount != null
+                ? Number(resolvedMaxDiscountAmount)
+                : null,
+            maxDiscount: parsed.data.discountType === 'PERCENTAGE' && resolvedMaxDiscountAmount !== '' && resolvedMaxDiscountAmount != null
+                ? Number(resolvedMaxDiscountAmount)
+                : null,
             applicableProducts: productIds,
             applicableCategories: categoryIds,
             applicableBrands: brandIds,
@@ -961,6 +1098,7 @@ const getCouponsPage = async (req, res) => {
             coupons,
             currentPage,
             totalPages: Math.max(Math.ceil(total / limit), 1),
+            searchQuery: search,
             filters: {
                 search,
                 status,
@@ -973,6 +1111,7 @@ const getCouponsPage = async (req, res) => {
             coupons: [],
             currentPage: 1,
             totalPages: 1,
+            searchQuery: '',
             filters: {
                 search: '',
                 status: '',
@@ -1054,22 +1193,6 @@ const getEditCouponPage = async (req, res) => {
 // @route   POST /admin/coupons/create
 const createCoupon = async (req, res) => {
     try {
-        const normalizeDate = (value) => {
-            if (!value) return undefined;
-
-            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                return value;
-            }
-
-            const parts = String(value).split('/');
-            if (parts.length === 3) {
-                const [day, month, year] = parts;
-                return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            }
-
-            return value;
-        };
-
         const normalizedBody = {
             ...req.body,
             discountValue: Number(req.body.discountValue || 0),
@@ -1080,8 +1203,8 @@ const createCoupon = async (req, res) => {
                 req.body.maxDiscount && Number(req.body.maxDiscount) > 0
                     ? Number(req.body.maxDiscount)
                     : undefined,
-            startDate: normalizeDate(req.body.startDate),
-            endDate: normalizeDate(req.body.endDate),
+            startDate: normalizeAdminDateInput(req.body.startDate),
+            endDate: normalizeAdminDateInput(req.body.endDate),
             code: String(req.body.code || '').trim().toUpperCase(),
             isActive: req.body.isActive === 'false' ? false : Boolean(req.body.isActive)
         };
@@ -1110,8 +1233,13 @@ const createCoupon = async (req, res) => {
             }));
         }
 
-        const coupon = new Coupon(parsed.data);
-        console.log('FINAL DATA BEFORE SAVE:', parsed.data);
+        const data = normalizeCouponDatesForSave({
+            ...parsed.data,
+            rawStartDate: body.startDate,
+            rawEndDate: body.endDate
+        });
+        const coupon = new Coupon(data);
+        console.log('FINAL DATA BEFORE SAVE:', data);
         await coupon.save();
 
         return res.redirect('/admin/coupons');
@@ -1145,10 +1273,16 @@ const updateCoupon = async (req, res) => {
 
         const body = {
             ...req.body,
+            discountValue: Number(req.body.discountValue || 0),
+            minOrderValue: Number(req.body.minOrderValue || 0),
+            usageLimit: req.body.usageLimit ? Number(req.body.usageLimit) : undefined,
+            usagePerUser: req.body.usagePerUser ? Number(req.body.usagePerUser) : undefined,
             maxDiscount:
                 req.body.maxDiscount && Number(req.body.maxDiscount) > 0
                     ? Number(req.body.maxDiscount)
                     : undefined,
+            startDate: normalizeAdminDateInput(req.body.startDate),
+            endDate: normalizeAdminDateInput(req.body.endDate),
             code: String(req.body.code || '').trim().toUpperCase(),
             isActive: req.body.isActive === 'false' ? false : req.body.isActive === 'true' || req.body.isActive === 'on'
         };
@@ -1180,9 +1314,15 @@ const updateCoupon = async (req, res) => {
             }));
         }
 
+        const data = normalizeCouponDatesForSave({
+            ...parsed.data,
+            rawStartDate: body.startDate,
+            rawEndDate: body.endDate
+        });
+
         await Coupon.updateOne(
             { _id: id, isDeleted: false },
-            { $set: parsed.data }
+            { $set: data }
         );
 
         return res.redirect(`/admin/coupons/${id}`);
@@ -1322,7 +1462,8 @@ const getCreateOfferPage = async (req, res) => {
                 type: 'PRODUCT',
                 discountType: 'PERCENTAGE',
                 discountValue: '',
-                maxDiscount: '',
+                maxDiscountAmount: '',
+                minOrderValue: '',
                 applicableProducts: [],
                 applicableCategories: [],
                 applicableBrands: [],
@@ -1401,7 +1542,8 @@ const createOffer = async (req, res) => {
             return res.status(validation.status).render('admin/create-offer', viewModel);
         }
 
-        const offer = new Offer(validation.payload);
+        const data = await enforceOfferSafetyRules(normalizeOfferDataForSave({ ...validation.payload }));
+        const offer = new Offer(data);
 
         await offer.save();
         clearOfferCache();
@@ -1411,8 +1553,10 @@ const createOffer = async (req, res) => {
         }
 
         return res.redirect('/admin/offers');
-    } catch (error) {
-        if (error?.code === 11000) {
+    } catch (err) {
+        console.error('OFFER ERROR:', err);
+
+        if (err?.code === 11000) {
             const viewModel = await buildOfferFormView({
                 errors: [{ path: ['name'], message: 'Offer name already exists' }],
                 oldInput: {
@@ -1425,6 +1569,26 @@ const createOffer = async (req, res) => {
             });
 
             return res.status(400).render('admin/create-offer', viewModel);
+        }
+
+        if (err instanceof AppError) {
+            const errorField = err.message === 'Discount exceeds cheapest product price in selection'
+                ? 'discountValue'
+                : err.message === 'Discount must be less than minimum order value'
+                    ? 'discountValue'
+                    : 'maxDiscountAmount';
+            const viewModel = await buildOfferFormView({
+                errors: [{ path: [errorField], message: err.message }],
+                oldInput: {
+                    ...req.body,
+                    applicableProducts: normalizeToArray(req.body.applicableProducts),
+                    applicableCategories: normalizeToArray(req.body.applicableCategories),
+                    applicableBrands: normalizeToArray(req.body.applicableBrands)
+                },
+                formError: err.message
+            });
+
+            return res.status(err.statusCode || 400).render('admin/create-offer', viewModel);
         }
 
         const viewModel = await buildOfferFormView({
@@ -1492,12 +1656,41 @@ const updateOffer = async (req, res) => {
             return res.status(validation.status).render('admin/create-offer', viewModel);
         }
 
-        Object.assign(offer, validation.payload);
+        const data = await enforceOfferSafetyRules(normalizeOfferDataForSave({ ...validation.payload }));
+
+        Object.assign(offer, data);
         await offer.save();
         clearOfferCache();
 
         return res.redirect(`/admin/offers/${offer._id}`);
-    } catch (error) {
+    } catch (err) {
+        console.error('OFFER ERROR:', err);
+
+        if (err instanceof AppError) {
+            const errorField = err.message === 'Discount exceeds cheapest product price in selection'
+                ? 'discountValue'
+                : err.message === 'Discount must be less than minimum order value'
+                    ? 'discountValue'
+                    : 'maxDiscountAmount';
+            const existingOffer = mongoose.Types.ObjectId.isValid(req.params.id)
+                ? await Offer.findOne({ _id: req.params.id, isDeleted: false }).lean()
+                : null;
+            const viewModel = await buildOfferFormView({
+                errors: [{ path: [errorField], message: err.message }],
+                oldInput: {
+                    ...req.body,
+                    applicableProducts: normalizeToArray(req.body.applicableProducts),
+                    applicableCategories: normalizeToArray(req.body.applicableCategories),
+                    applicableBrands: normalizeToArray(req.body.applicableBrands)
+                },
+                formError: err.message,
+                offer: existingOffer,
+                formMode: 'edit'
+            });
+
+            return res.status(err.statusCode || 400).render('admin/create-offer', viewModel);
+        }
+
         const existingOffer = mongoose.Types.ObjectId.isValid(req.params.id)
             ? await Offer.findOne({ _id: req.params.id, isDeleted: false }).lean()
             : null;
@@ -1536,7 +1729,8 @@ const toggleOffer = async (req, res) => {
         clearOfferCache();
 
         return res.json({ success: true, isActive: offer.isActive });
-    } catch (error) {
+    } catch (err) {
+        console.error('OFFER ERROR:', err);
         return res.status(500).json({ success: false, message: 'Failed to toggle offer' });
     }
 };
@@ -1555,13 +1749,16 @@ const deleteOffer = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Offer not found' });
         }
 
-        offer.isDeleted = true;
-        await offer.save();
+        await Offer.updateOne(
+            { _id: req.params.id },
+            { $set: { isDeleted: true } }
+        );
 
         clearOfferCache();
 
         return res.json({ success: true });
-    } catch (error) {
+    } catch (err) {
+        console.error('OFFER ERROR:', err);
         return res.status(500).json({ success: false, message: 'Failed to delete offer' });
     }
 };

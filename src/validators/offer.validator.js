@@ -18,7 +18,8 @@ const createOfferSchema = z.object({
     applicableCategories: z.preprocess(toArray, z.array(objectIdSchema)).optional(),
     applicableBrands: z.preprocess(toArray, z.array(objectIdSchema)).optional(),
     minOrderValue: z.coerce.number().nonnegative().optional(),
-    maxDiscount: z.union([z.literal(''), z.coerce.number().positive('Max discount must be greater than 0')]).optional(),
+    maxDiscountAmount: z.union([z.literal(''), z.coerce.number().nonnegative('Max discount amount cannot be negative')]).optional(),
+    maxDiscount: z.union([z.literal(''), z.coerce.number().nonnegative('Max discount cannot be negative')]).optional(),
     startDate: z.string().trim().min(1, 'Start date is required'),
     endDate: z.string().trim().min(1, 'End date is required')
 }).refine((data) => {
@@ -99,6 +100,26 @@ const createOfferSchema = z.object({
             path: ['discountValue'],
             message: 'Percentage discount must be greater than 0'
         });
+    }
+
+    if (data.discountType === 'FLAT') {
+        if (data.maxDiscountAmount !== '' && data.maxDiscountAmount != null) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['maxDiscountAmount'],
+                message: 'Max discount should not be set for flat offers'
+            });
+        }
+    }
+
+    if (data.discountType === 'PERCENTAGE') {
+        if (data.maxDiscountAmount === '' || data.maxDiscountAmount == null || Number(data.maxDiscountAmount) <= 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['maxDiscountAmount'],
+                message: 'Max discount is required for percentage offers'
+            });
+        }
     }
 });
 
