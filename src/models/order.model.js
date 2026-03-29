@@ -66,6 +66,24 @@ const orderItemSchema = new mongoose.Schema({
         required: true,
         min: 0
     },
+    offerDiscount: {
+        type: Number,
+        required: true,
+        default: 0,
+        min: 0
+    },
+    couponDiscount: {
+        type: Number,
+        required: true,
+        default: 0,
+        min: 0
+    },
+    finalSubtotal: {
+        type: Number,
+        required: true,
+        default: 0,
+        min: 0
+    },
     gstAmount: {
         type: Number,
         required: true,

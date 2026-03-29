@@ -26,6 +26,11 @@ const walletTransactionSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    transactionRef: {
+        type: String,
+        required: true,
+        trim: true
+    },
     referenceId: {
         type: String,
         required: true,
@@ -59,7 +64,8 @@ const walletTransactionSchema = new mongoose.Schema({
 });
 
 walletTransactionSchema.index({ userId: 1 });
-walletTransactionSchema.index({ referenceId: 1 }, { unique: true });
+walletTransactionSchema.index({ transactionRef: 1 }, { unique: true });
+walletTransactionSchema.index({ referenceId: 1 });
 walletTransactionSchema.index({ orderId: 1 });
 walletTransactionSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
 

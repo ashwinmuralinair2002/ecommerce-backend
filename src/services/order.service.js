@@ -3,52 +3,19 @@ const Cart = require('../models/cart.model');
 const Coupon = require('../models/coupon.model');
 const CouponUsage = require('../models/coupon-usage.model');
 const Order = require('../models/order.model');
+const Offer = require('../models/offer.model');
 const Product = require('../models/Product');
 const checkoutService = require('./checkout.service');
 const walletService = require('../services/wallet.service');
 const AppError = require('../utils/AppError');
+const { getCachedOffers } = require('../utils/offer-cache');
+const { calculatePricing } = require('../utils/pricing-engine');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const generateOrderItemId = () => `ITEM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-const distributeItemGst = (items, subtotal, gst) => {
-    const safeSubtotal = Number.isFinite(Number(subtotal)) ? Number(subtotal) : 0;
-    const safeGst = roundCurrency(Number.isFinite(Number(gst)) ? Number(gst) : 0);
-
-    if (!Array.isArray(items) || items.length === 0) {
-        return [];
-    }
-
-    if (safeGst === 0) {
-        return items.map(() => 0);
-    }
-
-    if (items.length === 1) {
-        return [safeGst];
-    }
-
-    if (safeSubtotal <= 0) {
-        const allocations = items.map(() => 0);
-        allocations[allocations.length - 1] = safeGst;
-
-        return allocations;
-    }
-
-    let allocatedGst = 0;
-
-    return items.map((item, index) => {
-        if (index === items.length - 1) {
-            return roundCurrency(safeGst - allocatedGst);
-        }
-
-        const itemTotal = Number.isFinite(Number(item && item.totalPrice)) ? Number(item.totalPrice) : 0;
-        const itemShare = itemTotal / safeSubtotal;
-        const itemGst = roundCurrency(itemShare * safeGst);
-        allocatedGst = roundCurrency(allocatedGst + itemGst);
-
-        return itemGst;
-    });
-};
+const buildPricingItemKey = (item) => (
+    `${String(item?.productId)}:${String(item?.selectedOfferId || 'default')}:${String(item?.priceSnapshot)}`
+);
 
 const buildShippingAddress = (address) => {
     return {
@@ -102,11 +69,33 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
         const orderId = `ORD-${Date.now()}`;
         const referenceId = `ORDER_${Date.now()}_${userId}`;
         const orderItems = [];
+        const activeOffers = await getCachedOffers(Offer);
+        const pricingItems = Array.isArray(checkoutData.items)
+            ? checkoutData.items.map((item) => ({
+                priceSnapshot: item.priceSnapshot != null
+                    ? Number(item.priceSnapshot)
+                    : 0,
+                quantity: Number(item.quantity || 0),
+                productId: item.product?._id || null,
+                categoryId: item.product?.category?._id || item.product?.category || null,
+                brandId: item.product?.brand?._id || item.product?.brand || null,
+                selectedOfferId: item.selectedOfferId || null
+            }))
+            : [];
+        const detailedPricing = await calculatePricing(pricingItems, activeOffers, appliedCoupon, userId);
+        const resolvedPricing = detailedPricing && Array.isArray(detailedPricing.itemsDetailed) && detailedPricing.itemsDetailed.length === pricingItems.length
+            ? detailedPricing
+            : pricing;
+        const resolvedFinalTotal = Number(
+            Number.isFinite(Number(resolvedPricing.finalTotal))
+                ? resolvedPricing.finalTotal
+                : finalTotal
+        );
 
         if (isWalletPayment) {
             const wallet = await walletService.getWallet(userId, session);
 
-            if (!wallet || Number(wallet.balance || 0) < finalTotal) {
+            if (!wallet || Number(wallet.balance || 0) < resolvedFinalTotal) {
                 throw new AppError('Insufficient wallet balance', 400);
             }
         }
@@ -166,32 +155,85 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
             await product.save({ session });
         }
 
-        const itemGstAllocations = distributeItemGst(
-            orderItems,
-            pricing.subtotal,
-            pricing.gst
+        const detailedItems = Array.isArray(resolvedPricing.itemsDetailed)
+            ? resolvedPricing.itemsDetailed
+            : [];
+        const detailedMap = new Map(
+            detailedItems.map((item) => [buildPricingItemKey(item), item])
         );
-
         const pricedOrderItems = orderItems.map((item, index) => {
-            const itemGst = Number.isFinite(Number(itemGstAllocations[index])) ? Number(itemGstAllocations[index]) : 0;
-            const unitFinalPrice = Number(item.quantity) > 0
-                ? roundCurrency((Number(item.totalPrice || 0) + itemGst) / Number(item.quantity))
-                : 0;
-            const finalPrice = roundCurrency(unitFinalPrice * Number(item.quantity || 0));
+            const detailedItem = detailedMap.get(buildPricingItemKey({
+                productId: item.productId,
+                selectedOfferId: checkoutData.items[index]?.selectedOfferId || null,
+                priceSnapshot: item.price
+            })) || null;
+
+            if (!detailedItem) {
+                throw new AppError('Missing pricing data for order item', 500);
+            }
+
+            if (!item.quantity || Number(item.quantity) <= 0) {
+                throw new AppError('Invalid item quantity in order creation', 500);
+            }
+
+            const offerDiscount = roundCurrency(Number(detailedItem.offerDiscountTotal || 0));
+            const couponDiscount = roundCurrency(Number(detailedItem.couponDiscountShare || 0));
+            const finalSubtotal = Math.max(0, roundCurrency(Number(detailedItem.finalSubtotal || 0)));
+            const gstAmount = Math.max(0, roundCurrency(Number(detailedItem.gstAmount || 0)));
+            const finalPrice = Math.max(0, roundCurrency(Number(detailedItem.finalPrice || 0)));
+
+            if (
+                !Number.isFinite(offerDiscount)
+                || !Number.isFinite(couponDiscount)
+                || !Number.isFinite(finalSubtotal)
+                || !Number.isFinite(gstAmount)
+                || !Number.isFinite(finalPrice)
+            ) {
+                throw new AppError('Invalid final price computed', 500);
+            }
+
+            const unitFinalPrice = roundCurrency(finalPrice / Number(item.quantity));
+
+            if (!Number.isFinite(unitFinalPrice) || unitFinalPrice < 0) {
+                throw new AppError('Invalid final price computed', 500);
+            }
 
             return {
                 ...item,
-                gstAmount: itemGst,
+                offerDiscount,
+                couponDiscount,
+                finalSubtotal,
+                gstAmount,
                 finalPrice,
                 unitFinalPrice
             };
         });
+        const summedOfferDiscount = roundCurrency(pricedOrderItems.reduce((sum, item) => {
+            return sum + Number(item.offerDiscount || 0);
+        }, 0));
+        const summedCouponDiscount = roundCurrency(pricedOrderItems.reduce((sum, item) => {
+            return sum + Number(item.couponDiscount || 0);
+        }, 0));
+        const summedFinalPrice = roundCurrency(pricedOrderItems.reduce((sum, item) => {
+            return sum + Number(item.finalPrice || 0);
+        }, 0));
+        const expectedOfferDiscountTotal = roundCurrency(Number(resolvedPricing.offerDiscountTotal || 0));
+        const expectedCouponDiscountTotal = roundCurrency(Number(resolvedPricing.couponDiscount || 0));
+        const expectedFinalTotal = roundCurrency(Number(resolvedPricing.finalTotal || 0));
+
+        if (
+            summedOfferDiscount !== expectedOfferDiscountTotal
+            || summedCouponDiscount !== expectedCouponDiscountTotal
+            || summedFinalPrice !== expectedFinalTotal
+        ) {
+            throw new AppError('Order pricing mismatch during order creation', 500);
+        }
 
         const order = new Order({
             orderId,
             user: userId,
             items: pricedOrderItems,
-            pricing,
+            pricing: resolvedPricing,
             shippingAddress: buildShippingAddress(checkoutData.address),
             paymentMethod: resolvedPaymentMethod || 'COD',
             paymentStatus,
@@ -199,7 +241,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
             razorpayOrderId,
             paymentCapturedAt,
             orderStatus: 'pending',
-            totalAmount: finalTotal
+            totalAmount: expectedFinalTotal
         });
 
         order.set('coupon', appliedCoupon
@@ -209,13 +251,14 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                 discountValue: appliedCoupon.discountValue
             }
             : null, { strict: false });
-        order.set('couponDiscount', Number(pricing.couponDiscount || 0), { strict: false });
+        order.set('couponDiscount', Number(resolvedPricing.couponDiscount || 0), { strict: false });
+        order.set('offerDiscountTotal', Number(resolvedPricing.offerDiscountTotal || 0), { strict: false });
 
         if (isWalletPayment) {
             try {
                 await walletService.debitWallet(
                     userId,
-                    finalTotal,
+                    expectedFinalTotal,
                     'purchase',
                     referenceId,
                     order.orderId,
@@ -236,7 +279,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
 
         await session.commitTransaction();
 
-        if (appliedCoupon && appliedCoupon._id && pricing.couponApplied) {
+        if (appliedCoupon && appliedCoupon._id && resolvedPricing.couponApplied) {
             const usageSession = await mongoose.startSession();
 
             try {
@@ -383,30 +426,54 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
             }
 
             if (item.refundStatus === 'processed') {
-                throw new Error('Refund already processed');
+                throw new AppError('Item already refunded', 400);
             }
 
-            item.refundStatus = 'pending';
-
-            if (!Number.isFinite(item.finalPrice)) {
-                throw new Error('Invalid finalPrice for refund');
+            if (item.refundStatus === 'processing') {
+                throw new AppError('Refund already in progress', 409);
             }
 
-            const refundAmount = item.finalPrice;
+            if (
+                String(order.paymentMethod || '').toUpperCase() === 'COD'
+                && String(order.paymentStatus || '').toLowerCase() !== 'paid'
+            ) {
+                throw new AppError('Refund not allowed for unpaid COD orders', 400);
+            }
+
+            if (!Number.isFinite(Number(item.finalPrice)) || Number(item.finalPrice) < 0) {
+                throw new AppError('Invalid refund amount', 500);
+            }
+
+            const refundAmount = Number(item.finalPrice);
+            const transactionRef = `refund:${order.orderId}:${item.itemId}`;
+
+            console.log('REFUND DEBUG:', {
+                itemId,
+                finalPrice: item.finalPrice,
+                offerDiscount: item.offerDiscount,
+                couponDiscount: item.couponDiscount,
+                gstAmount: item.gstAmount
+            });
+
+            item.refundStatus = 'processing';
+            await order.save({ session, validateBeforeSave: false });
 
             try {
                 await walletService.creditWallet(
                     userId,
                     refundAmount,
                     'refund_cancelled',
-                    String(item.itemId),
+                    transactionRef,
                     order.orderId
                 );
             } catch (err) {
-                throw new Error('Wallet refund failed. Cancellation aborted.');
+                item.refundStatus = 'failed';
+                await order.save({ session, validateBeforeSave: false });
+                throw new AppError('Wallet refund failed. Cancellation aborted.', 500);
             }
 
             item.refundStatus = 'processed';
+            item.refundedAt = new Date();
 
             await order.save({ session });
 
