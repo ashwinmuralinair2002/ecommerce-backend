@@ -43,11 +43,22 @@ const getDateThreshold = (dateFilter) => {
 
 const getUserOrders = async (userId, options = {}) => {
     try {
-        const { search = '', sort = 'newest', dateFilter = '' } = options;
+        const {
+            search = '',
+            sort = 'newest',
+            dateFilter = '',
+            paymentMethod = '',
+            page = 1,
+            limit = 10
+        } = options;
         const query = {
             user: userId,
             deleted: { $ne: true }
         };
+
+        if (paymentMethod && ['online', 'wallet', 'COD'].includes(paymentMethod)) {
+            query.paymentMethod = paymentMethod;
+        }
 
         if (search && search.trim()) {
             query.$or = [
@@ -62,12 +73,25 @@ const getUserOrders = async (userId, options = {}) => {
         }
 
         const sortOption = sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
+        const currentPage = Math.max(Number(page) || 1, 1);
+        const pageLimit = Math.max(Number(limit) || 10, 1);
+        const skip = (currentPage - 1) * pageLimit;
 
-        const orders = await Order.find(query)
-            .sort(sortOption)
-            .lean();
+        const [orders, totalOrders] = await Promise.all([
+            Order.find(query)
+                .sort(sortOption)
+                .skip(skip)
+                .limit(pageLimit)
+                .lean(),
+            Order.countDocuments(query)
+        ]);
 
-        return orders.map(mapOrderSummary);
+        return {
+            orders: orders.map(mapOrderSummary),
+            totalOrders,
+            currentPage,
+            totalPages: Math.max(Math.ceil(totalOrders / pageLimit), 1)
+        };
     } catch (err) {
         if (err instanceof AppError) throw err;
 
@@ -90,7 +114,8 @@ const getUserOrderById = async (userId, orderId) => {
         return {
             orderId: order.orderId,
             items: order.items || [],
-            pricing: order.pricing || {},
+            pricing: order.pricing || null,
+            coupon: order.coupon || null,
             shippingAddress: order.shippingAddress || {},
             orderStatus: order.orderStatus,
             paymentMethod: order.paymentMethod,

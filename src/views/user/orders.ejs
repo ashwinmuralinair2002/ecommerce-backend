@@ -22,6 +22,28 @@
     const currentSearch = typeof search === 'string' ? search : '';
     const currentSort = typeof sort === 'string' && sort ? sort : 'newest';
     const currentDate = typeof date === 'string' ? date : '';
+    const currentPaymentMethod = typeof paymentMethod === 'string'
+        ? paymentMethod
+        : (typeof query?.paymentMethod === 'string' ? query.paymentMethod : '');
+    const activePage = Number(currentPage) > 0 ? Number(currentPage) : 1;
+    const pageCount = Number(totalPages) > 0 ? Number(totalPages) : 1;
+    const totalOrderCount = Number(totalOrders) >= 0 ? Number(totalOrders) : orderList.length;
+    const paginationParams = new URLSearchParams();
+
+    if (currentSearch) paginationParams.set('search', currentSearch);
+    if (currentDate) paginationParams.set('date', currentDate);
+    if (currentSort) paginationParams.set('sort', currentSort);
+    if (currentPaymentMethod) paginationParams.set('paymentMethod', currentPaymentMethod);
+
+    const buildPageHref = (pageNumber) => {
+        const params = new URLSearchParams(paginationParams.toString());
+        params.set('page', pageNumber);
+        return `/orders?${params.toString()}`;
+    };
+
+    const pageWindowStart = Math.max(1, activePage - 2);
+    const pageWindowEnd = Math.min(pageCount, pageWindowStart + 4);
+    const visiblePageStart = Math.max(1, pageWindowEnd - 4);
 
     const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', {
         day: '2-digit',
@@ -82,7 +104,7 @@
                             <p class="mt-2 text-sm text-gray-500">Track every purchase, review totals, and open any order for full details.</p>
                         </div>
                         <div class="rounded-xl bg-primary/5 px-4 py-3 text-sm text-primary">
-                            <span class="font-semibold"><%= orderList.length %></span> order<%= orderList.length === 1 ? '' : 's' %>
+                            <span class="font-semibold"><%= totalOrderCount %></span> order<%= totalOrderCount === 1 ? '' : 's' %>
                         </div>
                     </div>
                 </section>
@@ -124,11 +146,27 @@
                             <option value="oldest" <%= currentSort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
                         </select>
 
+                        <select
+                            name="paymentMethod"
+                            onchange="this.form.submit()"
+                            class="rounded-xl border border-primary-light/50 bg-white px-4 py-3 text-sm text-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            <option value="" <%= currentPaymentMethod === '' ? 'selected' : '' %>>All Payments</option>
+                            <option value="online" <%= currentPaymentMethod === 'online' ? 'selected' : '' %>>Online</option>
+                            <option value="COD" <%= currentPaymentMethod === 'COD' ? 'selected' : '' %>>Cash on Delivery</option>
+                            <option value="wallet" <%= currentPaymentMethod === 'wallet' ? 'selected' : '' %>>Wallet</option>
+                        </select>
+
                         <button
                             type="submit"
                             class="inline-flex h-[50px] items-center justify-center rounded-xl bg-primary px-5 text-sm font-semibold text-white transition hover:opacity-90">
                             Apply
                         </button>
+
+                        <a
+                            href="/orders"
+                            class="inline-flex h-[50px] items-center justify-center rounded-xl border border-primary-light/50 bg-white px-5 text-sm font-semibold text-primary transition hover:bg-primary/5">
+                            Clear Filters
+                        </a>
                     </form>
                 </section>
 
@@ -177,6 +215,38 @@
                             </a>
                         <% }) %>
                     </section>
+
+                    <% if (pageCount > 1) { %>
+                        <nav class="mt-6 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
+                            <% if (activePage > 1) { %>
+                                <a
+                                    href="<%= buildPageHref(activePage - 1) %>"
+                                    class="inline-flex items-center justify-center rounded-lg h-9 px-4 border border-primary-light/50 bg-white text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+                                    Prev
+                                </a>
+                            <% } %>
+
+                            <% for (let i = visiblePageStart; i <= pageWindowEnd; i += 1) { %>
+                                <% if (i === activePage) { %>
+                                    <span class="inline-flex items-center justify-center rounded-lg h-9 min-w-9 px-3 bg-primary text-white text-sm font-medium"><%= i %></span>
+                                <% } else { %>
+                                    <a
+                                        href="<%= buildPageHref(i) %>"
+                                        class="inline-flex items-center justify-center rounded-lg h-9 min-w-9 px-3 border border-primary-light/50 bg-white text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+                                        <%= i %>
+                                    </a>
+                                <% } %>
+                            <% } %>
+
+                            <% if (activePage < pageCount) { %>
+                                <a
+                                    href="<%= buildPageHref(activePage + 1) %>"
+                                    class="inline-flex items-center justify-center rounded-lg h-9 px-4 border border-primary-light/50 bg-white text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+                                    Next
+                                </a>
+                            <% } %>
+                        </nav>
+                    <% } %>
                 <% } %>
             </section>
         </main>

@@ -14,6 +14,35 @@
     <%- include('../partials/user/theme-config') %>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .price-breakdown-card {
+            margin-top: 10px;
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin: 4px 0;
+        }
+
+        .price-row.discount {
+            color: #28a745;
+        }
+
+        .price-row.gst {
+            color: #555;
+        }
+
+        .price-row.total {
+            border-top: 1px dashed #ccc;
+            margin-top: 6px;
+            padding-top: 6px;
+            font-size: 15px;
+        }
+    </style>
 </head>
 
 <body>
@@ -23,6 +52,12 @@
     const items = Array.isArray(orderData.items) ? orderData.items : [];
     const pricing = orderData.pricing || {};
     const address = orderData.shippingAddress || {};
+    const pricingSubtotal = pricing.subtotal ?? orderData.totalAmount ?? 0;
+    const offerDiscountTotal = pricing.offerDiscountTotal ?? 0;
+    const couponDiscount = pricing.couponDiscount ?? 0;
+    const gst = pricing.gst ?? 0;
+    const finalTotal = pricing.finalTotal ?? orderData.totalAmount ?? 0;
+    const totalSaved = Number(offerDiscountTotal || 0) + Number(couponDiscount || 0);
 
     const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', {
         day: '2-digit',
@@ -140,7 +175,7 @@
                                 </div>
                                 <div class="rounded-xl bg-background-soft px-4 py-3">
                                     <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Total</p>
-                                    <p class="mt-1 text-base font-bold text-primary"><%= formatCurrency(orderData.totalAmount) %></p>
+                                    <p class="mt-1 text-base font-bold text-primary"><%= formatCurrency(finalTotal) %></p>
                                 </div>
                             </div>
                         </div>
@@ -156,6 +191,11 @@
                             <% } else { %>
                                 <div class="mt-5 space-y-4">
                                     <% items.forEach((item) => { %>
+                                        <% const itemBasePrice = item.priceSnapshot ?? item.price ?? 0; %>
+                                        <% const itemOfferDiscount = item.offerDiscount ?? 0; %>
+                                        <% const itemGST = item.gstAmount ?? item.gst ?? 0; %>
+                                        <% const itemFinalPrice = item.finalPrice ?? item.priceSnapshot ?? item.price ?? 0; %>
+                                        <% const itemDisplayTotal = item.finalPrice ?? item.totalPrice ?? item.priceSnapshot ?? item.price ?? 0; %>
                                         <article data-order-item class="rounded-xl border border-primary-light/35 bg-white p-4 transition hover:shadow-md">
                                             <div class="flex flex-col gap-4 lg:flex-row lg:items-center">
                                                 <a href="<%= item.productId ? `/product/${item.productId}` : '#' %>"
@@ -173,7 +213,29 @@
                                                             <p class="mt-1 text-sm text-gray-500">Variant: <%= item.colorName || 'Default' %></p>
                                                             <div class="mt-3 flex flex-wrap gap-2">
                                                                 <span class="rounded-full bg-background-soft px-3 py-1 text-xs font-medium text-primary">Qty: <%= Number(item.quantity || 0) %></span>
-                                                                <span class="rounded-full bg-background-soft px-3 py-1 text-xs font-medium text-primary">Unit Price: <%= formatCurrency(item.price) %></span>
+                                                                <span class="rounded-full bg-background-soft px-3 py-1 text-xs font-medium text-primary">Unit Price: <%= formatCurrency(item.priceSnapshot ?? item.price ?? 0) %></span>
+                                                            </div>
+                                                            <div class="price-breakdown-card">
+                                                                <div class="price-row">
+                                                                    <span>Base Price</span>
+                                                                    <span><%= formatCurrency(itemBasePrice) %></span>
+                                                                </div>
+                                                                <% if (Number(itemOfferDiscount || 0) > 0) { %>
+                                                                    <div class="price-row discount">
+                                                                        <span>Offer Discount</span>
+                                                                        <span>- <%= formatCurrency(itemOfferDiscount) %></span>
+                                                                    </div>
+                                                                <% } %>
+                                                                <% if (Number(itemGST || 0) > 0) { %>
+                                                                    <div class="price-row gst">
+                                                                        <span>GST</span>
+                                                                        <span><%= formatCurrency(itemGST) %></span>
+                                                                    </div>
+                                                                <% } %>
+                                                                <div class="price-row total">
+                                                                    <span><strong>Final Price</strong></span>
+                                                                    <span><strong><%= formatCurrency(itemFinalPrice) %></strong></span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -189,7 +251,7 @@
 
                                                     <div class="text-left lg:text-right">
                                                         <p class="text-xs font-medium uppercase tracking-wide text-gray-500">Item Total</p>
-                                                        <p class="mt-1 text-lg font-bold text-primary"><%= formatCurrency(item.totalPrice) %></p>
+                                                        <p class="mt-1 text-lg font-bold text-primary"><%= formatCurrency(itemDisplayTotal) %></p>
                                                     </div>
 
                                                     <% if (item.status === 'pending' && item.itemId) { %>
@@ -242,17 +304,42 @@
                                 </div>
                                 <div class="flex items-center justify-between">
                                     <span class="text-gray-500">Subtotal</span>
-                                    <span class="font-semibold text-primary"><%= formatCurrency(pricing.subtotal) %></span>
+                                    <span class="font-semibold text-primary"><%= formatCurrency(pricingSubtotal) %></span>
                                 </div>
+                                <% if (Number(offerDiscountTotal || 0) > 0) { %>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-gray-500">Offer Discount</span>
+                                        <span class="font-semibold text-green-600">-<%= formatCurrency(offerDiscountTotal) %></span>
+                                    </div>
+                                <% } %>
+                                <% if (orderData.coupon && Number(couponDiscount || 0) > 0) { %>
+                                    <div class="rounded-xl bg-background-soft px-3 py-2 text-xs text-primary">
+                                        Coupon Applied: <strong><%= orderData.coupon.code %></strong>
+                                    </div>
+                                <% } %>
+                                <% if (Number(couponDiscount || 0) > 0) { %>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-gray-500">Coupon Discount</span>
+                                        <span class="font-semibold text-green-600">-<%= formatCurrency(couponDiscount) %></span>
+                                    </div>
+                                <% } %>
                                 <div class="flex items-center justify-between">
                                     <span class="text-gray-500">GST</span>
-                                    <span class="font-semibold text-primary"><%= formatCurrency(pricing.gst) %></span>
+                                    <span class="font-semibold text-primary"><%= formatCurrency(gst) %></span>
                                 </div>
                             </div>
 
+                            <% if (!orderData.pricing) { %>
+                                <p class="mt-4 text-sm text-gray-500">Detailed pricing unavailable for older orders.</p>
+                            <% } %>
+
+                            <% if (totalSaved > 0) { %>
+                                <p class="mt-4 text-sm font-medium text-green-700">You saved <%= formatCurrency(totalSaved) %></p>
+                            <% } %>
+
                             <div class="mt-4 flex items-center justify-between">
                                 <span class="text-base font-bold text-primary">Grand Total</span>
-                                <span class="text-xl font-bold text-primary"><%= formatCurrency(pricing.finalTotal || orderData.totalAmount) %></span>
+                                <span class="text-xl font-bold text-primary"><%= formatCurrency(finalTotal) %></span>
                             </div>
                         </div>
 
