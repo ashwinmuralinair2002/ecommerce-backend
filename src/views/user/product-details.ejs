@@ -329,14 +329,14 @@
                                         <div
                                             class="lg:sticky lg:top-24 border border-primary-light/45 bg-white rounded-lg shadow-sm p-4 space-y-4">
                                         <div class="pb-3 border-b border-primary-light/30">
-                                            <% const productFinalPrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
+                                            <% const productDisplayPrice = Number(product.finalPrice || product.price || product.basePrice || 0); %>
                                             <h2 class="text-primary tracking-light text-[30px] font-bold leading-tight">
-                                                <%= formatCurrency(productFinalPrice) %>
+                                                <%= formatCurrency(productDisplayPrice) %>
                                             </h2>
                                             <% if (Number(product.discountPercentage || 0) > 0) { %>
                                                 <div class="flex items-center gap-2 mt-1">
                                                     <span class="text-gray-500 line-through text-sm">
-                                                        <%= formatCurrency(product.price) %>
+                                                        <%= formatCurrency(product.basePrice || product.price || 0) %>
                                                     </span>
                                                     <span
                                                         class="rounded-md bg-accent px-2 py-1 text-xs font-bold text-black">
@@ -385,8 +385,8 @@
                                                 <div class="space-y-2">
                                                     <% offers.forEach((offer) => { %>
                                                         <label class="offer-option flex items-start gap-3 rounded-lg border border-primary-light/35 bg-white px-3 py-2 cursor-pointer hover:border-primary transition <%= String(offer._id) === String(bestOfferId || '') ? 'border-primary bg-purple-50' : '' %>">
-                                                            <% const basePrice = Number(product.price || 0) - ((Number(product.price || 0) * Number(product.discountPercentage || 0)) / 100); %>
-                                                            <% const finalPrice = basePrice - Number(offer.discountPreview || 0); %>
+                                                            <% const offerBasePrice = Number(product.finalPrice || product.price || product.basePrice || 0); %>
+                                                            <% const finalPrice = Math.max(0, offerBasePrice - Number(offer.discountPreview || 0)); %>
                                                             <input
                                                                 type="radio"
                                                                 name="selectedOffer"
@@ -574,6 +574,11 @@
                         let isAddingToCart = false;
                         const variants = <%- JSON.stringify(product && Array.isArray(product.variants) ? product.variants : []) %>;
                         const productId = <%- JSON.stringify(product && product._id ? String(product._id) : '') %>;
+                        const productPricing = {
+                            finalPrice: <%- JSON.stringify(product && Object.prototype.hasOwnProperty.call(product, 'finalPrice') ? product.finalPrice : null) %>,
+                            price: <%- JSON.stringify(product && Object.prototype.hasOwnProperty.call(product, 'price') ? product.price : null) %>,
+                            basePrice: <%- JSON.stringify(product && Object.prototype.hasOwnProperty.call(product, 'basePrice') ? product.basePrice : null) %>
+                        };
 
                         const mainImg = document.getElementById("mainImage");
                         const zoomBox = document.getElementById("zoomBox");
@@ -599,16 +604,24 @@
                         const isProductUnavailable = <%- JSON.stringify(product.isListed === false || product.isDeleted === true) %>;
                         const MAX_QUANTITY = 5;
 
+                        function formatCurrencyClient(value) {
+                            const number = Number(value || 0);
+                            return '₹ ' + number.toLocaleString('en-IN', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            });
+                        }
+
                         function updateOfferSummary(selectedRadio) {
                             if (!offerSummary || !offerSaveAmount) return;
 
                             if (!selectedRadio) {
-                                offerSaveAmount.innerText = formatCurrency(0);
+                                offerSaveAmount.innerText = formatCurrencyClient(0);
                                 return;
                             }
 
                             const savings = Number(selectedRadio.dataset.discountPreview || 0);
-                            offerSaveAmount.innerText = formatCurrency(savings);
+                            offerSaveAmount.innerText = formatCurrencyClient(savings);
 
                             const selectedLabel = selectedRadio.closest('label');
 
@@ -619,6 +632,17 @@
                             if (selectedLabel) {
                                 selectedLabel.classList.add('border-primary', 'bg-purple-50');
                             }
+                        }
+
+                        function getResolvedProductPrice() {
+                            const price = Number(
+                                productPricing.finalPrice
+                                || productPricing.price
+                                || productPricing.basePrice
+                                || 0
+                            );
+
+                            return Number.isFinite(price) ? Math.max(0, price) : 0;
                         }
 
                         function syncNavbarCartCount(count) {
@@ -939,6 +963,7 @@
                                 addToCartButton.disabled = true;
                                 showAddToCartFeedback('', 'success');
                                 const selectedOfferId = document.querySelector('input[name="selectedOffer"]:checked')?.value || null;
+                                const price = getResolvedProductPrice();
 
                                 try {
                                     const response = await fetch('/api/cart/add', {
@@ -951,7 +976,8 @@
                                             productId,
                                             variantId,
                                             quantity: selectedQuantity,
-                                            selectedOfferId
+                                            selectedOfferId,
+                                            price
                                         })
                                     });
 

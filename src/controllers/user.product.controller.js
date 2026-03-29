@@ -635,9 +635,13 @@ exports.getProductDetails = async (req, res) => {
         }
         const alsoBought = alsoBoughtDocs.map((doc) => doc.toObject());
 
+        const productView = product.toObject();
+        productView.basePrice = Number(product.price || 0);
+        productView.finalPrice = Number(getBaseProductPrice(product));
+
         res.render('user/product-details', {
             title: product.title,
-            product: product.toObject(),
+            product: productView,
             offers: offerOptions,
             bestOfferId,
             wishlistVariantIds,

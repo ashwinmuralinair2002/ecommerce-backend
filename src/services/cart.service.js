@@ -5,7 +5,7 @@ const Product = require('../models/Product');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 const { getCachedOffers } = require('../utils/offer-cache');
-const { getBaseProductPrice } = require('../utils/pricing');
+const { getBaseProductPrice, getCartPriceSnapshot } = require('../utils/pricing');
 const { calculatePricing } = require('../utils/pricing-engine');
 
 const MAX_CART_ITEM_QUANTITY = 5;
@@ -230,12 +230,14 @@ const addToCart = asyncHandler(async (userId, productId, variantId, quantity, re
         cart.items[existingItemIndex].quantity = updatedQuantity;
         cart.items[existingItemIndex].selectedOfferId = normalizedSelectedOfferId;
     } else {
+        const priceSnapshot = getCartPriceSnapshot(product);
+
         cart.items.push({
             productId,
             variantId,
             quantity,
-            priceSnapshot: getBaseProductPrice(product),
-            savedPrice: getBaseProductPrice(product),
+            priceSnapshot,
+            savedPrice: priceSnapshot,
             selectedOfferId: normalizedSelectedOfferId
         });
     }

@@ -22,6 +22,31 @@ function getBaseProductPrice(product) {
     return Number.isFinite(finalPrice) ? Math.max(0, finalPrice) : 0;
 }
 
+function getCartPriceSnapshot(product) {
+    if (!product || typeof product !== 'object') {
+        return 0;
+    }
+
+    const finalPrice = Number(product.finalPrice);
+    if (Number.isFinite(finalPrice) && finalPrice > 0) {
+        return finalPrice;
+    }
+
+    const computedDiscountedPrice = getBaseProductPrice(product);
+    if (Number.isFinite(computedDiscountedPrice) && computedDiscountedPrice > 0) {
+        return computedDiscountedPrice;
+    }
+
+    const basePrice = Number(product.basePrice);
+    if (Number.isFinite(basePrice) && basePrice > 0) {
+        return basePrice;
+    }
+
+    const listPrice = Number(product.price);
+    return Number.isFinite(listPrice) && listPrice > 0 ? listPrice : 0;
+}
+
 module.exports = {
-    getBaseProductPrice
+    getBaseProductPrice,
+    getCartPriceSnapshot
 };
