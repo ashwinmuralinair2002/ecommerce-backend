@@ -1763,7 +1763,587 @@ const deleteOffer = async (req, res) => {
     }
 };
 
+// @desc    Get Admin Dashboard KPI Stats
+// @route   GET /admin/dashboard-stats
+const getDashboardStats = async (req, res) => {
+    try {
+        const normalizedStatusExpr = {
+            $toLower: {
+                $ifNull: ['$orderStatus', '$status']
+            }
+        };
+
+        const [productStats, orderStats] = await Promise.all([
+            Product.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalProducts: { $sum: 1 },
+                        activeProducts: {
+                            $sum: {
+                                $cond: [{ $ne: ['$isDeleted', true] }, 1, 0]
+                            }
+                        }
+                    }
+                }
+            ]),
+            Order.aggregate([
+                {
+                    $facet: {
+                        totalOrders: [
+                            { $count: 'count' }
+                        ],
+                        totalRevenue: [
+                            {
+                                $match: {
+                                    $expr: { $eq: [normalizedStatusExpr, 'delivered'] }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: null,
+                                    totalRevenue: { $sum: { $ifNull: ['$totalAmount', 0] } }
+                                }
+                            }
+                        ],
+                        returns: [
+                            {
+                                $match: {
+                                    $expr: { $eq: [normalizedStatusExpr, 'returned'] }
+                                }
+                            },
+                            { $count: 'count' }
+                        ],
+                        cancellations: [
+                            {
+                                $match: {
+                                    $expr: { $eq: [normalizedStatusExpr, 'cancelled'] }
+                                }
+                            },
+                            { $count: 'count' }
+                        ],
+                        uniqueProductsSold: [
+                            {
+                                $match: {
+                                    $expr: { $eq: [normalizedStatusExpr, 'delivered'] }
+                                }
+                            },
+                            {
+                                $project: {
+                                    items: {
+                                        $cond: [{ $isArray: '$items' }, '$items', []]
+                                    }
+                                }
+                            },
+                            { $unwind: '$items' },
+                            {
+                                $match: {
+                                    'items.productId': { $exists: true, $ne: null }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: null,
+                                    uniqueProducts: { $addToSet: '$items.productId' }
+                                }
+                            },
+                            {
+                                $project: {
+                                    _id: 0,
+                                    count: { $size: '$uniqueProducts' }
+                                }
+                            }
+                        ]
+                    }
+                }
+            ])
+        ]);
+
+        const aggregatedOrderStats = orderStats[0] || {};
+
+        return res.json({
+            totalProducts: Number(productStats[0]?.totalProducts || 0),
+            activeProducts: Number(productStats[0]?.activeProducts || 0),
+            uniqueProductsSold: Number(aggregatedOrderStats.uniqueProductsSold?.[0]?.count || 0),
+            totalOrders: Number(aggregatedOrderStats.totalOrders?.[0]?.count || 0),
+            totalRevenue: Number(aggregatedOrderStats.totalRevenue?.[0]?.totalRevenue || 0),
+            returns: Number(aggregatedOrderStats.returns?.[0]?.count || 0),
+            cancellations: Number(aggregatedOrderStats.cancellations?.[0]?.count || 0)
+        });
+    } catch (error) {
+        console.error('DASHBOARD STATS ERROR:', error);
+        return res.status(500).json({
+            totalProducts: 0,
+            activeProducts: 0,
+            uniqueProductsSold: 0,
+            totalOrders: 0,
+            totalRevenue: 0,
+            returns: 0,
+            cancellations: 0
+        });
+    }
+};
+
+// @desc    Get Order Status Distribution Stats
+// @route   GET /admin/order-status-stats
+const getOrderStatusStats = async (req, res) => {
+    try {
+        const range = String(req.query.range || '').toLowerCase();
+        const now = new Date();
+        let startDate;
+
+        switch (range) {
+            case 'daily':
+                startDate = new Date(now);
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            case 'weekly':
+                startDate = new Date();
+                startDate.setDate(startDate.getDate() - 7);
+                break;
+            case 'monthly':
+                startDate = new Date();
+                startDate.setMonth(startDate.getMonth() - 1);
+                break;
+            case 'yearly':
+                startDate = new Date();
+                startDate.setFullYear(startDate.getFullYear() - 1);
+                break;
+            default:
+                startDate = new Date(0);
+        }
+
+        const stats = await Order.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate }
+                }
+            },
+            {
+                $unwind: {
+                    path: '$items',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    normalizedStatus: {
+                        $switch: {
+                            branches: [
+                                {
+                                    case: {
+                                        $eq: [
+                                            { $ifNull: ['$items.status', '$orderStatus'] },
+                                            'pending'
+                                        ]
+                                    },
+                                    then: 'Pending'
+                                },
+                                {
+                                    case: {
+                                        $eq: [
+                                            { $ifNull: ['$items.status', '$orderStatus'] },
+                                            'shipped'
+                                        ]
+                                    },
+                                    then: 'Shipped'
+                                },
+                                {
+                                    case: {
+                                        $eq: [
+                                            { $ifNull: ['$items.status', '$orderStatus'] },
+                                            'delivered'
+                                        ]
+                                    },
+                                    then: 'Delivered'
+                                },
+                                {
+                                    case: {
+                                        $eq: [
+                                            { $ifNull: ['$items.status', '$orderStatus'] },
+                                            'cancelled'
+                                        ]
+                                    },
+                                    then: 'Cancelled'
+                                },
+                                {
+                                    case: {
+                                        $eq: [
+                                            { $ifNull: ['$items.status', '$orderStatus'] },
+                                            'returned'
+                                        ]
+                                    },
+                                    then: 'Returned'
+                                },
+                                {
+                                    case: {
+                                        $eq: [
+                                            { $ifNull: ['$items.status', '$orderStatus'] },
+                                            'return_requested'
+                                        ]
+                                    },
+                                    then: 'Return Requested'
+                                }
+                            ],
+                            default: null
+                        }
+                    },
+                    quantity: {
+                        $cond: [
+                            {
+                                $and: [
+                                    { $ne: ['$items.quantity', null] },
+                                    { $gt: ['$items.quantity', 0] }
+                                ]
+                            },
+                            '$items.quantity',
+                            1
+                        ]
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: '$normalizedStatus',
+                    count: { $sum: '$quantity' }
+                }
+            },
+            {
+                $match: {
+                    _id: { $ne: null }
+                }
+            }
+        ]);
+
+        const statusMap = {
+            Pending: 0,
+            Shipped: 0,
+            Delivered: 0,
+            Cancelled: 0,
+            Returned: 0,
+            'Return Requested': 0
+        };
+
+        stats.forEach((item) => {
+            if (Object.prototype.hasOwnProperty.call(statusMap, item._id)) {
+                statusMap[item._id] = Number(item.count || 0);
+            }
+        });
+
+        return res.json(statusMap);
+    } catch (error) {
+        console.error('ORDER STATUS CHART ERROR:', error);
+        return res.status(500).json({
+            Pending: 0,
+            Shipped: 0,
+            Delivered: 0,
+            Cancelled: 0,
+            Returned: 0,
+            'Return Requested': 0
+        });
+    }
+};
+
+// @desc    Get Revenue Trend For Last 7 Days
+// @route   GET /admin/revenue-trend
+const getRevenueTrend = async (req, res) => {
+    try {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+
+        const deliveredStatusExpr = {
+            $toLower: {
+                $ifNull: ['$orderStatus', '$status']
+            }
+        };
+
+        const revenueData = await Order.aggregate([
+            {
+                $match: {
+                    createdAt: { $gte: startDate },
+                    $expr: { $eq: [deliveredStatusExpr, 'delivered'] }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: '$createdAt' },
+                        month: { $month: '$createdAt' },
+                        day: { $dayOfMonth: '$createdAt' }
+                    },
+                    totalRevenue: { $sum: { $ifNull: ['$totalAmount', 0] } }
+                }
+            },
+            {
+                $sort: {
+                    '_id.year': 1,
+                    '_id.month': 1,
+                    '_id.day': 1
+                }
+            }
+        ]);
+
+        const last7Days = [];
+        for (let i = 6; i >= 0; i -= 1) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            date.setHours(0, 0, 0, 0);
+
+            last7Days.push({
+                date: date.toISOString().split('T')[0],
+                revenue: 0
+            });
+        }
+
+        revenueData.forEach((item) => {
+            const date = `${item._id.year}-${String(item._id.month).padStart(2, '0')}-${String(item._id.day).padStart(2, '0')}`;
+            const foundDay = last7Days.find((day) => day.date === date);
+
+            if (foundDay) {
+                foundDay.revenue = Number(item.totalRevenue || 0);
+            }
+        });
+
+        return res.json(last7Days);
+    } catch (error) {
+        console.error('REVENUE TREND ERROR:', error);
+
+        const fallbackDays = [];
+        for (let i = 6; i >= 0; i -= 1) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            date.setHours(0, 0, 0, 0);
+
+            fallbackDays.push({
+                date: date.toISOString().split('T')[0],
+                revenue: 0
+            });
+        }
+
+        return res.status(500).json(fallbackDays);
+    }
+};
+
+// @desc    Get Top Performing Products, Brands, and Categories
+// @route   GET /admin/top-performers
+const getTopPerformers = async (req, res) => {
+    try {
+        const deliveredMatchStage = {
+            $match: {
+                $expr: {
+                    $eq: [
+                        {
+                            $toLower: {
+                                $ifNull: ['$orderStatus', '$status']
+                            }
+                        },
+                        'delivered'
+                    ]
+                }
+            }
+        };
+
+        const unwindItemsStage = {
+            $unwind: '$items'
+        };
+
+        const validProductItemMatchStage = {
+            $match: {
+                'items.productId': { $exists: true, $ne: null }
+            }
+        };
+
+        const itemRevenueExpression = {
+            $ifNull: [
+                '$items.finalPrice',
+                {
+                    $multiply: [
+                        { $ifNull: ['$items.price', 0] },
+                        { $ifNull: ['$items.quantity', 0] }
+                    ]
+                }
+            ]
+        };
+
+        const [products, brands, categories] = await Promise.all([
+            Order.aggregate([
+                deliveredMatchStage,
+                unwindItemsStage,
+                validProductItemMatchStage,
+                {
+                    $group: {
+                        _id: '$items.productId',
+                        totalRevenue: {
+                            $sum: itemRevenueExpression
+                        },
+                        orders: { $addToSet: '$_id' }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: '_id',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                {
+                    $unwind: '$product'
+                },
+                {
+                    $match: {
+                        'product.title': { $exists: true, $nin: [null, ''] }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        productId: '$_id',
+                        name: '$product.title',
+                        totalRevenue: { $round: ['$totalRevenue', 2] },
+                        orderCount: { $size: '$orders' }
+                    }
+                },
+                { $sort: { totalRevenue: -1, orderCount: -1, name: 1 } },
+                { $limit: 10 }
+            ]),
+            Order.aggregate([
+                deliveredMatchStage,
+                unwindItemsStage,
+                validProductItemMatchStage,
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'items.productId',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                {
+                    $unwind: '$product'
+                },
+                {
+                    $match: {
+                        'product.brand': { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'brands',
+                        localField: 'product.brand',
+                        foreignField: '_id',
+                        as: 'brand'
+                    }
+                },
+                {
+                    $unwind: '$brand'
+                },
+                {
+                    $match: {
+                        'brand.name': { $exists: true, $nin: [null, ''] }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$brand._id',
+                        brand: { $first: '$brand.name' },
+                        totalRevenue: {
+                            $sum: itemRevenueExpression
+                        },
+                        orders: { $addToSet: '$_id' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        brand: 1,
+                        totalRevenue: { $round: ['$totalRevenue', 2] },
+                        orderCount: { $size: '$orders' }
+                    }
+                },
+                { $sort: { totalRevenue: -1, orderCount: -1, brand: 1 } },
+                { $limit: 10 }
+            ]),
+            Order.aggregate([
+                deliveredMatchStage,
+                unwindItemsStage,
+                validProductItemMatchStage,
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'items.productId',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                {
+                    $unwind: '$product'
+                },
+                {
+                    $match: {
+                        'product.category': { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'categories',
+                        localField: 'product.category',
+                        foreignField: '_id',
+                        as: 'category'
+                    }
+                },
+                {
+                    $unwind: '$category'
+                },
+                {
+                    $match: {
+                        'category.name': { $exists: true, $nin: [null, ''] }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$category._id',
+                        category: { $first: '$category.name' },
+                        totalRevenue: {
+                            $sum: itemRevenueExpression
+                        },
+                        orders: { $addToSet: '$_id' }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: 1,
+                        totalRevenue: { $round: ['$totalRevenue', 2] },
+                        orderCount: { $size: '$orders' }
+                    }
+                },
+                { $sort: { totalRevenue: -1, orderCount: -1, category: 1 } },
+                { $limit: 10 }
+            ])
+        ]);
+
+        return res.json({
+            products,
+            brands,
+            categories
+        });
+    } catch (error) {
+        console.error('TOP PERFORMERS ERROR:', error);
+        return res.status(500).json({
+            products: [],
+            brands: [],
+            categories: []
+        });
+    }
+};
+
 module.exports = {
+    getDashboardStats,
+    getOrderStatusStats,
+    getRevenueTrend,
+    getTopPerformers,
     getCustomersPage,
     toggleBlockUser,
     softDeleteUser,
