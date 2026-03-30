@@ -19,6 +19,7 @@ router.get('/dashboard-stats', adminController.getDashboardStats);
 router.get('/order-status-stats', adminController.getOrderStatusStats);
 router.get('/revenue-trend', adminController.getRevenueTrend);
 router.get('/top-performers', adminController.getTopPerformers);
+router.get('/download-report', adminController.downloadReport);
 
 router.get('/offers', adminController.getOffersPage);
 router.get('/coupons', adminController.getCouponsPage);

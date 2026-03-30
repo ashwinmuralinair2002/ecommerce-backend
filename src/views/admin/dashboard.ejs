@@ -187,9 +187,35 @@
 
         .chart-header {
             display: flex;
-            gap: 10px;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
             margin-bottom: 15px;
             flex-wrap: wrap;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .download-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .download-title {
+            font-size: 12px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .download-actions {
+            display: flex;
+            gap: 8px;
         }
 
         .chart-filter-btn {
@@ -206,6 +232,32 @@
         .chart-filter-btn.active {
             background: #6c63ff;
             color: #fff;
+        }
+
+        .btn-pdf,
+        .btn-excel {
+            border: none;
+            color: #fff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+
+        .btn-pdf {
+            background: #ff4d4f;
+        }
+
+        .btn-excel {
+            background: #28a745;
+        }
+
+        .btn-pdf:hover,
+        .btn-excel:hover {
+            transform: translateY(-1px);
+            opacity: 0.95;
         }
 
         .chart-canvas-wrap {
@@ -494,10 +546,19 @@
                     <div class="chart-card">
                         <h2 class="chart-title">Order Status Distribution</h2>
                         <div class="chart-header">
-                            <button type="button" class="chart-filter-btn active" data-range="daily" onclick="loadChart('daily')">Daily</button>
-                            <button type="button" class="chart-filter-btn" data-range="weekly" onclick="loadChart('weekly')">Weekly</button>
-                            <button type="button" class="chart-filter-btn" data-range="monthly" onclick="loadChart('monthly')">Monthly</button>
-                            <button type="button" class="chart-filter-btn" data-range="yearly" onclick="loadChart('yearly')">Yearly</button>
+                            <div class="filter-buttons">
+                                <button type="button" class="chart-filter-btn active" data-range="daily" onclick="loadChart('daily')">Daily</button>
+                                <button type="button" class="chart-filter-btn" data-range="weekly" onclick="loadChart('weekly')">Weekly</button>
+                                <button type="button" class="chart-filter-btn" data-range="monthly" onclick="loadChart('monthly')">Monthly</button>
+                                <button type="button" class="chart-filter-btn" data-range="yearly" onclick="loadChart('yearly')">Yearly</button>
+                            </div>
+                            <div class="download-buttons">
+                                <div class="download-title">Download Sales Report</div>
+                                <div class="download-actions">
+                                    <button type="button" class="btn-pdf" onclick="downloadReport('pdf')">PDF</button>
+                                    <button type="button" class="btn-excel" onclick="downloadReport('excel')">Excel</button>
+                                </div>
+                            </div>
                         </div>
                         <div class="chart-canvas-wrap">
                             <canvas id="orderPieChart"></canvas>
@@ -557,6 +618,7 @@
         </main>
     </div>
     <script>
+        let currentRange = 'daily';
         let orderStatusChart;
         let revenueTrendChart;
 
@@ -568,17 +630,18 @@
         }
 
         function setActive(range) {
-            document.querySelectorAll('.chart-header button').forEach((button) => {
+            document.querySelectorAll('.filter-buttons .chart-filter-btn').forEach((button) => {
                 button.classList.remove('active');
             });
 
-            const activeButton = document.querySelector(`.chart-header button[data-range="${range}"]`);
+            const activeButton = document.querySelector(`.filter-buttons .chart-filter-btn[data-range="${range}"]`);
             if (activeButton) {
                 activeButton.classList.add('active');
             }
         }
 
-        async function loadChart(range = 'monthly') {
+        async function loadChart(range = 'daily') {
+            currentRange = range;
             setActive(range);
 
             let data = {
@@ -635,6 +698,10 @@
                     }
                 }
             });
+        }
+
+        function downloadReport(type) {
+            window.open(`/admin/download-report?type=${encodeURIComponent(type)}&range=${encodeURIComponent(currentRange)}`, '_blank');
         }
 
         async function loadDashboardStats() {

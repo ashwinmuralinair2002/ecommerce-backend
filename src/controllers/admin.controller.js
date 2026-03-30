@@ -1,5 +1,7 @@
 // Admin management controller for customer and system operations
 const mongoose = require('mongoose');
+const PDFDocument = require('pdfkit');
+const ExcelJS = require('exceljs');
 const Offer = require('../models/offer.model');
 const Coupon = require('../models/coupon.model');
 const CouponUsage = require('../models/coupon-usage.model');
@@ -154,6 +156,159 @@ const normalizeDateToUTC = (dateString, isEnd = false) => {
     }
 
     return new Date(date.toISOString());
+};
+
+const formatReportDate = (value) => {
+    if (!value) {
+        return 'N/A';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return 'N/A';
+    }
+
+    return date.toISOString().split('T')[0];
+};
+
+const formatReportHeaderDate = (value) => {
+    if (!value) {
+        return 'N/A';
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return 'N/A';
+    }
+
+    return date.toLocaleDateString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+};
+
+const getISTDateParts = (value = new Date()) => {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+
+    const parts = formatter.formatToParts(value).reduce((acc, part) => {
+        if (part.type !== 'literal') {
+            acc[part.type] = Number(part.value);
+        }
+
+        return acc;
+    }, {});
+
+    return {
+        year: Number(parts.year || 1970),
+        month: Number(parts.month || 1),
+        day: Number(parts.day || 1)
+    };
+};
+
+const createISTMidnightUTCDate = ({ year, month, day }) => {
+    const IST_OFFSET_MINUTES = 330;
+
+    return new Date(Date.UTC(year, month - 1, day, 0, -IST_OFFSET_MINUTES, 0, 0));
+};
+
+const formatReportCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+})}`;
+
+const normalizeReportPaymentMethod = (paymentMethod) => {
+    if (paymentMethod === 'COD') {
+        return 'Cash on Delivery';
+    }
+
+    if (paymentMethod === 'online') {
+        return 'Online';
+    }
+
+    if (paymentMethod === 'wallet') {
+        return 'Wallet';
+    }
+
+    return String(paymentMethod || 'N/A');
+};
+
+const formatReportStatusLabel = (status) => String(status || 'unknown')
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
+const getStatusColor = (status) => {
+    const normalizedStatus = String(status || '').toLowerCase();
+
+    if (normalizedStatus === 'delivered') {
+        return 'green';
+    }
+
+    if (['cancelled', 'canceled', 'returned'].includes(normalizedStatus)) {
+        return 'red';
+    }
+
+    if (normalizedStatus === 'shipped') {
+        return 'blue';
+    }
+
+    if (['pending', 'processing'].includes(normalizedStatus)) {
+        return 'orange';
+    }
+
+    return 'black';
+};
+
+const getReportDateRange = (range = 'daily') => {
+    const now = new Date();
+    const endDate = new Date(now);
+    const istNowParts = getISTDateParts(now);
+    const rangeAnchor = new Date(Date.UTC(
+        istNowParts.year,
+        istNowParts.month - 1,
+        istNowParts.day,
+        0,
+        0,
+        0,
+        0
+    ));
+    let startDate;
+
+    switch (range) {
+        case 'daily':
+            break;
+        case 'weekly':
+            rangeAnchor.setUTCDate(rangeAnchor.getUTCDate() - 7);
+            break;
+        case 'monthly':
+            rangeAnchor.setUTCMonth(rangeAnchor.getUTCMonth() - 1);
+            break;
+        case 'yearly':
+            rangeAnchor.setUTCFullYear(rangeAnchor.getUTCFullYear() - 1);
+            break;
+        default:
+            startDate = new Date(0);
+    }
+
+    if (!startDate) {
+        startDate = createISTMidnightUTCDate({
+            year: rangeAnchor.getUTCFullYear(),
+            month: rangeAnchor.getUTCMonth() + 1,
+            day: rangeAnchor.getUTCDate()
+        });
+    }
+
+    return { startDate, endDate };
 };
 
 const normalizeCouponDatesForSave = (data) => {
@@ -1890,6 +2045,7 @@ const getOrderStatusStats = async (req, res) => {
     try {
         const range = String(req.query.range || '').toLowerCase();
         const now = new Date();
+        const endDate = new Date();
         let startDate;
 
         switch (range) {
@@ -2339,11 +2495,208 @@ const getTopPerformers = async (req, res) => {
     }
 };
 
+// @desc    Download Sales Report
+// @route   GET /admin/download-report
+const downloadReport = async (req, res) => {
+    try {
+        const type = String(req.query.type || '').toLowerCase();
+        const range = String(req.query.range || 'daily').toLowerCase();
+
+        if (!['pdf', 'excel'].includes(type)) {
+            return res.status(400).json({ message: 'Supported export types are PDF and Excel.' });
+        }
+
+        const { startDate, endDate } = getReportDateRange(range);
+        const fileRange = ['daily', 'weekly', 'monthly', 'yearly'].includes(range) ? range : 'all';
+
+        if (type === 'excel') {
+            const orders = await Order.find({
+                createdAt: {
+                    $gte: startDate,
+                    $lte: endDate
+                }
+            })
+                .populate('user', 'name email')
+                .sort({ createdAt: -1 })
+                .lean();
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Sales Report');
+
+            worksheet.columns = [
+                { header: 'Date', key: 'date', width: 15 },
+                { header: 'Order ID', key: 'orderId', width: 20 },
+                { header: 'Customer Name', key: 'name', width: 20 },
+                { header: 'Email', key: 'email', width: 25 },
+                { header: 'Product', key: 'product', width: 25 },
+                { header: 'Variant', key: 'variant', width: 15 },
+                { header: 'Quantity', key: 'quantity', width: 10 },
+                { header: 'Price', key: 'price', width: 12 },
+                { header: 'Status', key: 'status', width: 15 },
+                { header: 'Payment Method', key: 'payment', width: 18 },
+                { header: 'Total', key: 'total', width: 15 }
+            ];
+            worksheet.getRow(1).font = { bold: true };
+
+            for (const order of orders) {
+                const items = Array.isArray(order.items) ? order.items : [];
+
+                for (const item of items) {
+                    const quantity = Number(item.quantity || 0);
+                    const price = Number(item.unitFinalPrice || item.price || 0);
+                    const total = Number(item.finalPrice || (price * quantity) || 0);
+                    const itemStatus = String(item.status || order.orderStatus || 'Unknown');
+
+                    worksheet.addRow({
+                        date: formatReportDate(order.createdAt),
+                        orderId: order.orderId || String(order._id || ''),
+                        name: order.user?.name || 'User',
+                        email: order.user?.email || 'N/A',
+                        product: item.productName || 'Product',
+                        variant: item.colorName || 'Default',
+                        quantity,
+                        price,
+                        status: itemStatus,
+                        payment: normalizeReportPaymentMethod(order.paymentMethod),
+                        total
+                    });
+                }
+            }
+
+            res.setHeader(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            );
+            res.setHeader(
+                'Content-Disposition',
+                `attachment; filename=sales-report-${fileRange}.xlsx`
+            );
+
+            await workbook.xlsx.write(res);
+            res.end();
+            return;
+        }
+
+        const orders = await Order.find({
+            createdAt: {
+                $gte: startDate,
+                $lte: endDate
+            }
+        })
+            .populate('user', 'name email')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const hasLineItems = orders.some((order) => Array.isArray(order.items) && order.items.length > 0);
+        const dateLabel = range === 'daily'
+            ? formatReportHeaderDate(endDate)
+            : `${formatReportHeaderDate(startDate)} - ${formatReportHeaderDate(endDate)}`;
+        const totalOrders = orders.length;
+        const totalRevenue = orders.reduce((sum, order) => sum + Number(order.pricing?.finalTotal || 0), 0);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=sales-report-${fileRange}.pdf`);
+
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+        doc.pipe(res);
+
+        doc.font('Helvetica-Bold').fontSize(16).fillColor('#111827').text('SoundWave Sales Report', { align: 'center' });
+        doc.moveDown(0.3);
+        doc.font('Helvetica-Bold').fontSize(11).fillColor('#111827').text(dateLabel, { align: 'center' });
+        doc.moveDown();
+        doc.font('Helvetica-Bold').fontSize(14).fillColor('#111827').text('Order Summary', { underline: true });
+        doc.moveDown(0.5);
+        doc.font('Helvetica').fontSize(12).fillColor('#111827').text(`Total Orders: ${totalOrders}`);
+        doc.text(`Total Revenue: ${formatReportCurrency(totalRevenue)}`);
+        doc.moveDown();
+
+        if (!orders.length || !hasLineItems) {
+            doc
+                .fontSize(12)
+                .fillColor('#6B7280')
+                .text('No data available for the selected range.', { align: 'center' });
+
+            doc.end();
+            return;
+        }
+
+        for (const order of orders) {
+            const items = Array.isArray(order.items) ? order.items : [];
+
+            if (!items.length) {
+                continue;
+            }
+
+            if (doc.y > 750) {
+                doc.addPage();
+            }
+
+            const customerName = order.user?.name || 'User';
+            const customerEmail = order.user?.email || 'N/A';
+            const orderIdentifier = order.orderId || String(order._id || '').slice(-6);
+            const paymentMethod = normalizeReportPaymentMethod(order.paymentMethod);
+            const orderAmount = Number(order.pricing?.finalTotal || order.totalAmount || 0);
+            const orderStatus = order.orderStatus || 'Unknown';
+
+            doc.font('Helvetica-Bold').fontSize(11).fillColor('#111827');
+            doc.text(`Order ID: ${orderIdentifier} | Date: ${formatReportDate(order.createdAt)}`);
+            doc.font('Helvetica').fillColor('#111827').text(`Customer: ${customerName}`);
+            doc.text(`Email: ${customerEmail}`);
+            doc.text(`Payment: ${paymentMethod}`);
+            doc.text(`Amount: ${formatReportCurrency(orderAmount)}`);
+            doc.fillColor(getStatusColor(orderStatus)).text(`Order Status: ${formatReportStatusLabel(orderStatus)}`);
+            doc.moveDown(0.5);
+            doc.font('Helvetica').fontSize(10).fillColor('#111827');
+
+            for (const item of items) {
+                if (doc.y > 750) {
+                    doc.addPage();
+                }
+
+                const itemStatus = String(item.status || order.orderStatus || 'Unknown');
+                const quantity = Number(item.quantity || 0);
+                const price = Number(item.unitFinalPrice || item.price || 0);
+                const total = itemStatus.toLowerCase() === 'delivered'
+                    ? Number(item.finalPrice || (price * quantity) || 0)
+                    : 0;
+                const productName = item.productName || 'Product';
+                const variantName = item.colorName || 'Default';
+
+                doc.text(
+                    `• ${productName} | Variant: ${variantName} | Qty: ${quantity} | Price: ${formatReportCurrency(price)} | Total: ${formatReportCurrency(total)}`,
+                    {
+                        indent: 20
+                    }
+                );
+                doc.fillColor(getStatusColor(itemStatus)).text(`Status: ${formatReportStatusLabel(itemStatus)}`, {
+                    indent: 40
+                });
+                doc.fillColor('#111827');
+            }
+
+            doc.moveDown();
+            doc.moveTo(30, doc.y).lineTo(570, doc.y).stroke();
+            doc.moveDown();
+        }
+
+        doc.end();
+    } catch (error) {
+        console.error('DOWNLOAD REPORT ERROR:', error);
+
+        if (!res.headersSent) {
+            return res.status(500).json({ message: 'Failed to generate sales report.' });
+        }
+
+        res.end();
+    }
+};
+
 module.exports = {
     getDashboardStats,
     getOrderStatusStats,
     getRevenueTrend,
     getTopPerformers,
+    downloadReport,
     getCustomersPage,
     toggleBlockUser,
     softDeleteUser,
