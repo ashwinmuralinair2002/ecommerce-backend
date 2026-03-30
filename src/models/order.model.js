@@ -78,6 +78,12 @@ const orderItemSchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
+    taxableValue: {
+        type: Number,
+        required: true,
+        default: 0,
+        min: 0
+    },
     finalSubtotal: {
         type: Number,
         required: true,

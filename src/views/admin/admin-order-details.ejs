@@ -120,6 +120,8 @@
                                         </thead>
                                         <tbody>
                                             <% order.items.forEach(item => { %>
+                                                <% const itemGST = item.gstAmount || 0; %>
+                                                <% const itemFinalPrice = item.finalPrice || item.priceSnapshot || item.price || 0; %>
                                                 <tr class="border-t border-t-[#BCA6DB] hover:bg-gray-50">
                                                     <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
                                                         <img
@@ -130,8 +132,30 @@
                                                     <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal"><%= item.productName %></td>
                                                     <td class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal"><%= item.colorName || 'N/A' %></td>
                                                     <td class="h-[72px] px-4 py-2 text-[#685BCB] text-sm font-normal leading-normal"><%= item.quantity %></td>
-                                                    <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">₹<%= Number(item.price || 0).toLocaleString('en-IN') %></td>
-                                                    <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">₹<%= Number(item.totalPrice || 0).toLocaleString('en-IN') %></td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal price-breakdown">
+                                                        <div>₹ <%= Number(item.priceSnapshot ?? item.price ?? 0).toLocaleString('en-IN') %></div>
+
+                                                        <% if (item.offerDiscount && item.offerDiscount > 0) { %>
+                                                            <div style="color: red;">
+                                                                - ₹ <%= Number(item.offerDiscount).toLocaleString('en-IN') %>
+                                                            </div>
+
+                                                            <div style="color: green; font-size: 12px;">
+                                                                You saved ₹ <%= Number(item.offerDiscount).toLocaleString('en-IN') %>
+                                                            </div>
+                                                        <% } %>
+
+                                                        <% if (itemGST) { %>
+                                                            <div style="font-size: 12px; color: #555;">
+                                                                GST: ₹ <%= Number(itemGST).toLocaleString('en-IN') %>
+                                                            </div>
+                                                        <% } %>
+
+                                                        <div style="font-weight: bold;">
+                                                            = ₹ <%= Number(itemFinalPrice).toLocaleString('en-IN') %>
+                                                        </div>
+                                                    </td>
+                                                    <td class="h-[72px] px-4 py-2 text-[#1F1F1F] text-sm font-normal leading-normal">₹<%= Number(item.finalPrice || ((item.priceSnapshot || item.price || 0) * (item.quantity || 0))).toLocaleString('en-IN') %></td>
                                                     <td class="h-[72px] px-4 py-2 text-sm font-normal leading-normal">
                                                         <div class="flex flex-col items-start">
                                                             <div class="flex items-center gap-2">

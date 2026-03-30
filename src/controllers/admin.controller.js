@@ -23,6 +23,7 @@ const bcrypt = require('bcryptjs');
 
 const ENABLE_ADMIN_USER_EDIT = process.env.ENABLE_ADMIN_USER_EDIT === 'true';
 const { Types } = mongoose;
+const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
 const mapIssuesToFields = (issues = []) => {
     return issues.reduce((acc, issue) => {
@@ -2531,10 +2532,11 @@ const downloadReport = async (req, res) => {
                 { header: 'Product', key: 'product', width: 25 },
                 { header: 'Variant', key: 'variant', width: 15 },
                 { header: 'Quantity', key: 'quantity', width: 10 },
-                { header: 'Price', key: 'price', width: 12 },
-                { header: 'Status', key: 'status', width: 15 },
+                { header: 'Unit Price', key: 'price', width: 12 },
+                { header: 'Total GST', key: 'gst', width: 12 },
+                { header: 'Total', key: 'total', width: 15 },
                 { header: 'Payment Method', key: 'payment', width: 18 },
-                { header: 'Total', key: 'total', width: 15 }
+                { header: 'Status', key: 'status', width: 15 }
             ];
             worksheet.getRow(1).font = { bold: true };
 
@@ -2543,8 +2545,9 @@ const downloadReport = async (req, res) => {
 
                 for (const item of items) {
                     const quantity = Number(item.quantity || 0);
-                    const price = Number(item.unitFinalPrice || item.price || 0);
-                    const total = Number(item.finalPrice || (price * quantity) || 0);
+                    const price = roundCurrency(Number(item.priceSnapshot || item.price || 0));
+                    const gst = roundCurrency(Number(item.gstAmount || 0));
+                    const total = roundCurrency(Number(item.finalPrice || 0));
                     const itemStatus = String(item.status || order.orderStatus || 'Unknown');
 
                     worksheet.addRow({
@@ -2556,9 +2559,10 @@ const downloadReport = async (req, res) => {
                         variant: item.colorName || 'Default',
                         quantity,
                         price,
-                        status: itemStatus,
+                        gst,
+                        total,
                         payment: normalizeReportPaymentMethod(order.paymentMethod),
-                        total
+                        status: itemStatus
                     });
                 }
             }

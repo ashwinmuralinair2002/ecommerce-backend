@@ -12,6 +12,7 @@ const { getCachedOffers } = require('../utils/offer-cache');
 const { calculatePricing } = require('../utils/pricing-engine');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
+const GST_RATE = 0.18;
 const generateOrderItemId = () => `ITEM-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const buildPricingItemKey = (item) => (
     `${String(item?.productId)}:${String(item?.selectedOfferId || 'default')}:${String(item?.priceSnapshot)}`
@@ -176,15 +177,36 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                 throw new AppError('Invalid item quantity in order creation', 500);
             }
 
+            const unitPrice = roundCurrency(Number(item.price || 0));
+            const quantity = Number(item.quantity || 0);
+            const totalBase = roundCurrency(unitPrice * quantity);
             const offerDiscount = roundCurrency(Number(detailedItem.offerDiscountTotal || 0));
             const couponDiscount = roundCurrency(Number(detailedItem.couponDiscountShare || 0));
-            const finalSubtotal = Math.max(0, roundCurrency(Number(detailedItem.finalSubtotal || 0)));
-            const gstAmount = Math.max(0, roundCurrency(Number(detailedItem.gstAmount || 0)));
-            const finalPrice = Math.max(0, roundCurrency(Number(detailedItem.finalPrice || 0)));
+            const totalDiscount = roundCurrency(offerDiscount + couponDiscount);
+            const taxableValue = Math.max(0, roundCurrency(totalBase - totalDiscount));
+            const finalSubtotal = Math.max(0, roundCurrency(
+                Number.isFinite(Number(detailedItem.finalSubtotal))
+                    ? Number(detailedItem.finalSubtotal)
+                    : taxableValue
+            ));
+            const gstAmount = Math.max(0, roundCurrency(
+                Number.isFinite(Number(detailedItem.gstAmount))
+                    ? Number(detailedItem.gstAmount)
+                    : (finalSubtotal * GST_RATE)
+            ));
+            const finalPrice = Math.max(0, roundCurrency(
+                Number.isFinite(Number(detailedItem.finalPrice))
+                    ? Number(detailedItem.finalPrice)
+                    : (finalSubtotal + gstAmount)
+            ));
 
             if (
-                !Number.isFinite(offerDiscount)
+                !Number.isFinite(unitPrice)
+                || !Number.isFinite(totalBase)
+                || !Number.isFinite(offerDiscount)
                 || !Number.isFinite(couponDiscount)
+                || !Number.isFinite(totalDiscount)
+                || !Number.isFinite(taxableValue)
                 || !Number.isFinite(finalSubtotal)
                 || !Number.isFinite(gstAmount)
                 || !Number.isFinite(finalPrice)
@@ -192,7 +214,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                 throw new AppError('Invalid final price computed', 500);
             }
 
-            const unitFinalPrice = roundCurrency(finalPrice / Number(item.quantity));
+            const unitFinalPrice = roundCurrency(finalPrice / quantity);
 
             if (!Number.isFinite(unitFinalPrice) || unitFinalPrice < 0) {
                 throw new AppError('Invalid final price computed', 500);
@@ -202,6 +224,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                 ...item,
                 offerDiscount,
                 couponDiscount,
+                taxableValue,
                 finalSubtotal,
                 gstAmount,
                 finalPrice,
