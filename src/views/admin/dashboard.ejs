@@ -234,6 +234,34 @@
             color: #fff;
         }
 
+        .custom-range-inputs {
+            display: none;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .custom-range-inputs input {
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 0.875rem;
+            color: #1F1F1F;
+            background: #fff;
+        }
+
+        .custom-range-apply {
+            border: none;
+            background: #1F1F1F;
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
         .btn-pdf,
         .btn-excel {
             border: none;
@@ -547,10 +575,11 @@
                         <h2 class="chart-title">Order Status Distribution</h2>
                         <div class="chart-header">
                             <div class="filter-buttons">
-                                <button type="button" class="chart-filter-btn active" data-range="daily" onclick="loadChart('daily')">Daily</button>
-                                <button type="button" class="chart-filter-btn" data-range="weekly" onclick="loadChart('weekly')">Weekly</button>
-                                <button type="button" class="chart-filter-btn" data-range="monthly" onclick="loadChart('monthly')">Monthly</button>
-                                <button type="button" class="chart-filter-btn" data-range="yearly" onclick="loadChart('yearly')">Yearly</button>
+                                <button type="button" class="chart-filter-btn active" data-range="daily">Daily</button>
+                                <button type="button" class="chart-filter-btn" data-range="weekly">Weekly</button>
+                                <button type="button" class="chart-filter-btn" data-range="monthly">Monthly</button>
+                                <button type="button" class="chart-filter-btn" data-range="yearly">Yearly</button>
+                                <button type="button" class="chart-filter-btn" data-range="custom">Custom</button>
                             </div>
                             <div class="download-buttons">
                                 <div class="download-title">Download Sales Report</div>
@@ -559,6 +588,11 @@
                                     <button type="button" class="btn-excel" onclick="downloadReport('excel')">Excel</button>
                                 </div>
                             </div>
+                        </div>
+                        <div id="customRangeInputs" class="custom-range-inputs" style="display: none; margin-top: 10px;">
+                            <input type="date" id="startDate" />
+                            <input type="date" id="endDate" />
+                            <button type="button" id="applyCustomRange" class="custom-range-apply">Apply</button>
                         </div>
                         <div class="chart-canvas-wrap">
                             <canvas id="orderPieChart"></canvas>
@@ -603,7 +637,7 @@
                 </section>
 
                 <section class="revenue-chart-card" aria-labelledby="revenue-chart-heading">
-                    <h3 id="revenue-chart-heading" class="revenue-chart-title">Revenue (Last 7 Days)</h3>
+                    <h3 id="revenue-chart-heading" class="revenue-chart-title">Revenue Trend</h3>
                     <div class="revenue-chart-canvas-wrap">
                         <canvas id="revenueChart"></canvas>
                     </div>
@@ -619,6 +653,8 @@
     </div>
     <script>
         let currentRange = 'daily';
+        let currentStartDate = '';
+        let currentEndDate = '';
         let orderStatusChart;
         let revenueTrendChart;
 
@@ -627,6 +663,62 @@
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 2
             })}`;
+        }
+
+        function getCustomRangeInputs() {
+            return document.getElementById('customRangeInputs');
+        }
+
+        function getRangeInputValues() {
+            return {
+                startDate: document.getElementById('startDate')?.value || '',
+                endDate: document.getElementById('endDate')?.value || ''
+            };
+        }
+
+        function toggleCustomRangeInputs(show) {
+            const container = getCustomRangeInputs();
+
+            if (container) {
+                container.style.display = show ? 'flex' : 'none';
+            }
+        }
+
+        function buildDashboardQuery(range = currentRange, startDate = currentStartDate, endDate = currentEndDate) {
+            const params = new URLSearchParams();
+            params.set('range', range);
+
+            if (range === 'custom') {
+                if (startDate) {
+                    params.set('startDate', startDate);
+                }
+
+                if (endDate) {
+                    params.set('endDate', endDate);
+                }
+            }
+
+            return `?${params.toString()}`;
+        }
+
+        function setCurrentFilter(range = 'daily', startDate = '', endDate = '') {
+            currentRange = range;
+            currentStartDate = range === 'custom' ? startDate : '';
+            currentEndDate = range === 'custom' ? endDate : '';
+
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (startDateInput) {
+                startDateInput.value = currentStartDate;
+            }
+
+            if (endDateInput) {
+                endDateInput.value = currentEndDate;
+            }
+
+            setActive(range);
+            toggleCustomRangeInputs(range === 'custom');
         }
 
         function setActive(range) {
@@ -640,10 +732,7 @@
             }
         }
 
-        async function loadChart(range = 'daily') {
-            currentRange = range;
-            setActive(range);
-
+        async function loadChart() {
             let data = {
                 Pending: 0,
                 Shipped: 0,
@@ -654,7 +743,7 @@
             };
 
             try {
-                const res = await fetch(`/admin/order-status-stats?range=${encodeURIComponent(range)}`);
+                const res = await fetch(`/admin/order-status-stats${buildDashboardQuery()}`);
                 if (!res.ok) {
                     throw new Error('Failed to load order status stats');
                 }
@@ -701,7 +790,16 @@
         }
 
         function downloadReport(type) {
-            window.open(`/admin/download-report?type=${encodeURIComponent(type)}&range=${encodeURIComponent(currentRange)}`, '_blank');
+            const reportUrl = new URL('/admin/download-report', window.location.origin);
+            reportUrl.searchParams.set('type', type);
+            reportUrl.searchParams.set('range', currentRange);
+
+            if (currentRange === 'custom') {
+                reportUrl.searchParams.set('startDate', currentStartDate);
+                reportUrl.searchParams.set('endDate', currentEndDate);
+            }
+
+            window.open(reportUrl.toString(), '_blank');
         }
 
         async function loadDashboardStats() {
@@ -735,7 +833,7 @@
             };
 
             try {
-                const response = await fetch('/admin/dashboard-stats');
+                const response = await fetch(`/admin/dashboard-stats${buildDashboardQuery()}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to load dashboard stats');
@@ -753,7 +851,7 @@
             let data = [];
 
             try {
-                const res = await fetch('/admin/revenue-trend');
+                const res = await fetch(`/admin/revenue-trend${buildDashboardQuery()}`);
                 if (!res.ok) {
                     throw new Error('Failed to load revenue trend');
                 }
@@ -854,7 +952,7 @@
 
         async function loadTopPerformers() {
             try {
-                const response = await fetch('/admin/top-performers');
+                const response = await fetch(`/admin/top-performers${buildDashboardQuery()}`);
 
                 if (!response.ok) {
                     throw new Error('Failed to load top performers');
@@ -872,10 +970,45 @@
             }
         }
 
-        loadChart('daily');
-        loadDashboardStats();
-        loadRevenueChart();
-        loadTopPerformers();
+        function fetchDashboard(range = 'daily', startDate = '', endDate = '') {
+            setCurrentFilter(range, startDate, endDate);
+            loadChart();
+            loadDashboardStats();
+            loadRevenueChart();
+            loadTopPerformers();
+        }
+
+        document.querySelectorAll('.filter-buttons .chart-filter-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                const range = button.dataset.range;
+
+                if (range === 'custom') {
+                    const { startDate, endDate } = getRangeInputValues();
+                    setCurrentFilter('custom', startDate, endDate);
+                    return;
+                }
+
+                fetchDashboard(range);
+            });
+        });
+
+        document.getElementById('applyCustomRange').addEventListener('click', () => {
+            const { startDate, endDate } = getRangeInputValues();
+
+            if (!startDate || !endDate) {
+                alert('Please select both dates');
+                return;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                alert('Start date cannot be after end date');
+                return;
+            }
+
+            fetchDashboard('custom', startDate, endDate);
+        });
+
+        fetchDashboard('daily');
     </script>
 </body>
 

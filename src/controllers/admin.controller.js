@@ -270,9 +270,38 @@ const getStatusColor = (status) => {
     return 'black';
 };
 
-const getReportDateRange = (range = 'daily') => {
+const getCustomDateRange = (startDate, endDate) => {
+    if (!startDate || !endDate) {
+        throw new AppError('Start date and end date required', 400);
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        throw new AppError('Invalid start date or end date', 400);
+    }
+
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    if (start > end) {
+        throw new AppError('End date must be on or after start date', 400);
+    }
+
+    return {
+        startDate: start,
+        endDate: end
+    };
+};
+
+const getReportDateRange = (range = 'daily', customStartDate, customEndDate) => {
+    if (range === 'custom') {
+        return getCustomDateRange(customStartDate, customEndDate);
+    }
+
     const now = new Date();
-    const endDate = new Date(now);
+    const resolvedEndDate = new Date(now);
     const istNowParts = getISTDateParts(now);
     const rangeAnchor = new Date(Date.UTC(
         istNowParts.year,
@@ -283,7 +312,7 @@ const getReportDateRange = (range = 'daily') => {
         0,
         0
     ));
-    let startDate;
+    let resolvedStartDate;
 
     switch (range) {
         case 'daily':
@@ -298,18 +327,82 @@ const getReportDateRange = (range = 'daily') => {
             rangeAnchor.setUTCFullYear(rangeAnchor.getUTCFullYear() - 1);
             break;
         default:
-            startDate = new Date(0);
+            resolvedStartDate = new Date(0);
     }
 
-    if (!startDate) {
-        startDate = createISTMidnightUTCDate({
+    if (!resolvedStartDate) {
+        resolvedStartDate = createISTMidnightUTCDate({
             year: rangeAnchor.getUTCFullYear(),
             month: rangeAnchor.getUTCMonth() + 1,
             day: rangeAnchor.getUTCDate()
         });
     }
 
-    return { startDate, endDate };
+    return { startDate: resolvedStartDate, endDate: resolvedEndDate };
+};
+
+const getAnalyticsDateRange = (query = {}, options = {}) => {
+    const {
+        defaultRange = 'all',
+        includeUpperBound = true
+    } = options;
+    const requestedRange = String(query.range || defaultRange).toLowerCase();
+
+    if (requestedRange === 'custom') {
+        const customRange = getCustomDateRange(query.startDate, query.endDate);
+
+        return {
+            range: 'custom',
+            startDate: customRange.startDate,
+            endDate: customRange.endDate,
+            createdAt: {
+                $gte: customRange.startDate,
+                $lte: customRange.endDate
+            }
+        };
+    }
+
+    if (!['daily', 'weekly', 'monthly', 'yearly'].includes(requestedRange)) {
+        return {
+            range: 'all',
+            startDate: new Date(0),
+            endDate: new Date(),
+            createdAt: null
+        };
+    }
+
+    const { startDate: resolvedStartDate, endDate: resolvedEndDate } = getReportDateRange(requestedRange);
+    const createdAt = {
+        $gte: resolvedStartDate
+    };
+
+    if (includeUpperBound) {
+        createdAt.$lte = resolvedEndDate;
+    }
+
+    return {
+        range: requestedRange,
+        startDate: resolvedStartDate,
+        endDate: resolvedEndDate,
+        createdAt
+    };
+};
+
+const buildDailyBuckets = (startDate, endDate) => {
+    const buckets = [];
+    const cursor = new Date(startDate);
+
+    cursor.setHours(0, 0, 0, 0);
+
+    while (cursor <= endDate) {
+        buckets.push({
+            date: cursor.toISOString().split('T')[0],
+            revenue: 0
+        });
+        cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return buckets;
 };
 
 const normalizeCouponDatesForSave = (data) => {
@@ -1923,6 +2016,7 @@ const deleteOffer = async (req, res) => {
 // @route   GET /admin/dashboard-stats
 const getDashboardStats = async (req, res) => {
     try {
+        const dateRange = getAnalyticsDateRange(req.query, { defaultRange: 'all' });
         const normalizedStatusExpr = {
             $toLower: {
                 $ifNull: ['$orderStatus', '$status']
@@ -1944,6 +2038,11 @@ const getDashboardStats = async (req, res) => {
                 }
             ]),
             Order.aggregate([
+                ...(dateRange.createdAt ? [{
+                    $match: {
+                        createdAt: dateRange.createdAt
+                    }
+                }] : []),
                 {
                     $facet: {
                         totalOrders: [
@@ -2028,6 +2127,11 @@ const getDashboardStats = async (req, res) => {
         });
     } catch (error) {
         console.error('DASHBOARD STATS ERROR:', error);
+
+        if (error instanceof AppError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
+
         return res.status(500).json({
             totalProducts: 0,
             activeProducts: 0,
@@ -2044,36 +2148,12 @@ const getDashboardStats = async (req, res) => {
 // @route   GET /admin/order-status-stats
 const getOrderStatusStats = async (req, res) => {
     try {
-        const range = String(req.query.range || '').toLowerCase();
-        const now = new Date();
-        const endDate = new Date();
-        let startDate;
-
-        switch (range) {
-            case 'daily':
-                startDate = new Date(now);
-                startDate.setHours(0, 0, 0, 0);
-                break;
-            case 'weekly':
-                startDate = new Date();
-                startDate.setDate(startDate.getDate() - 7);
-                break;
-            case 'monthly':
-                startDate = new Date();
-                startDate.setMonth(startDate.getMonth() - 1);
-                break;
-            case 'yearly':
-                startDate = new Date();
-                startDate.setFullYear(startDate.getFullYear() - 1);
-                break;
-            default:
-                startDate = new Date(0);
-        }
+        const dateRange = getAnalyticsDateRange(req.query, { defaultRange: 'all' });
 
         const stats = await Order.aggregate([
             {
                 $match: {
-                    createdAt: { $gte: startDate }
+                    ...(dateRange.createdAt ? { createdAt: dateRange.createdAt } : {})
                 }
             },
             {
@@ -2190,6 +2270,11 @@ const getOrderStatusStats = async (req, res) => {
         return res.json(statusMap);
     } catch (error) {
         console.error('ORDER STATUS CHART ERROR:', error);
+
+        if (error instanceof AppError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
+
         return res.status(500).json({
             Pending: 0,
             Shipped: 0,
@@ -2205,9 +2290,23 @@ const getOrderStatusStats = async (req, res) => {
 // @route   GET /admin/revenue-trend
 const getRevenueTrend = async (req, res) => {
     try {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 6);
-        startDate.setHours(0, 0, 0, 0);
+        const hasRequestedRange = ['range', 'startDate', 'endDate'].some((key) => req.query[key]);
+        const dateRange = hasRequestedRange
+            ? getAnalyticsDateRange(req.query, { defaultRange: 'daily' })
+            : (() => {
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - 6);
+                startDate.setHours(0, 0, 0, 0);
+
+                return {
+                    range: 'daily',
+                    startDate,
+                    endDate: new Date(),
+                    createdAt: {
+                        $gte: startDate
+                    }
+                };
+            })();
 
         const deliveredStatusExpr = {
             $toLower: {
@@ -2218,7 +2317,7 @@ const getRevenueTrend = async (req, res) => {
         const revenueData = await Order.aggregate([
             {
                 $match: {
-                    createdAt: { $gte: startDate },
+                    createdAt: dateRange.createdAt,
                     $expr: { $eq: [deliveredStatusExpr, 'delivered'] }
                 }
             },
@@ -2241,44 +2340,30 @@ const getRevenueTrend = async (req, res) => {
             }
         ]);
 
-        const last7Days = [];
-        for (let i = 6; i >= 0; i -= 1) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            date.setHours(0, 0, 0, 0);
-
-            last7Days.push({
-                date: date.toISOString().split('T')[0],
-                revenue: 0
-            });
-        }
+        const buckets = buildDailyBuckets(dateRange.startDate, dateRange.endDate);
 
         revenueData.forEach((item) => {
             const date = `${item._id.year}-${String(item._id.month).padStart(2, '0')}-${String(item._id.day).padStart(2, '0')}`;
-            const foundDay = last7Days.find((day) => day.date === date);
+            const foundDay = buckets.find((day) => day.date === date);
 
             if (foundDay) {
                 foundDay.revenue = Number(item.totalRevenue || 0);
             }
         });
 
-        return res.json(last7Days);
+        return res.json(buckets);
     } catch (error) {
         console.error('REVENUE TREND ERROR:', error);
 
-        const fallbackDays = [];
-        for (let i = 6; i >= 0; i -= 1) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            date.setHours(0, 0, 0, 0);
-
-            fallbackDays.push({
-                date: date.toISOString().split('T')[0],
-                revenue: 0
-            });
+        if (error instanceof AppError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
         }
 
-        return res.status(500).json(fallbackDays);
+        const fallbackStartDate = new Date();
+        fallbackStartDate.setDate(fallbackStartDate.getDate() - 6);
+        fallbackStartDate.setHours(0, 0, 0, 0);
+
+        return res.status(500).json(buildDailyBuckets(fallbackStartDate, new Date()));
     }
 };
 
@@ -2286,8 +2371,10 @@ const getRevenueTrend = async (req, res) => {
 // @route   GET /admin/top-performers
 const getTopPerformers = async (req, res) => {
     try {
+        const dateRange = getAnalyticsDateRange(req.query, { defaultRange: 'all' });
         const deliveredMatchStage = {
             $match: {
+                ...(dateRange.createdAt ? { createdAt: dateRange.createdAt } : {}),
                 $expr: {
                     $eq: [
                         {
@@ -2488,6 +2575,11 @@ const getTopPerformers = async (req, res) => {
         });
     } catch (error) {
         console.error('TOP PERFORMERS ERROR:', error);
+
+        if (error instanceof AppError) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
+
         return res.status(500).json({
             products: [],
             brands: [],
@@ -2507,8 +2599,8 @@ const downloadReport = async (req, res) => {
             return res.status(400).json({ message: 'Supported export types are PDF and Excel.' });
         }
 
-        const { startDate, endDate } = getReportDateRange(range);
-        const fileRange = ['daily', 'weekly', 'monthly', 'yearly'].includes(range) ? range : 'all';
+        const { startDate, endDate } = getReportDateRange(range, req.query.startDate, req.query.endDate);
+        const fileRange = ['daily', 'weekly', 'monthly', 'yearly', 'custom'].includes(range) ? range : 'all';
 
         if (type === 'excel') {
             const orders = await Order.find({
@@ -2686,6 +2778,10 @@ const downloadReport = async (req, res) => {
         doc.end();
     } catch (error) {
         console.error('DOWNLOAD REPORT ERROR:', error);
+
+        if (error instanceof AppError && !res.headersSent) {
+            return res.status(error.statusCode || 400).json({ message: error.message });
+        }
 
         if (!res.headersSent) {
             return res.status(500).json({ message: 'Failed to generate sales report.' });
