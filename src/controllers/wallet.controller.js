@@ -3,6 +3,8 @@ const WalletTransaction = require('../models/wallet-transaction.model');
 const Order = require('../models/order.model');
 const { razorpayInstance, verifyRazorpaySignature } = require('../services/payment.service');
 const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/http-status');
+const MESSAGES = require('../constants/messages');
 
 const MIN_RECHARGE_AMOUNT = 10;
 const MAX_RECHARGE_AMOUNT = 50000;
@@ -164,9 +166,9 @@ const createRechargeOrder = async (req, res) => {
         const userId = req.session && req.session.userId;
 
         if (!userId) {
-            return res.status(401).json({
+            return res.status(HTTP_STATUS.UNAUTHORIZED).json({
                 success: false,
-                message: 'Authentication required'
+                message: MESSAGES.AUTH_REQUIRED
             });
         }
 
@@ -197,7 +199,7 @@ const createRechargeOrder = async (req, res) => {
             }
         });
     } catch (error) {
-        return res.status(error.statusCode || 500).json({
+        return res.status(error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message || 'Failed to create recharge order'
         });
@@ -209,9 +211,9 @@ const verifyRecharge = async (req, res) => {
         const userId = req.session && req.session.userId;
 
         if (!userId) {
-            return res.status(401).json({
+            return res.status(HTTP_STATUS.UNAUTHORIZED).json({
                 success: false,
-                message: 'Authentication required'
+                message: MESSAGES.AUTH_REQUIRED
             });
         }
 
@@ -222,7 +224,7 @@ const verifyRecharge = async (req, res) => {
         } = req.body || {};
 
         if (!razorpayPaymentId || !razorpayOrderId || !razorpaySignature) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'Missing payment verification data'
             });
@@ -231,9 +233,9 @@ const verifyRecharge = async (req, res) => {
         const isValid = verifyRazorpaySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
 
         if (!isValid) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
-                message: 'Payment verification failed'
+                message: MESSAGES.PAYMENT_VERIFICATION_FAILED
             });
         }
 
@@ -262,7 +264,7 @@ const verifyRecharge = async (req, res) => {
         }
 
         if (payment.order_id !== razorpayOrderId) {
-            throw new AppError('Payment order mismatch', 400);
+            throw new AppError(MESSAGES.PAYMENT_ORDER_MISMATCH, 400);
         }
 
         const amountInRupees = Number(payment.amount || 0) / 100;
@@ -281,7 +283,7 @@ const verifyRecharge = async (req, res) => {
 
         return res.json({ success: true });
     } catch (error) {
-        return res.status(error.statusCode || 500).json({
+        return res.status(error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message || 'Failed to verify recharge payment'
         });

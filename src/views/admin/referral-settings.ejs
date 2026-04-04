@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+    <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900">
+    <title>SoundWave - Referral Settings</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const success = params.get('success');
+
+            if (success) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: success,
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
+        <%- include("../partials/admin/navbar") %>
+
+        <main class="flex flex-1 bg-white">
+            <aside class="w-64 flex-shrink-0 border-r border-[#BCA6DB] bg-[#BCA6DB]">
+                <%- include('../partials/admin/sidebar', { page: 'offers' }) %>
+            </aside>
+
+            <section class="flex-1 p-6 md:p-8">
+                <div class="max-w-2xl space-y-4">
+                    <div class="mb-6">
+                        <h1 class="text-[32px] font-bold text-[#1F1F1F]">Referral Settings</h1>
+                        <p class="text-[#685BCB] text-sm">Manage referral reward amount, usage limit, and active status.</p>
+                    </div>
+
+                    <form method="POST" action="/admin/referral" class="space-y-4 rounded-xl border border-[#BCA6DB] bg-white p-6">
+                        <input
+                            type="number"
+                            name="referrerReward"
+                            min="0"
+                            placeholder="Referrer Reward"
+                            required
+                            value="<%= config?.referrerReward ?? '' %>"
+                            class="w-full h-12 rounded-xl border border-[#BCA6DB] px-4 text-sm text-[#1F1F1F] focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+
+                        <input
+                            type="number"
+                            name="referredUserReward"
+                            min="0"
+                            placeholder="Referred User Reward"
+                            required
+                            value="<%= config?.referredUserReward ?? '' %>"
+                            class="w-full h-12 rounded-xl border border-[#BCA6DB] px-4 text-sm text-[#1F1F1F] focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+
+                        <input
+                            type="number"
+                            name="maxReferrals"
+                            min="0"
+                            placeholder="Max Referrals"
+                            required
+                            value="<%= config?.maxReferrals ?? '' %>"
+                            class="w-full h-12 rounded-xl border border-[#BCA6DB] px-4 text-sm text-[#1F1F1F] focus:outline-none focus:ring-2 focus:ring-[#685BCB]">
+
+                        <label class="flex items-center gap-3 text-sm text-[#1F1F1F]">
+                            <input
+                                type="checkbox"
+                                name="isActive"
+                                <%= config?.isActive ? 'checked' : '' %>
+                                class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]">
+                            Active
+                        </label>
+
+                        <button
+                            type="submit"
+                            class="flex items-center justify-center rounded-lg h-10 px-4 bg-[#685BCB] text-white text-sm font-bold hover:bg-[#5a4dc0] transition-colors">
+                            Save
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+
+</html>

@@ -14,6 +14,7 @@ const accountRoutes = require('./routes/account.routes');
 const cartRoutes = require('./routes/cart.routes');
 const orderRoutes = require('./routes/order.routes');
 const authPagesRoutes = require('./routes/auth-pages.routes');
+const adminRoutes = require('./routes/admin.routes');
 const adminWebRoutes = require('./routes/admin-web.routes');
 const adminHeroRoutes = require('./routes/admin.hero.routes');
 const adminOrderRoutes = require('./routes/admin.order.routes');
@@ -29,6 +30,7 @@ const redirectAdminHome = require('./middleware/admin-home-redirect.middleware')
 require('dotenv').config();
 
 const app = express();
+app.set('trust proxy', 1);
 // Middleware
 app.use(nocache);
 // cookie-parser removed
@@ -43,7 +45,7 @@ app.use(requestLogger);
 
 // Session Middleware (Required for Google Strategy State)
 app.use(session({
-    secret: process.env.JWT_SECRET || 'secret',
+    secret: process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -85,6 +87,7 @@ app.get('/', redirectAdminHome, getHomePage);
 app.use(homeRoutes);
 app.use('/account', accountRoutes);
 app.use(authPagesRoutes);
+app.use('/admin', adminRoutes);
 app.use('/admin', adminWebRoutes);
 app.use('/admin', adminOrderRoutes);
 app.use('/admin', adminHeroRoutes);

@@ -3,6 +3,10 @@ const Product = require('../models/Product');
 const Brand = require('../models/Brand');
 const Category = require('../models/Category'); // Added Category import
 const cloudinary = require('../config/cloudinary');
+const HTTP_STATUS = require('../constants/http-status');
+const MESSAGES = require('../constants/messages');
+const { asArray } = require('../utils/array.utils');
+const { normalizeHexColor, parseBooleanLike } = require('../utils/validation.utils');
 
 const ENUM_MAP = {
     noiseControlTypes: [
@@ -30,31 +34,12 @@ const ENUM_MAP = {
     sensitivityRange: ['Up to 95 dB', '96-105 dB', '106-115 dB', '115+ dB']
 };
 
-function asArray(value) {
-    if (Array.isArray(value)) return value.filter(Boolean);
-    if (typeof value === 'string' && value.trim()) return [value.trim()];
-    return [];
-}
-
 function normalizeArrayEnum(value, allowedValues) {
     return asArray(value).filter((item) => allowedValues.includes(item));
 }
 
 function normalizeSingleEnum(value, allowedValues) {
     return allowedValues.includes(value) ? value : null;
-}
-
-function parseBooleanLike(value) {
-    return value === true || value === 'true' || value === 'on' || value === '1';
-}
-
-function normalizeHexColor(input) {
-    if (!input) return '';
-    const value = String(input).trim().toUpperCase();
-    if (/^#?[0-9A-F]{6}$/.test(value)) {
-        return value.startsWith('#') ? value : `#${value}`;
-    }
-    return '';
 }
 
 function parseVariantPayload(payloadRaw) {
@@ -307,13 +292,13 @@ const softDeleteProducts = async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
-            return res.status(400).json({ success: false, message: 'No products selected' });
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'No products selected' });
         }
         await Product.updateMany({ _id: { $in: ids } }, { isDeleted: true });
         return res.json({ success: true, message: `${ids.length} product(s) deleted successfully` });
     } catch (error) {
         console.error('Error soft deleting products:', error);
-        return res.status(500).json({ success: false, message: 'Failed to delete products' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to delete products' });
     }
 };
 
@@ -323,14 +308,14 @@ const softDeleteProduct = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.PRODUCT_NOT_FOUND });
         }
         product.isDeleted = true;
         await product.save();
         return res.json({ success: true, message: 'Product deleted successfully' });
     } catch (error) {
         console.error('Error soft deleting product:', error);
-        return res.status(500).json({ success: false, message: 'Failed to delete product' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to delete product' });
     }
 };
 
@@ -425,7 +410,7 @@ const createProduct = async (req, res) => {
 
         const variants = await buildVariantsFromRequest(req);
         if (!variants.length) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'At least one variant is required.'
             });
@@ -436,7 +421,7 @@ const createProduct = async (req, res) => {
         const productSku = sku || `SKU-${Date.now()}`;
 
         if (!category) {
-            return res.status(400).json({ success: false, message: 'Invalid Category' });
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'Invalid Category' });
         }
 
         const categoryId = category;
@@ -502,7 +487,7 @@ const createProduct = async (req, res) => {
                 await cloudinary.uploader.destroy(file.filename).catch(() => { });
             }
         }
-        return res.status(500).json({ success: false, message: error.message || 'Failed to create product' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message || 'Failed to create product' });
     }
 };
 
@@ -512,7 +497,7 @@ const updateProduct = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.PRODUCT_NOT_FOUND });
         }
 
         const {
@@ -535,7 +520,7 @@ const updateProduct = async (req, res) => {
         const variantsEnabled = String(hasVariants || '').toLowerCase() === 'true';
         const variants = variantsEnabled ? await buildVariantsFromRequest(req, product.variants || []) : [];
         if (!variants.length) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'At least one variant is required.'
             });
@@ -609,23 +594,20 @@ const updateProduct = async (req, res) => {
                 const existingVariant = product.variants.id(incomingVariant._id);
 
                 if (existingVariant) {
-                    existingVariant.colorName = incomingVariant.colorName;
-                    existingVariant.colorCode = incomingVariant.colorCode;
-                    existingVariant.stockCount = incomingVariant.stockCount;
-                    existingVariant.images = incomingVariant.images;
+                    existingVariant.set({
+                        colorName: incomingVariant.colorName,
+                        colorCode: incomingVariant.colorCode,
+                        stockCount: incomingVariant.stockCount,
+                        images: incomingVariant.images
+                    });
 
                     processedVariantIds.add(variantId);
-                    updatedVariants.push(existingVariant);
+                    updatedVariants.push(existingVariant.toObject());
                     return;
                 }
             }
 
-            updatedVariants.push({
-                colorName: incomingVariant.colorName,
-                colorCode: incomingVariant.colorCode,
-                stockCount: incomingVariant.stockCount,
-                images: incomingVariant.images
-            });
+            updatedVariants.push(incomingVariant);
         });
 
         product.variants = updatedVariants;
@@ -641,7 +623,7 @@ const updateProduct = async (req, res) => {
                 await cloudinary.uploader.destroy(file.filename).catch(() => { });
             }
         }
-        return res.status(500).json({ success: false, message: error.message || 'Failed to update product' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: error.message || 'Failed to update product' });
     }
 };
 
@@ -651,13 +633,13 @@ const deleteProductImage = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.PRODUCT_NOT_FOUND });
         }
         await migrateLegacyProductImages(product);
-        return res.status(400).json({ success: false, message: 'Global product images are no longer supported. Use variant images.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'Global product images are no longer supported. Use variant images.' });
     } catch (error) {
         console.error('Error deleting product image:', error);
-        return res.status(500).json({ success: false, message: 'Failed to delete image' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to delete image' });
     }
 };
 
@@ -667,7 +649,7 @@ const toggleProductListing = async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.PRODUCT_NOT_FOUND });
         }
 
         product.isListed = !product.isListed;
@@ -680,7 +662,7 @@ const toggleProductListing = async (req, res) => {
         });
     } catch (error) {
         console.error('Error toggling product listing:', error);
-        return res.status(500).json({ success: false, message: 'Failed to toggle product listing' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to toggle product listing' });
     }
 };
 

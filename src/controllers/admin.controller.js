@@ -11,6 +11,7 @@ const Brand = require('../models/Brand');
 const User = require('../models/user.model');
 const Wallet = require('../models/wallet.model');
 const WalletTransaction = require('../models/wallet-transaction.model');
+const ReferralConfig = require('../models/referralConfig.model');
 const Order = require('../models/order.model');
 const { attachOrderIds } = require('./wallet.controller');
 const { createOfferSchema } = require('../validators/offer.validator');
@@ -20,36 +21,29 @@ const AppError = require('../utils/AppError');
 const profileService = require('../services/profile.service');
 const { Parser } = require('json2csv');
 const bcrypt = require('bcryptjs');
+const HTTP_STATUS = require('../constants/http-status');
+const MESSAGES = require('../constants/messages');
+const { normalizeToArray, normalizeSelectionArray } = require('../utils/array.utils');
+const {
+    formatDateForInput,
+    formatReportCurrency,
+    formatReportStatusLabel,
+    formatReportDate,
+    formatReportHeaderDate,
+    normalizeReportPaymentMethod,
+    getStatusColor
+} = require('../utils/string.utils');
+const { escapeRegex, roundCurrency, mapIssuesToFields } = require('../utils/validation.utils');
+const {
+    normalizeAdminDateInput,
+    normalizeDateToUTC,
+    getReportDateRange,
+    getAnalyticsDateRange,
+    buildDailyBuckets
+} = require('../utils/date.utils');
 
 const ENABLE_ADMIN_USER_EDIT = process.env.ENABLE_ADMIN_USER_EDIT === 'true';
 const { Types } = mongoose;
-const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
-
-const mapIssuesToFields = (issues = []) => {
-    return issues.reduce((acc, issue) => {
-        const fieldName = Array.isArray(issue.path) && issue.path.length > 0 ? issue.path[0] : 'form';
-
-        if (!acc[fieldName]) {
-            acc[fieldName] = issue.message;
-        }
-
-        return acc;
-    }, {});
-};
-
-const normalizeSelectionArray = (value) => {
-    if (value == null || value === '') {
-        return [];
-    }
-
-    return Array.isArray(value) ? value : [value];
-};
-
-const normalizeToArray = (val) => {
-    if (!val) return [];
-    return Array.isArray(val) ? val : [val];
-};
-
 const normalizeOfferDataForSave = (data) => {
     if (data.discountType === 'FLAT') {
         data.maxDiscountAmount = null;
@@ -105,305 +99,11 @@ const enforceOfferSafetyRules = async (data) => {
     return data;
 };
 
-const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
 const toObjectIds = (arr) => (
     normalizeToArray(arr)
         .filter((id) => mongoose.Types.ObjectId.isValid(id))
         .map((id) => new mongoose.Types.ObjectId(id))
 );
-
-const formatDateForInput = (value) => {
-    if (!value) return '';
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
-
-    return date.toISOString().split('T')[0];
-};
-
-const normalizeAdminDateInput = (value) => {
-    if (!value) return '';
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-        return value;
-    }
-
-    const parts = String(value).split('/');
-
-    if (parts.length === 3) {
-        const [day, month, year] = parts;
-        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    }
-
-    return String(value);
-};
-
-const normalizeDateToUTC = (dateString, isEnd = false) => {
-    if (!dateString) return null;
-
-    const date = new Date(dateString);
-
-    if (Number.isNaN(date.getTime())) {
-        return null;
-    }
-
-    if (isEnd) {
-        date.setHours(23, 59, 59, 999);
-    } else {
-        date.setHours(0, 0, 0, 0);
-    }
-
-    return new Date(date.toISOString());
-};
-
-const formatReportDate = (value) => {
-    if (!value) {
-        return 'N/A';
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return 'N/A';
-    }
-
-    return date.toISOString().split('T')[0];
-};
-
-const formatReportHeaderDate = (value) => {
-    if (!value) {
-        return 'N/A';
-    }
-
-    const date = new Date(value);
-
-    if (Number.isNaN(date.getTime())) {
-        return 'N/A';
-    }
-
-    return date.toLocaleDateString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-    });
-};
-
-const getISTDateParts = (value = new Date()) => {
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Kolkata',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-
-    const parts = formatter.formatToParts(value).reduce((acc, part) => {
-        if (part.type !== 'literal') {
-            acc[part.type] = Number(part.value);
-        }
-
-        return acc;
-    }, {});
-
-    return {
-        year: Number(parts.year || 1970),
-        month: Number(parts.month || 1),
-        day: Number(parts.day || 1)
-    };
-};
-
-const createISTMidnightUTCDate = ({ year, month, day }) => {
-    const IST_OFFSET_MINUTES = 330;
-
-    return new Date(Date.UTC(year, month - 1, day, 0, -IST_OFFSET_MINUTES, 0, 0));
-};
-
-const formatReportCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-})}`;
-
-const normalizeReportPaymentMethod = (paymentMethod) => {
-    if (paymentMethod === 'COD') {
-        return 'Cash on Delivery';
-    }
-
-    if (paymentMethod === 'online') {
-        return 'Online';
-    }
-
-    if (paymentMethod === 'wallet') {
-        return 'Wallet';
-    }
-
-    return String(paymentMethod || 'N/A');
-};
-
-const formatReportStatusLabel = (status) => String(status || 'unknown')
-    .split('_')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
-const getStatusColor = (status) => {
-    const normalizedStatus = String(status || '').toLowerCase();
-
-    if (normalizedStatus === 'delivered') {
-        return 'green';
-    }
-
-    if (['cancelled', 'canceled', 'returned'].includes(normalizedStatus)) {
-        return 'red';
-    }
-
-    if (normalizedStatus === 'shipped') {
-        return 'blue';
-    }
-
-    if (['pending', 'processing'].includes(normalizedStatus)) {
-        return 'orange';
-    }
-
-    return 'black';
-};
-
-const getCustomDateRange = (startDate, endDate) => {
-    if (!startDate || !endDate) {
-        throw new AppError('Start date and end date required', 400);
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        throw new AppError('Invalid start date or end date', 400);
-    }
-
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-
-    if (start > end) {
-        throw new AppError('End date must be on or after start date', 400);
-    }
-
-    return {
-        startDate: start,
-        endDate: end
-    };
-};
-
-const getReportDateRange = (range = 'daily', customStartDate, customEndDate) => {
-    if (range === 'custom') {
-        return getCustomDateRange(customStartDate, customEndDate);
-    }
-
-    const now = new Date();
-    const resolvedEndDate = new Date(now);
-    const istNowParts = getISTDateParts(now);
-    const rangeAnchor = new Date(Date.UTC(
-        istNowParts.year,
-        istNowParts.month - 1,
-        istNowParts.day,
-        0,
-        0,
-        0,
-        0
-    ));
-    let resolvedStartDate;
-
-    switch (range) {
-        case 'daily':
-            break;
-        case 'weekly':
-            rangeAnchor.setUTCDate(rangeAnchor.getUTCDate() - 7);
-            break;
-        case 'monthly':
-            rangeAnchor.setUTCMonth(rangeAnchor.getUTCMonth() - 1);
-            break;
-        case 'yearly':
-            rangeAnchor.setUTCFullYear(rangeAnchor.getUTCFullYear() - 1);
-            break;
-        default:
-            resolvedStartDate = new Date(0);
-    }
-
-    if (!resolvedStartDate) {
-        resolvedStartDate = createISTMidnightUTCDate({
-            year: rangeAnchor.getUTCFullYear(),
-            month: rangeAnchor.getUTCMonth() + 1,
-            day: rangeAnchor.getUTCDate()
-        });
-    }
-
-    return { startDate: resolvedStartDate, endDate: resolvedEndDate };
-};
-
-const getAnalyticsDateRange = (query = {}, options = {}) => {
-    const {
-        defaultRange = 'all',
-        includeUpperBound = true
-    } = options;
-    const requestedRange = String(query.range || defaultRange).toLowerCase();
-
-    if (requestedRange === 'custom') {
-        const customRange = getCustomDateRange(query.startDate, query.endDate);
-
-        return {
-            range: 'custom',
-            startDate: customRange.startDate,
-            endDate: customRange.endDate,
-            createdAt: {
-                $gte: customRange.startDate,
-                $lte: customRange.endDate
-            }
-        };
-    }
-
-    if (!['daily', 'weekly', 'monthly', 'yearly'].includes(requestedRange)) {
-        return {
-            range: 'all',
-            startDate: new Date(0),
-            endDate: new Date(),
-            createdAt: null
-        };
-    }
-
-    const { startDate: resolvedStartDate, endDate: resolvedEndDate } = getReportDateRange(requestedRange);
-    const createdAt = {
-        $gte: resolvedStartDate
-    };
-
-    if (includeUpperBound) {
-        createdAt.$lte = resolvedEndDate;
-    }
-
-    return {
-        range: requestedRange,
-        startDate: resolvedStartDate,
-        endDate: resolvedEndDate,
-        createdAt
-    };
-};
-
-const buildDailyBuckets = (startDate, endDate) => {
-    const buckets = [];
-    const cursor = new Date(startDate);
-
-    cursor.setHours(0, 0, 0, 0);
-
-    while (cursor <= endDate) {
-        buckets.push({
-            date: cursor.toISOString().split('T')[0],
-            revenue: 0
-        });
-        cursor.setDate(cursor.getDate() + 1);
-    }
-
-    return buckets;
-};
 
 const normalizeCouponDatesForSave = (data) => {
     const normalizedStartDate = normalizeDateToUTC(data.startDate);
@@ -757,11 +457,11 @@ const toggleBlockUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.USER_NOT_FOUND });
         }
 
         if (user.role === 'admin') {
-            return res.status(403).json({ success: false, message: 'Cannot block admin' });
+            return res.status(HTTP_STATUS.FORBIDDEN).json({ success: false, message: 'Cannot block admin' });
         }
 
         user.isBlocked = !user.isBlocked;
@@ -769,7 +469,7 @@ const toggleBlockUser = async (req, res) => {
 
         res.json({ success: true, isBlocked: user.isBlocked });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to update user status' });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to update user status' });
     }
 };
 
@@ -779,7 +479,7 @@ const softDeleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.USER_NOT_FOUND });
         }
 
         user.isDeleted = true;
@@ -787,7 +487,7 @@ const softDeleteUser = async (req, res) => {
 
         res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to delete user' });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to delete user' });
     }
 };
 
@@ -857,7 +557,7 @@ const renderEditCustomerPage = async (req, res) => {
 const updateCustomer = async (req, res) => {
     try {
         if (!ENABLE_ADMIN_USER_EDIT) {
-            return res.status(403).json({
+            return res.status(HTTP_STATUS.FORBIDDEN).json({
                 success: false,
                 message: 'Editing user details is currently disabled'
             });
@@ -929,7 +629,7 @@ const updateAdminNotes = async (req, res) => {
         const user = await User.findById(req.params.id);
 
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.USER_NOT_FOUND });
         }
 
         user.adminNotes = adminNotes;
@@ -937,7 +637,7 @@ const updateAdminNotes = async (req, res) => {
 
         res.json({ success: true, message: 'Notes updated' });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to update notes' });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to update notes' });
     }
 };
 
@@ -969,10 +669,10 @@ const exportCustomers = async (req, res) => {
             res.attachment('customers.csv');
             return res.send(csv);
         } catch (err) {
-            return res.status(500).json({ success: false, message: 'Failed to generate CSV export' });
+            return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to generate CSV export' });
         }
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to export customers' });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to export customers' });
     }
 };
 
@@ -1003,14 +703,14 @@ const updateAdminProfile = async (req, res) => {
             if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
                 return res.redirect('back');
             }
-            return res.status(400).json({ success: false, message: 'Invalid email address' });
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'Invalid email address' });
         }
 
         // We rely on session.userId now as per standardized auth
         if (req.session.userId) {
             const dbUser = await User.findById(req.session.userId);
             if (!dbUser) {
-                return res.status(404).json({ success: false, message: 'User not found' });
+                return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: MESSAGES.USER_NOT_FOUND });
             }
 
             if (email && email !== dbUser.email) {
@@ -1048,7 +748,7 @@ const updateAdminProfile = async (req, res) => {
             // This means Env-admins MUST have a DB record?
             // Yes, standardizing usually implies making them first-class citizens.
 
-            return res.status(403).json({ success: false, message: 'Restricted to DB Admins' });
+            return res.status(HTTP_STATUS.FORBIDDEN).json({ success: false, message: 'Restricted to DB Admins' });
         }
 
         if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
@@ -1064,7 +764,7 @@ const updateAdminProfile = async (req, res) => {
         if (req.headers['content-type'] === 'application/x-www-form-urlencoded') {
             return res.redirect('back');
         }
-        res.status(500).json({ success: false, message: 'Failed to update profile' });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to update profile' });
     }
 };
 
@@ -1300,6 +1000,54 @@ const getOffersPage = async (req, res) => {
     }
 };
 
+const getReferralSettings = async (req, res) => {
+    try {
+        const config = await ReferralConfig.findOne().lean();
+
+        return res.render('admin/referral-settings', { config });
+    } catch (error) {
+        return res.render('admin/referral-settings', { config: null });
+    }
+};
+
+const updateReferralSettings = async (req, res) => {
+    console.log('updateReferralSettings HIT');
+
+    try {
+        const { referrerReward, referredUserReward, maxReferrals, isActive } = req.body;
+        const parsedReferrerReward = Number(referrerReward);
+        const parsedReferredUserReward = Number(referredUserReward);
+        const parsedMaxReferrals = Number(maxReferrals);
+
+        if (parsedReferrerReward < 0 || parsedReferredUserReward < 0 || parsedMaxReferrals < 0) {
+            throw new AppError('Invalid referral config values', 400);
+        }
+
+        console.log('Incoming referral config:', {
+            referrerReward: parsedReferrerReward,
+            referredUserReward: parsedReferredUserReward,
+            maxReferrals: parsedMaxReferrals,
+            isActive
+        });
+
+        await ReferralConfig.findOneAndUpdate(
+            {},
+            {
+                referrerReward: parsedReferrerReward,
+                referredUserReward: parsedReferredUserReward,
+                maxReferrals: parsedMaxReferrals,
+                isActive: !!isActive
+            },
+            { upsert: true, new: true }
+        );
+
+        return res.redirect('/admin/referral?success=Referral%20updated');
+    } catch (error) {
+        console.error('Referral update error:', error);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(error.message);
+    }
+};
+
 // @desc    Get Coupons Page
 // @route   GET /admin/coupons
 const getCouponsPage = async (req, res) => {
@@ -1356,7 +1104,7 @@ const getCouponsPage = async (req, res) => {
             formError: null
         });
     } catch (error) {
-        return res.status(500).render('admin/coupons', {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('admin/coupons', {
             coupons: [],
             currentPage: 1,
             totalPages: 1,
@@ -1401,7 +1149,7 @@ const checkCouponCode = async (req, res) => {
 
         return res.json({ exists: Boolean(existing) });
     } catch (error) {
-        return res.status(500).json({ exists: false, error: true });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ exists: false, error: true });
     }
 };
 
@@ -1462,7 +1210,7 @@ const createCoupon = async (req, res) => {
         const parsed = createCouponSchema.safeParse(body);
 
         if (!parsed.success) {
-            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+            return res.status(HTTP_STATUS.BAD_REQUEST).render('admin/create-coupon', buildCouponFormView({
                 errors: parsed.error.issues,
                 oldInput: body,
                 formError: null
@@ -1475,7 +1223,7 @@ const createCoupon = async (req, res) => {
         });
 
         if (existing) {
-            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+            return res.status(HTTP_STATUS.BAD_REQUEST).render('admin/create-coupon', buildCouponFormView({
                 errors: [{ path: ['code'], message: 'Coupon already exists' }],
                 oldInput: body,
                 formError: 'Duplicate coupon code'
@@ -1539,7 +1287,7 @@ const updateCoupon = async (req, res) => {
         const parsed = createCouponSchema.safeParse(body);
 
         if (!parsed.success) {
-            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+            return res.status(HTTP_STATUS.BAD_REQUEST).render('admin/create-coupon', buildCouponFormView({
                 errors: parsed.error.issues,
                 oldInput: body,
                 coupon: { _id: id },
@@ -1554,7 +1302,7 @@ const updateCoupon = async (req, res) => {
         });
 
         if (existing) {
-            return res.status(400).render('admin/create-coupon', buildCouponFormView({
+            return res.status(HTTP_STATUS.BAD_REQUEST).render('admin/create-coupon', buildCouponFormView({
                 errors: [{ path: ['code'], message: 'Coupon already exists' }],
                 oldInput: body,
                 formError: 'Duplicate coupon code',
@@ -1658,7 +1406,7 @@ const deleteCoupon = async (req, res) => {
 const getOfferDetailsPage = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(404).render('admin/offer-details', {
+            return res.status(HTTP_STATUS.NOT_FOUND).render('admin/offer-details', {
                 offer: null,
                 error: 'Offer not found'
             });
@@ -1674,7 +1422,7 @@ const getOfferDetailsPage = async (req, res) => {
             .lean();
 
         if (!offer) {
-            return res.status(404).render('admin/offer-details', {
+            return res.status(HTTP_STATUS.NOT_FOUND).render('admin/offer-details', {
                 offer: null,
                 error: 'Offer not found'
             });
@@ -1685,7 +1433,7 @@ const getOfferDetailsPage = async (req, res) => {
             error: null
         });
     } catch (error) {
-        return res.status(500).render('admin/offer-details', {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('admin/offer-details', {
             offer: null,
             error: 'Failed to load offer details'
         });
@@ -1700,7 +1448,7 @@ const getCreateOfferPage = async (req, res) => {
 
         return res.render('admin/create-offer', viewModel);
     } catch (error) {
-        return res.status(500).render('admin/create-offer', {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('admin/create-offer', {
             products: [],
             categories: [],
             brands: [],
@@ -1735,7 +1483,7 @@ const getCreateOfferPage = async (req, res) => {
 const getEditOfferPage = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(404).render('admin/offer-details', {
+            return res.status(HTTP_STATUS.NOT_FOUND).render('admin/offer-details', {
                 offer: null,
                 error: 'Offer not found'
             });
@@ -1747,7 +1495,7 @@ const getEditOfferPage = async (req, res) => {
         }).lean();
 
         if (!offer) {
-            return res.status(404).render('admin/offer-details', {
+            return res.status(HTTP_STATUS.NOT_FOUND).render('admin/offer-details', {
                 offer: null,
                 error: 'Offer not found'
             });
@@ -1761,7 +1509,7 @@ const getEditOfferPage = async (req, res) => {
 
         return res.render('admin/create-offer', viewModel);
     } catch (error) {
-        return res.status(500).render('admin/offer-details', {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('admin/offer-details', {
             offer: null,
             error: 'Failed to load offer for editing'
         });
@@ -1817,7 +1565,7 @@ const createOffer = async (req, res) => {
                 formError: 'Offer name already exists'
             });
 
-            return res.status(400).render('admin/create-offer', viewModel);
+            return res.status(HTTP_STATUS.BAD_REQUEST).render('admin/create-offer', viewModel);
         }
 
         if (err instanceof AppError) {
@@ -1850,7 +1598,7 @@ const createOffer = async (req, res) => {
             formError: 'Failed to create offer. Please try again.'
         });
 
-        return res.status(500).render('admin/create-offer', viewModel);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('admin/create-offer', viewModel);
     }
 };
 
@@ -1859,7 +1607,7 @@ const createOffer = async (req, res) => {
 const updateOffer = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(404).render('admin/offer-details', {
+            return res.status(HTTP_STATUS.NOT_FOUND).render('admin/offer-details', {
                 offer: null,
                 error: 'Offer not found'
             });
@@ -1871,7 +1619,7 @@ const updateOffer = async (req, res) => {
         });
 
         if (!offer) {
-            return res.status(404).render('admin/offer-details', {
+            return res.status(HTTP_STATUS.NOT_FOUND).render('admin/offer-details', {
                 offer: null,
                 error: 'Offer not found'
             });
@@ -1955,7 +1703,7 @@ const updateOffer = async (req, res) => {
             formMode: 'edit'
         });
 
-        return res.status(500).render('admin/create-offer', viewModel);
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('admin/create-offer', viewModel);
     }
 };
 
@@ -1964,13 +1712,13 @@ const updateOffer = async (req, res) => {
 const toggleOffer = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ success: false, message: 'Invalid ID' });
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'Invalid ID' });
         }
 
         const offer = await Offer.findById(req.params.id);
 
         if (!offer || offer.isDeleted) {
-            return res.status(404).json({ success: false, message: 'Offer not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: 'Offer not found' });
         }
 
         offer.isActive = !offer.isActive;
@@ -1980,7 +1728,7 @@ const toggleOffer = async (req, res) => {
         return res.json({ success: true, isActive: offer.isActive });
     } catch (err) {
         console.error('OFFER ERROR:', err);
-        return res.status(500).json({ success: false, message: 'Failed to toggle offer' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to toggle offer' });
     }
 };
 
@@ -1989,13 +1737,13 @@ const toggleOffer = async (req, res) => {
 const deleteOffer = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({ success: false, message: 'Invalid ID' });
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: 'Invalid ID' });
         }
 
         const offer = await Offer.findById(req.params.id);
 
         if (!offer) {
-            return res.status(404).json({ success: false, message: 'Offer not found' });
+            return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: 'Offer not found' });
         }
 
         await Offer.updateOne(
@@ -2008,7 +1756,7 @@ const deleteOffer = async (req, res) => {
         return res.json({ success: true });
     } catch (err) {
         console.error('OFFER ERROR:', err);
-        return res.status(500).json({ success: false, message: 'Failed to delete offer' });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to delete offer' });
     }
 };
 
@@ -2132,7 +1880,7 @@ const getDashboardStats = async (req, res) => {
             return res.status(error.statusCode || 400).json({ message: error.message });
         }
 
-        return res.status(500).json({
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             totalProducts: 0,
             activeProducts: 0,
             uniqueProductsSold: 0,
@@ -2275,7 +2023,7 @@ const getOrderStatusStats = async (req, res) => {
             return res.status(error.statusCode || 400).json({ message: error.message });
         }
 
-        return res.status(500).json({
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             Pending: 0,
             Shipped: 0,
             Delivered: 0,
@@ -2363,7 +2111,7 @@ const getRevenueTrend = async (req, res) => {
         fallbackStartDate.setDate(fallbackStartDate.getDate() - 6);
         fallbackStartDate.setHours(0, 0, 0, 0);
 
-        return res.status(500).json(buildDailyBuckets(fallbackStartDate, new Date()));
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(buildDailyBuckets(fallbackStartDate, new Date()));
     }
 };
 
@@ -2580,7 +2328,7 @@ const getTopPerformers = async (req, res) => {
             return res.status(error.statusCode || 400).json({ message: error.message });
         }
 
-        return res.status(500).json({
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             products: [],
             brands: [],
             categories: []
@@ -2596,7 +2344,7 @@ const downloadReport = async (req, res) => {
         const range = String(req.query.range || 'daily').toLowerCase();
 
         if (!['pdf', 'excel'].includes(type)) {
-            return res.status(400).json({ message: 'Supported export types are PDF and Excel.' });
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: 'Supported export types are PDF and Excel.' });
         }
 
         const { startDate, endDate } = getReportDateRange(range, req.query.startDate, req.query.endDate);
@@ -2784,7 +2532,7 @@ const downloadReport = async (req, res) => {
         }
 
         if (!res.headersSent) {
-            return res.status(500).json({ message: 'Failed to generate sales report.' });
+            return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: 'Failed to generate sales report.' });
         }
 
         res.end();
@@ -2812,6 +2560,8 @@ module.exports = {
     renderAddCustomerPage,
     addCustomer,
     getOffersPage,
+    getReferralSettings,
+    updateReferralSettings,
     getCouponsPage,
     getCreateCouponPage,
     checkCouponCode,

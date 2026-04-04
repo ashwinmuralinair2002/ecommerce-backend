@@ -2,6 +2,7 @@ const PDFDocument = require('pdfkit');
 const axios = require('axios');
 const Order = require('../models/order.model');
 const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/http-status');
 
 const formatCurrency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
@@ -230,7 +231,7 @@ const generateInvoice = async (orderId, userId, res) => {
             if (error instanceof AppError) {
                 throw error;
             }
-            throw new AppError('Invoice generation failed', 500);
+            throw new AppError('Invoice generation failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
     }
 };

@@ -1,4 +1,5 @@
 const { ZodError } = require('zod');
+const HTTP_STATUS = require('../constants/http-status');
 
 const validate = (schema) => {
   return (req, res, next) => {
@@ -12,7 +13,7 @@ const validate = (schema) => {
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        return res.status(400).json({
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
           message: 'Validation failed',
           errors: error.issues.map(err => ({

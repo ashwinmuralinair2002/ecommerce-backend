@@ -4,12 +4,13 @@ const Product = require('../models/Product');
 const cartService = require('./cart.service');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const HTTP_STATUS = require('../constants/http-status');
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const ensureValidIds = (productId, variantId) => {
     if (!isValidObjectId(productId) || !isValidObjectId(variantId)) {
-        throw new AppError('Invalid product or variant', 400);
+        throw new AppError('Invalid product or variant', HTTP_STATUS.BAD_REQUEST);
     }
 };
 
@@ -19,13 +20,13 @@ const getValidatedProductAndVariant = async (productId, variantId) => {
     const product = await Product.findById(productId).select('title price discountPercentage images variants');
 
     if (!product) {
-        throw new AppError('Product not found', 404);
+        throw new AppError('Product not found', HTTP_STATUS.NOT_FOUND);
     }
 
     const variant = product.variants.id(variantId);
 
     if (!variant) {
-        throw new AppError('Variant not found', 404);
+        throw new AppError('Variant not found', HTTP_STATUS.NOT_FOUND);
     }
 
     return { product, variant };

@@ -1,6 +1,7 @@
 // Brand management controller for admin dashboard
 const Brand = require('../models/Brand');
 const cloudinary = require('../config/cloudinary');
+const HTTP_STATUS = require('../constants/http-status');
 
 function normalizeCrop(rawCrop) {
     if (!rawCrop) return null;
@@ -299,7 +300,7 @@ exports.toggleBrandStatus = async (req, res) => {
         res.redirect(req.get('referer') || '/admin/brands');
     } catch (error) {
         if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.status(500).json({
+            return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: 'Failed to toggle brand status'
             });

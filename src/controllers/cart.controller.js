@@ -1,5 +1,6 @@
 const Cart = require('../models/cart.model');
 const cartService = require('../services/cart.service');
+const HTTP_STATUS = require('../constants/http-status');
 
 const addToCart = async (req, res) => {
     const userId = req.session.userId;
@@ -12,7 +13,7 @@ const addToCart = async (req, res) => {
             data: cart
         });
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });
@@ -29,7 +30,7 @@ const getCart = async (req, res) => {
             data: cart
         });
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });
@@ -47,7 +48,7 @@ const updateQuantity = async (req, res) => {
             data: cart
         });
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });
@@ -65,7 +66,7 @@ const removeItem = async (req, res) => {
             data: cart
         });
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });
@@ -89,7 +90,7 @@ const buyNow = async (req, res) => {
             success: true
         });
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });

@@ -1,4 +1,5 @@
 const wishlistService = require('../services/wishlist.service');
+const HTTP_STATUS = require('../constants/http-status');
 
 const getWishlistPage = async (req, res) => {
     try {
@@ -11,7 +12,7 @@ const getWishlistPage = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).send('Failed to load wishlist');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Failed to load wishlist');
     }
 };
 
@@ -25,7 +26,7 @@ const getWishlistCount = async (req, res) => {
             count
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: 'Failed to load wishlist count'
         });
@@ -40,7 +41,7 @@ const addToWishlist = async (req, res) => {
         const result = await wishlistService.addToWishlist(userId, productId, variantId);
         res.json(result);
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });
@@ -55,7 +56,7 @@ const removeFromWishlist = async (req, res) => {
         const result = await wishlistService.removeFromWishlist(userId, productId, variantId);
         res.json(result);
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });
@@ -70,7 +71,7 @@ const moveToCart = async (req, res) => {
         const result = await wishlistService.moveToCart(userId, productId, variantId);
         res.json(result);
     } catch (error) {
-        res.status(400).json({
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });

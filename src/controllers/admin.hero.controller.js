@@ -3,21 +3,14 @@ const HeroBanner = require('../models/HeroBanner');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
+const HTTP_STATUS = require('../constants/http-status');
+const { parseBoolean, parseOrder } = require('../utils/validation.utils');
+const { getFriendlyError } = require('../utils/string.utils');
 
 const MAX_ACTIVE_HERO_BANNERS = 10;
 const MAX_ACTIVE_ERROR = 'Maximum 10 active hero banners allowed. Please unlist one before activating another.';
 const HERO_TYPES = ['product', 'category', 'brand', 'custom'];
 const HERO_SEARCHABLE_TYPES = ['product', 'category', 'brand'];
-
-function parseBoolean(value, defaultValue = false) {
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'string') {
-        const normalized = value.trim().toLowerCase();
-        if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
-        if (['false', '0', 'no', 'off'].includes(normalized)) return false;
-    }
-    return defaultValue;
-}
 
 function parseOptionalObjectId(value) {
     if (value === undefined || value === null || value === '') return null;
@@ -27,17 +20,6 @@ function parseOptionalObjectId(value) {
         throw error;
     }
     return value;
-}
-
-function parseOrder(value, defaultValue = 0) {
-    if (value === undefined || value === null || value === '') return defaultValue;
-    const parsed = Number(value);
-    if (Number.isNaN(parsed)) {
-        const error = new Error('Order must be a valid number.');
-        error.statusCode = 400;
-        throw error;
-    }
-    return parsed;
 }
 
 function parseImageFromFile(file, fallbackImage = null) {
@@ -62,15 +44,6 @@ async function enforceMaxActiveLimit(excludeId = null) {
         error.statusCode = 400;
         throw error;
     }
-}
-
-function getFriendlyError(error, fallbackMessage) {
-    if (error && error.name === 'ValidationError') {
-        const details = Object.values(error.errors || {}).map((item) => item.message);
-        return details[0] || 'Validation failed.';
-    }
-
-    return (error && error.message) || fallbackMessage;
 }
 
 async function loadReferenceData() {
@@ -325,7 +298,7 @@ exports.getAddHero = async (req, res) => {
             }
         });
     } catch (error) {
-        return res.status(500).send('Failed to load add hero page.');
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Failed to load add hero page.');
     }
 };
 

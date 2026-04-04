@@ -13,7 +13,16 @@ const logEnvStatus = () => {
     console.log('  DEV_OTP_CONSOLE:', process.env.DEV_OTP_CONSOLE || 'Not set');
 };
 
-const sendEmail = async (to, subject, text, otp = null) => {
+const sendEmail = async (to, subject, text, otp = null, traceContext = {}) => {
+    const { otpTraceId = `email:${to}:${Date.now()}`, flow = 'generic' } = traceContext;
+    console.log('[OTP TRACE] Email service invoked:', {
+        otpTraceId,
+        flow,
+        to,
+        subject,
+        textLength: text ? text.length : 0,
+        hasOtp: !!otp
+    });
     console.log(`[OTP] Attempting to send email via transporter`);
     logEnvStatus();
 
@@ -27,6 +36,13 @@ const sendEmail = async (to, subject, text, otp = null) => {
         });
 
         console.log('[EMAIL DIAG] Creating Nodemailer transporter...');
+        console.log('[OTP TRACE] Building transporter for OTP mail:', {
+            otpTraceId,
+            flow,
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            secure: false
+        });
         const transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: process.env.SMTP_PORT, // 587
@@ -38,23 +54,41 @@ const sendEmail = async (to, subject, text, otp = null) => {
         });
 
         try {
+            console.log('[OTP TRACE] Starting transporter.verify():', { otpTraceId, flow });
             await transporter.verify();
             console.log("✅ SMTP connection successful");
+            console.log('[OTP TRACE] transporter.verify() succeeded:', { otpTraceId, flow });
         } catch (err) {
             console.error("❌ SMTP connection failed:", err.message);
+            console.error('[OTP TRACE] transporter.verify() failed:', {
+                otpTraceId,
+                flow,
+                name: err.name,
+                message: err.message,
+                code: err.code,
+                command: err.command
+            });
         }
 
         console.log('[EMAIL DIAG] Transporter created successfully');
 
         const mailOptions = {
-            from: `"SoundWave" <${process.env.EMAIL_FROM}>`,
+            from: process.env.EMAIL_FROM,
             to,
             subject,
             text
         };
+        console.log('[OTP TRACE] Mail options prepared:', {
+            otpTraceId,
+            flow,
+            from: mailOptions.from,
+            to: mailOptions.to,
+            subject: mailOptions.subject
+        });
 
         console.log(`[EMAIL DIAG] Sending email to: ${to}`);
         console.log(`[EMAIL DIAG] Subject: ${subject}`);
+        console.log('[OTP TRACE] Starting transporter.sendMail():', { otpTraceId, flow });
 
         const info = await transporter.sendMail(mailOptions);
 
@@ -62,11 +96,29 @@ const sendEmail = async (to, subject, text, otp = null) => {
         console.log(`[EMAIL SUCCESS] Response: ${info.response}`);
         console.log(`[EMAIL SUCCESS] Accepted: ${info.accepted}`);
         console.log(`[EMAIL SUCCESS] Rejected: ${info.rejected}`);
+        console.log('[OTP TRACE] transporter.sendMail() succeeded:', {
+            otpTraceId,
+            flow,
+            messageId: info.messageId,
+            response: info.response,
+            accepted: info.accepted,
+            rejected: info.rejected
+        });
 
         return info;
     } catch (error) {
         if (error instanceof AppError) throw error;
 
+        console.error('[OTP TRACE] transporter.sendMail() failed:', {
+            otpTraceId,
+            flow,
+            name: error.name,
+            message: error.message,
+            code: error.code,
+            command: error.command,
+            response: error.response,
+            responseCode: error.responseCode
+        });
         console.error('[EMAIL ERROR] Full error object:', error);
         console.error('[EMAIL ERROR] Error name:', error.name);
         console.error('[EMAIL ERROR] Error message:', error.message);

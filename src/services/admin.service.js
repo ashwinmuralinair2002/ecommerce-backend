@@ -1,6 +1,7 @@
 // Service layer for admin-related business logic
 const User = require('../models/user.model');
 const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/http-status');
 
 // Get All Users (Search, Pagination, Sort)
 const getAllUsers = async (query) => {
@@ -37,7 +38,7 @@ const getAllUsers = async (query) => {
             throw error;
         }
 
-        throw new AppError('Admin service failed', 500);
+        throw new AppError('Admin service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -46,7 +47,7 @@ const toggleBlockUser = async (userId) => {
     try {
         const user = await User.findById(userId);
         if (!user) {
-            throw new AppError('User not found', 404);
+            throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
         }
 
         // Prevent blocking self (Admin) - Optional safety
@@ -71,7 +72,7 @@ const toggleBlockUser = async (userId) => {
             throw error;
         }
 
-        throw new AppError('Admin service failed', 500);
+        throw new AppError('Admin service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 

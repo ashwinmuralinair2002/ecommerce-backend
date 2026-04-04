@@ -10,6 +10,7 @@ const walletService = require('../services/wallet.service');
 const AppError = require('../utils/AppError');
 const { getCachedOffers } = require('../utils/offer-cache');
 const { calculatePricing } = require('../utils/pricing-engine');
+const HTTP_STATUS = require('../constants/http-status');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const GST_RATE = 0.18;
@@ -97,7 +98,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
             const wallet = await walletService.getWallet(userId, session);
 
             if (!wallet || Number(wallet.balance || 0) < resolvedFinalTotal) {
-                throw new AppError('Insufficient wallet balance', 400);
+                throw new AppError('Insufficient wallet balance', HTTP_STATUS.BAD_REQUEST);
             }
         }
 
@@ -107,22 +108,22 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                 .populate('brand', 'name');
 
             if (!product || product.isListed === false || product.isDeleted === true) {
-                throw new AppError('Invalid cart items present', 400);
+                throw new AppError('Invalid cart items present', HTTP_STATUS.BAD_REQUEST);
             }
 
             const variant = product.variants.id(item.variant && item.variant._id);
             const quantity = Number(item.quantity || 0);
 
             if (!variant || Number(variant.stockCount || 0) === 0 || quantity > 5) {
-                throw new AppError('Invalid cart items present', 400);
+                throw new AppError('Invalid cart items present', HTTP_STATUS.BAD_REQUEST);
             }
 
             if (Number(variant.stockCount || 0) < quantity) {
-                throw new AppError('Stock changed, please refresh', 409);
+                throw new AppError('Stock changed, please refresh', HTTP_STATUS.CONFLICT);
             }
 
             if (!Number.isFinite(item.priceSnapshot)) {
-                throw new AppError('Invalid price snapshot during order creation', 500);
+                throw new AppError('Invalid price snapshot during order creation', HTTP_STATUS.INTERNAL_SERVER_ERROR);
             }
 
             const price = item.priceSnapshot;
@@ -170,11 +171,11 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
             })) || null;
 
             if (!detailedItem) {
-                throw new AppError('Missing pricing data for order item', 500);
+                throw new AppError('Missing pricing data for order item', HTTP_STATUS.INTERNAL_SERVER_ERROR);
             }
 
             if (!item.quantity || Number(item.quantity) <= 0) {
-                throw new AppError('Invalid item quantity in order creation', 500);
+                throw new AppError('Invalid item quantity in order creation', HTTP_STATUS.INTERNAL_SERVER_ERROR);
             }
 
             const unitPrice = roundCurrency(Number(item.price || 0));
@@ -211,13 +212,13 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                 || !Number.isFinite(gstAmount)
                 || !Number.isFinite(finalPrice)
             ) {
-                throw new AppError('Invalid final price computed', 500);
+                throw new AppError('Invalid final price computed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
             }
 
             const unitFinalPrice = roundCurrency(finalPrice / quantity);
 
             if (!Number.isFinite(unitFinalPrice) || unitFinalPrice < 0) {
-                throw new AppError('Invalid final price computed', 500);
+                throw new AppError('Invalid final price computed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
             }
 
             return {
@@ -249,7 +250,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
             || summedCouponDiscount !== expectedCouponDiscountTotal
             || summedFinalPrice !== expectedFinalTotal
         ) {
-            throw new AppError('Order pricing mismatch during order creation', 500);
+            throw new AppError('Order pricing mismatch during order creation', HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
 
         const order = new Order({
@@ -288,7 +289,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                     session
                 );
             } catch (err) {
-                throw new AppError('Wallet payment failed. Order not placed.', 400);
+                throw new AppError('Wallet payment failed. Order not placed.', HTTP_STATUS.BAD_REQUEST);
             }
         }
 
@@ -344,7 +345,7 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
                 });
             } catch (error) {
                 if (error?.message === 'USER_LIMIT_EXCEEDED') {
-                    throw new AppError('Coupon usage limit reached for your account', 400);
+                    throw new AppError('Coupon usage limit reached for your account', HTTP_STATUS.BAD_REQUEST);
                 }
 
                 console.warn('Failed to record coupon usage after order creation', {
@@ -371,14 +372,14 @@ const placeOrder = async (userId, paymentMethod, paymentData = {}, req = null) =
         }
 
         if (error && error.code === 11000 && isOnlinePayment) {
-            throw new AppError('Order already exists for this payment', 409);
+            throw new AppError('Order already exists for this payment', HTTP_STATUS.CONFLICT);
         }
 
-        throw new AppError('Order service failed', 500);
+        throw new AppError('Order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     } finally {
         await session.endSession();
     }
-};
+    }
 
 const cancelOrderItem = async (userId, orderId, itemId, reason) => {
     const session = await mongoose.startSession();
@@ -394,13 +395,13 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
             }).session(session);
 
             if (!order) {
-                throw new AppError('Order not found', 404);
+                throw new AppError('Order not found', HTTP_STATUS.NOT_FOUND);
             }
 
             const hasStableItemIds = Array.isArray(order.items) && order.items.every((item) => item && item.itemId);
 
             if (!hasStableItemIds) {
-                throw new AppError('Cancellation not supported for this order', 409);
+                throw new AppError('Cancellation not supported for this order', HTTP_STATUS.CONFLICT);
             }
 
             const item = Array.isArray(order.items)
@@ -408,23 +409,23 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
                 : null;
 
             if (!item) {
-                throw new AppError('Item not found', 404);
+                throw new AppError('Item not found', HTTP_STATUS.NOT_FOUND);
             }
 
             if (item.status !== 'pending') {
-                throw new AppError('Item cannot be cancelled', 409);
+                throw new AppError('Item cannot be cancelled', HTTP_STATUS.CONFLICT);
             }
 
             const product = await Product.findById(item.productId).session(session);
 
             if (!product) {
-                throw new AppError('Product not found', 404);
+                throw new AppError('Product not found', HTTP_STATUS.NOT_FOUND);
             }
 
             const variant = product.variants.id(item.variantId);
 
             if (!variant) {
-                throw new AppError('Product variant not found', 404);
+                throw new AppError('Product variant not found', HTTP_STATUS.NOT_FOUND);
             }
 
             variant.stockCount += Number(item.quantity || 0);
@@ -449,15 +450,15 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
             }
 
             if (item.refundStatus === 'processed') {
-                throw new AppError('Item already refunded', 400);
+                throw new AppError('Item already refunded', HTTP_STATUS.BAD_REQUEST);
             }
 
             if (item.refundStatus === 'processing') {
-                throw new AppError('Refund already in progress', 409);
+                throw new AppError('Refund already in progress', HTTP_STATUS.CONFLICT);
             }
 
             if (!Number.isFinite(Number(item.finalPrice)) || Number(item.finalPrice) < 0) {
-                throw new AppError('Invalid refund amount', 500);
+                throw new AppError('Invalid refund amount', HTTP_STATUS.INTERNAL_SERVER_ERROR);
             }
 
             const refundAmount = Number(item.finalPrice);
@@ -489,7 +490,7 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
                 } catch (err) {
                     item.refundStatus = 'failed';
                     await order.save({ session, validateBeforeSave: false });
-                    throw new AppError('Wallet refund failed. Cancellation aborted.', 500);
+                    throw new AppError('Wallet refund failed. Cancellation aborted.', HTTP_STATUS.INTERNAL_SERVER_ERROR);
                 }
 
                 item.refundStatus = 'processed';
@@ -513,7 +514,7 @@ const cancelOrderItem = async (userId, orderId, itemId, reason) => {
             throw error;
         }
 
-        throw new AppError('Order service failed', 500);
+        throw new AppError('Order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     } finally {
         await session.endSession();
     }
@@ -528,7 +529,7 @@ const requestReturn = async (userId, orderId, itemId, reason) => {
         });
 
         if (!order) {
-            throw new AppError('Order not found', 404);
+            throw new AppError('Order not found', HTTP_STATUS.NOT_FOUND);
         }
 
         const item = Array.isArray(order.items)
@@ -536,19 +537,19 @@ const requestReturn = async (userId, orderId, itemId, reason) => {
             : null;
 
         if (!item) {
-            throw new AppError('Item not found', 404);
+            throw new AppError('Item not found', HTTP_STATUS.NOT_FOUND);
         }
 
         if (['return_requested', 'returned', 'return_rejected'].includes(item.status)) {
-            throw new AppError('Return already processed for this item', 409);
+            throw new AppError('Return already processed for this item', HTTP_STATUS.CONFLICT);
         }
 
         if (item.status !== 'delivered') {
-            throw new AppError('Return allowed only for delivered items', 409);
+            throw new AppError('Return allowed only for delivered items', HTTP_STATUS.CONFLICT);
         }
 
         if (!reason || typeof reason !== 'string' || !reason.trim()) {
-            throw new AppError('Return reason is required', 400);
+            throw new AppError('Return reason is required', HTTP_STATUS.BAD_REQUEST);
         }
 
         item.status = 'return_requested';
@@ -565,7 +566,7 @@ const requestReturn = async (userId, orderId, itemId, reason) => {
             throw error;
         }
 
-        throw new AppError('Order service failed', 500);
+        throw new AppError('Order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 

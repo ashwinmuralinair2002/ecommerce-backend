@@ -3,6 +3,7 @@ const { z } = require('zod');
 const Wallet = require('../models/wallet.model');
 const WalletTransaction = require('../models/wallet-transaction.model');
 const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/http-status');
 
 const roundCurrency = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 const generateWalletReferenceId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -15,19 +16,19 @@ const validateAmount = (amount) => {
         const normalizedAmount = normalizeAmount(amount);
         return amountSchema.parse(normalizedAmount);
     } catch (error) {
-        throw new AppError('Invalid wallet amount', 400);
+        throw new AppError('Invalid wallet amount', HTTP_STATUS.BAD_REQUEST);
     }
 };
 
 const normalizeReferenceId = (referenceId) => {
     if (!referenceId || typeof referenceId !== 'string') {
-        throw new AppError('Invalid referenceId', 400);
+        throw new AppError('Invalid referenceId', HTTP_STATUS.BAD_REQUEST);
     }
 
     const normalizedReferenceId = referenceId.trim();
 
     if (!normalizedReferenceId) {
-        throw new AppError('Invalid wallet reference', 400);
+        throw new AppError('Invalid wallet reference', HTTP_STATUS.BAD_REQUEST);
     }
 
     return normalizedReferenceId;
@@ -176,7 +177,7 @@ const creditWallet = async (userId, amount, reason, transactionRef, orderId = nu
             await activeSession.abortTransaction();
         }
 
-        throw new AppError('Wallet service failed', 500);
+        throw new AppError('Wallet service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     } finally {
         if (ownsSession) {
             await activeSession.endSession();
@@ -215,7 +216,7 @@ const debitWallet = async (userId, amount, reason, transactionRef, orderId = nul
         const wallet = await createWallet(userId, activeSession);
 
         if (!wallet || Number(wallet.balance || 0) < normalizedAmount) {
-            throw new AppError('Insufficient wallet balance', 400);
+            throw new AppError('Insufficient wallet balance', HTTP_STATUS.BAD_REQUEST);
         }
 
         const transaction = await WalletTransaction.create([{
@@ -239,7 +240,7 @@ const debitWallet = async (userId, amount, reason, transactionRef, orderId = nul
         );
 
         if (!updatedWallet) {
-            throw new AppError('Insufficient wallet balance', 400);
+            throw new AppError('Insufficient wallet balance', HTTP_STATUS.BAD_REQUEST);
         }
 
         return {
@@ -265,7 +266,7 @@ const debitWallet = async (userId, amount, reason, transactionRef, orderId = nul
             };
         }
 
-        throw new AppError('Wallet service failed', 500);
+        throw new AppError('Wallet service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 

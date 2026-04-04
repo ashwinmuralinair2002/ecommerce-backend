@@ -2,6 +2,8 @@
 const profileService = require('../services/profile.service');
 const User = require('../models/user.model');
 const bcrypt = require('bcryptjs');
+const HTTP_STATUS = require('../constants/http-status');
+const MESSAGES = require('../constants/messages');
 
 // @desc    Get User Profile
 // @route   GET /api/profile
@@ -10,7 +12,7 @@ const getProfile = async (req, res) => {
         const user = await profileService.getProfile(req.user.id);
         res.json(user);
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        res.status(HTTP_STATUS.NOT_FOUND).json({ error: error.message });
     }
 };
 
@@ -21,7 +23,7 @@ const updateProfile = async (req, res) => {
         const user = await profileService.updateProfile(req.user.id, req.body);
         res.json(user);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -29,7 +31,7 @@ const updateProfile = async (req, res) => {
 // @route   POST /api/profile/upload-photo
 const uploadProfilePhoto = async (req, res) => {
     if (!req.file) {
-        return res.status(400).json({ error: 'No image uploaded' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'No image uploaded' });
     }
 
     try {
@@ -46,7 +48,7 @@ const uploadProfilePhoto = async (req, res) => {
 
         res.json({ message: 'Profile photo uploaded', profileImage: imageUrl, user });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: error.message });
     }
 };
 
@@ -54,7 +56,7 @@ const uploadProfilePhoto = async (req, res) => {
 // @route   POST /api/profile/email/request
 const requestEmailChange = async (req, res) => {
     const { newEmail } = req.body;
-    if (!newEmail) return res.status(400).json({ error: 'New email is required' });
+    if (!newEmail) return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'New email is required' });
 
     try {
         const result = await profileService.requestEmailChange(req.user.id, newEmail);
@@ -63,7 +65,7 @@ const requestEmailChange = async (req, res) => {
             res.json(result);
         });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -71,7 +73,7 @@ const requestEmailChange = async (req, res) => {
 // @route   POST /api/profile/email/verify
 const verifyEmailChange = async (req, res) => {
     const { otp } = req.body;
-    if (!otp) return res.status(400).json({ error: 'OTP is required' });
+    if (!otp) return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: MESSAGES.OTP_REQUIRED });
 
     try {
         const result = await profileService.verifyEmailChange(req.user.id, otp);
@@ -84,7 +86,7 @@ const verifyEmailChange = async (req, res) => {
             role: user ? user.role : undefined
         });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -93,14 +95,14 @@ const verifyEmailChange = async (req, res) => {
 const addAddress = async (req, res) => {
     const { street, city, state, zip, country } = req.body;
     if (!street || !city || !state || !zip || !country) {
-        return res.status(400).json({ error: 'All address fields are required' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'All address fields are required' });
     }
 
     try {
         const addresses = await profileService.addAddress(req.user.id, req.body);
         res.json(addresses);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -111,7 +113,7 @@ const updateAddress = async (req, res) => {
         const addresses = await profileService.updateAddress(req.user.id, req.params.id, req.body);
         res.json(addresses);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -122,7 +124,7 @@ const deleteAddress = async (req, res) => {
         const addresses = await profileService.deleteAddress(req.user.id, req.params.id);
         res.json(addresses);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -146,7 +148,7 @@ const deleteAccount = async (req, res) => {
             });
         });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -156,13 +158,13 @@ const requestPasswordChange = async (req, res) => {
     const { oldPassword, newPassword, confirmPassword } = req.body;
 
     if (!oldPassword || !newPassword || !confirmPassword) {
-        return res.status(400).json({ error: 'All fields are required' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'All fields are required' });
     }
     if (newPassword !== confirmPassword) {
-        return res.status(400).json({ error: 'New passwords do not match' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'New passwords do not match' });
     }
     if (newPassword.length < 6) {
-        return res.status(400).json({ error: 'New password must be at least 6 characters' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'New password must be at least 6 characters' });
     }
 
     try {
@@ -181,7 +183,7 @@ const requestPasswordChange = async (req, res) => {
             res.json(result);
         });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -191,8 +193,8 @@ const verifyPasswordChange = async (req, res) => {
     const { otp } = req.body;
     const tempPasswordHash = req.session.tempPasswordHash;
 
-    if (!otp) return res.status(400).json({ error: 'OTP is required' });
-    if (!tempPasswordHash) return res.status(400).json({ error: 'Session expired. Please request password change again.' });
+    if (!otp) return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: MESSAGES.OTP_REQUIRED });
+    if (!tempPasswordHash) return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Session expired. Please request password change again.' });
 
     try {
         const result = await profileService.verifyPasswordChange(req.user.id, otp, tempPasswordHash);
@@ -203,7 +205,7 @@ const verifyPasswordChange = async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 
@@ -212,7 +214,7 @@ const verifyPasswordChange = async (req, res) => {
 const resendPasswordChangeOtp = async (req, res) => {
     // Check if user is in valid password change flow (session has temp hash)
     if (!req.session.tempPasswordHash) {
-        return res.status(400).json({ error: 'Session expired. Please request password change again.' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Session expired. Please request password change again.' });
     }
 
     try {
@@ -222,7 +224,7 @@ const resendPasswordChangeOtp = async (req, res) => {
             res.json(result);
         });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(HTTP_STATUS.BAD_REQUEST).json({ error: error.message });
     }
 };
 

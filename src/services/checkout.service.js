@@ -7,6 +7,7 @@ const { getCachedOffers } = require('../utils/offer-cache');
 const { getCachedCoupons } = require('../utils/coupon-cache');
 const { calculatePricing } = require('../utils/pricing-engine');
 const { validateCoupon, calculateCouponDiscount } = require('../utils/coupon-engine');
+const HTTP_STATUS = require('../constants/http-status');
 
 const MAX_CART_ITEM_QUANTITY = 5;
 
@@ -33,11 +34,11 @@ const prepareCheckout = async (userId, req) => {
         const cart = await cartService.getCart(userId, req);
 
         if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
-            throw new AppError('Cart is empty', 400);
+            throw new AppError('Cart is empty', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (cart.items.some(hasInvalidCartItem)) {
-            throw new AppError('Invalid cart items present', 400);
+            throw new AppError('Invalid cart items present', HTTP_STATUS.BAD_REQUEST);
         }
 
         const user = await User.findById(userId).select('addresses').lean();
@@ -45,7 +46,7 @@ const prepareCheckout = async (userId, req) => {
         const selectedAddress = addresses.find((address) => address && address.isDefault === true);
 
         if (!selectedAddress) {
-            throw new AppError('No delivery address selected', 400);
+            throw new AppError('No delivery address selected', HTTP_STATUS.BAD_REQUEST);
         }
 
         const activeOffers = await getCachedOffers(Offer);
@@ -177,7 +178,7 @@ const prepareCheckout = async (userId, req) => {
             throw error;
         }
 
-        throw new AppError('Checkout service failed', 500);
+        throw new AppError('Checkout service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 

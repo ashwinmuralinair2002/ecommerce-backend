@@ -3,6 +3,7 @@ const Razorpay = require('razorpay');
 const checkoutService = require('./checkout.service');
 const AppError = require('../utils/AppError');
 const { buildBuyNowCheckoutData } = require('../utils/buy-now-checkout');
+const HTTP_STATUS = require('../constants/http-status');
 
 const razorpayInstance = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
@@ -22,7 +23,7 @@ const verifyRazorpaySignature = (orderId, paymentId, signature) => {
 const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
     try {
         if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-            throw new AppError('Razorpay is not configured', 500);
+            throw new AppError('Razorpay is not configured', HTTP_STATUS.INTERNAL_SERVER_ERROR);
         }
 
         const checkoutData = buyNowItem
@@ -42,7 +43,7 @@ const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
         );
 
         if (!finalTotal || finalTotal <= 0) {
-            throw new AppError('Invalid order amount', 400);
+            throw new AppError('Invalid order amount', HTTP_STATUS.BAD_REQUEST);
         }
 
         const amountInPaise = Math.round(finalTotal * 100);
@@ -89,7 +90,7 @@ const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
             throw new AppError(error.message || 'Failed to create Razorpay order', error.statusCode || 400);
         }
 
-        throw new AppError('Failed to create Razorpay order', 500);
+        throw new AppError('Failed to create Razorpay order', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 

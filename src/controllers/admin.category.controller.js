@@ -1,19 +1,10 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const cloudinary = require('../config/cloudinary');
-
-function slugify(value) {
-    return String(value || '')
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-');
-}
-
-function escapeRegex(value) {
-    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/http-status');
+const { slugify } = require('../utils/string.utils');
+const { escapeRegex } = require('../utils/validation.utils');
 
 async function buildUniqueSlug(baseSlug, excludeId = null) {
     let slug = baseSlug || `category-${Date.now()}`;
@@ -126,7 +117,7 @@ exports.checkCategoryName = async (req, res) => {
 
         return res.json({ exists: Boolean(existing) });
     } catch (error) {
-        return res.status(500).json({ exists: false });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ exists: false });
     }
 };
 
@@ -147,6 +138,10 @@ exports.addCategory = async (req, res) => {
 
         if (existing && existing.isDeleted !== true) {
             errors.name = 'Category name already exists';
+        }
+
+        if (!req.file && (!req.files || !Array.isArray(req.files.image) || req.files.image.length === 0)) {
+            throw new AppError('Category image is required', 400);
         }
 
         if (Object.keys(errors).length > 0) {

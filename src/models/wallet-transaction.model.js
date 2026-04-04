@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const WALLET_TRANSACTION_TYPES = ['credit', 'debit'];
-const WALLET_TRANSACTION_REASONS = ['refund_cancelled', 'refund_returned', 'purchase', 'recharge', 'online recharge'];
+const WALLET_TRANSACTION_REASONS = ['refund_cancelled', 'refund_returned', 'purchase', 'recharge', 'online recharge', 'referral_bonus'];
 
 const walletTransactionSchema = new mongoose.Schema({
     userId: {

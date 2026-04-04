@@ -1,4 +1,6 @@
 const paymentService = require('../services/payment.service');
+const HTTP_STATUS = require('../constants/http-status');
+const MESSAGES = require('../constants/messages');
 
 const createRazorpayOrderController = async (req, res) => {
     try {
@@ -6,9 +8,9 @@ const createRazorpayOrderController = async (req, res) => {
         const checkoutContext = req.session && req.session.checkoutContext ? req.session.checkoutContext : null;
 
         if (!userId) {
-            return res.status(401).json({
+            return res.status(HTTP_STATUS.UNAUTHORIZED).json({
                 success: false,
-                message: 'Authentication required'
+                message: MESSAGES.AUTH_REQUIRED
             });
         }
 
@@ -36,7 +38,7 @@ const createRazorpayOrderController = async (req, res) => {
             data: razorpayOrder
         });
     } catch (error) {
-        return res.status(error.statusCode || 500).json({
+        return res.status(error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message || 'Failed to create Razorpay order'
         });

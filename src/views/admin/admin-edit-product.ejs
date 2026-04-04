@@ -687,6 +687,7 @@
         const variantError = document.getElementById('variantError');
         const addVariantBtn = document.getElementById('addVariantBtn');
         let variants = <%- JSON.stringify(product.variants || []) %>.map((variant) => ({
+            _id: variant._id || '',
             colorInput: variant.colorName || variant.colorCode || '',
             colorName: variant.colorName || '',
             colorCode: variant.colorCode || '',
@@ -820,7 +821,7 @@
         }
 
         function addVariant() {
-            variants.push({ colorInput: '', colorName: '', colorCode: '', stockCount: 0, existingImages: [], newImages: [] });
+            variants.push({ _id: '', colorInput: '', colorName: '', colorCode: '', stockCount: 0, existingImages: [], newImages: [] });
             renderVariants();
         }
 
@@ -1424,6 +1425,7 @@
                 const heroExistingIndex = (variant.existingImages || []).findIndex((img) => img && img.isHero === true);
                 const heroNewIndex = (variant.newImages || []).findIndex((img) => img && img.isHero === true);
                 return {
+                    _id: variant._id || '',
                     colorName: variant.colorName || '',
                     colorCode: variant.colorCode || '',
                     stockCount: parseInt(variant.stockCount, 10) || 0,

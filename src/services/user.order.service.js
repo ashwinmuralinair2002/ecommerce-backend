@@ -1,5 +1,6 @@
 const Order = require('../models/order.model');
 const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/http-status');
 
 const mapOrderSummary = (order) => ({
     orderId: order.orderId,
@@ -95,7 +96,7 @@ const getUserOrders = async (userId, options = {}) => {
     } catch (err) {
         if (err instanceof AppError) throw err;
 
-        throw new AppError('User order service failed', 500);
+        throw new AppError('User order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -125,7 +126,7 @@ const getUserOrderById = async (userId, orderId) => {
     } catch (err) {
         if (err instanceof AppError) throw err;
 
-        throw new AppError('User order service failed', 500);
+        throw new AppError('User order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 

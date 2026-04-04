@@ -1,5 +1,6 @@
 // User schema definition and model
 const mongoose = require('mongoose');
+const generateReferralCode = require('../utils/generateReferralCode');
 
 const addressSchema = new mongoose.Schema({
     name: { type: String, trim: true },
@@ -93,8 +94,32 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: '',
     },
+    referralCode: {
+        type: String,
+        unique: true,
+        index: true
+    },
+    referralCount: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    referredBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    hasUsedReferral: {
+        type: Boolean,
+        default: false
+    },
 }, {
     timestamps: true,
+});
+
+userSchema.pre('save', function () {
+    if (!this.referralCode) {
+        this.referralCode = generateReferralCode(this);
+    }
 });
 
 userSchema.index({ email: 1 }, { unique: true });

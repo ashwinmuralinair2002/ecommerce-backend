@@ -3,6 +3,7 @@ const Product = require('../models/Product');
 const checkoutService = require('../services/checkout.service');
 const walletService = require('../services/wallet.service');
 const { buildBuyNowCheckoutData } = require('../utils/buy-now-checkout');
+const HTTP_STATUS = require('../constants/http-status');
 
 const buildBuyNowContextItem = (buyNowItem, price = null) => ({
     productId: String(buyNowItem.productId),
@@ -121,21 +122,21 @@ const buyNow = async (req, res) => {
         const normalizedQuantity = Number(quantity);
 
         if (!productId || !variantId) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'Invalid product selection'
             });
         }
 
         if (!Number.isInteger(normalizedQuantity) || normalizedQuantity < 1 || normalizedQuantity > 5) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'Invalid quantity'
             });
         }
 
         if (!product || product.isListed !== true || product.isDeleted === true) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'Product not available'
             });
@@ -146,14 +147,14 @@ const buyNow = async (req, res) => {
             : null;
 
         if (!variant) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'Variant not found'
             });
         }
 
         if (Number(variant.stockCount || 0) <= 0 || normalizedQuantity > Number(variant.stockCount || 0)) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
                 success: false,
                 message: 'Quantity exceeds available stock'
             });
@@ -170,7 +171,7 @@ const buyNow = async (req, res) => {
             success: true
         });
     } catch (error) {
-        return res.status(400).json({
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message || 'Unable to start buy now'
         });

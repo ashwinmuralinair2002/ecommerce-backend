@@ -9,6 +9,7 @@ const { getBestOffer } = require('./offer-engine');
 const { getCartPriceSnapshot } = require('./pricing');
 const { calculatePricing } = require('./pricing-engine');
 const { validateCoupon, calculateCouponDiscount } = require('./coupon-engine');
+const HTTP_STATUS = require('../constants/http-status');
 
 const MAX_CART_ITEM_QUANTITY = 5;
 
@@ -20,11 +21,11 @@ const resolveBuyNowSelection = async (buyNowItem) => {
     const quantity = Number(buyNowItem && buyNowItem.quantity ? buyNowItem.quantity : 0);
 
     if (!productId || !variantId) {
-        throw new AppError('Invalid product selection', 400);
+        throw new AppError('Invalid product selection', HTTP_STATUS.BAD_REQUEST);
     }
 
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_CART_ITEM_QUANTITY) {
-        throw new AppError('Invalid quantity', 400);
+        throw new AppError('Invalid quantity', HTTP_STATUS.BAD_REQUEST);
     }
 
     const product = await Product.findById(productId)
@@ -33,7 +34,7 @@ const resolveBuyNowSelection = async (buyNowItem) => {
         .lean();
 
     if (!product || product.isListed !== true || product.isDeleted === true) {
-        throw new AppError('Product not available', 404);
+        throw new AppError('Product not available', HTTP_STATUS.NOT_FOUND);
     }
 
     const variant = Array.isArray(product.variants)
@@ -41,15 +42,15 @@ const resolveBuyNowSelection = async (buyNowItem) => {
         : null;
 
     if (!variant) {
-        throw new AppError('Variant not found', 404);
+        throw new AppError('Variant not found', HTTP_STATUS.NOT_FOUND);
     }
 
     if (Number(variant.stockCount || 0) <= 0) {
-        throw new AppError('Out of stock', 400);
+        throw new AppError('Out of stock', HTTP_STATUS.BAD_REQUEST);
     }
 
     if (quantity > Number(variant.stockCount || 0)) {
-        throw new AppError('Quantity exceeds available stock', 400);
+        throw new AppError('Quantity exceeds available stock', HTTP_STATUS.BAD_REQUEST);
     }
 
     const unitPrice = roundCurrency(getCartPriceSnapshot(product));
@@ -72,7 +73,7 @@ const buildBuyNowCheckoutData = async (userId, buyNowItem, req) => {
     const selectedAddress = addresses.find((address) => address && address.isDefault === true);
 
     if (!selectedAddress) {
-        throw new AppError('No delivery address selected', 400);
+        throw new AppError('No delivery address selected', HTTP_STATUS.BAD_REQUEST);
     }
 
     const activeOffers = await getCachedOffers(Offer);

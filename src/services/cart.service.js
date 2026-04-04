@@ -7,6 +7,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { getCachedOffers } = require('../utils/offer-cache');
 const { getBaseProductPrice, getCartPriceSnapshot } = require('../utils/pricing');
 const { calculatePricing } = require('../utils/pricing-engine');
+const HTTP_STATUS = require('../constants/http-status');
 
 const MAX_CART_ITEM_QUANTITY = 5;
 const normalizeSelectedOfferId = (selectedOfferId) => (
@@ -32,17 +33,17 @@ const getValidatedProductAndVariant = async (productId, variantId) => {
     const product = await Product.findById(productId);
 
     if (!product || product.isListed !== true || product.isDeleted === true) {
-        throw new AppError('Product not available', 404);
+        throw new AppError('Product not available', HTTP_STATUS.NOT_FOUND);
     }
 
     const variant = product.variants.id(variantId);
 
     if (!variant) {
-        throw new AppError('Variant not found', 404);
+        throw new AppError('Variant not found', HTTP_STATUS.NOT_FOUND);
     }
 
     if (variant.stockCount <= 0) {
-        throw new AppError('Out of stock', 400);
+        throw new AppError('Out of stock', HTTP_STATUS.BAD_REQUEST);
     }
 
     return { product, variant };
@@ -50,15 +51,15 @@ const getValidatedProductAndVariant = async (productId, variantId) => {
 
 const validateRequestedQuantity = (quantity, stockCount) => {
     if (!Number.isInteger(quantity) || quantity < 1) {
-        throw new AppError('Invalid quantity', 400);
+        throw new AppError('Invalid quantity', HTTP_STATUS.BAD_REQUEST);
     }
 
     if (quantity > stockCount) {
-        throw new AppError('Quantity exceeds available stock', 400);
+        throw new AppError('Quantity exceeds available stock', HTTP_STATUS.BAD_REQUEST);
     }
 
     if (quantity > MAX_CART_ITEM_QUANTITY) {
-        throw new AppError('Quantity limit exceeded', 400);
+        throw new AppError('Quantity limit exceeded', HTTP_STATUS.BAD_REQUEST);
     }
 };
 
@@ -220,11 +221,11 @@ const addToCart = asyncHandler(async (userId, productId, variantId, quantity, re
         const updatedQuantity = cart.items[existingItemIndex].quantity + quantity;
 
         if (updatedQuantity > variant.stockCount) {
-            throw new AppError('Quantity exceeds available stock', 400);
+            throw new AppError('Quantity exceeds available stock', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (updatedQuantity > MAX_CART_ITEM_QUANTITY) {
-            throw new AppError('Quantity limit exceeded', 400);
+            throw new AppError('Quantity limit exceeded', HTTP_STATUS.BAD_REQUEST);
         }
 
         cart.items[existingItemIndex].quantity = updatedQuantity;
@@ -255,7 +256,7 @@ const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId,
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
-        throw new AppError('Cart not found', 404);
+        throw new AppError('Cart not found', HTTP_STATUS.NOT_FOUND);
     }
 
     const normalizedSelectedOfferId = normalizeSelectedOfferId(selectedOfferId);
@@ -267,18 +268,30 @@ const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId,
     );
 
     if (itemIndex === -1) {
-        throw new AppError('Cart item not found', 404);
+        throw new AppError('Cart item not found', HTTP_STATUS.NOT_FOUND);
     }
 
     const cartItem = cart.items[itemIndex];
-    const { product, variant } = await getValidatedProductAndVariant(cartItem.productId, cartItem.variantId);
+    const product = await Product.findById(cartItem.productId);
 
-    if (quantity > variant.stockCount) {
-        throw new AppError('Quantity exceeds available stock', 400);
+    if (!product || product.isListed !== true || product.isDeleted === true) {
+        throw new AppError('Product not available', HTTP_STATUS.NOT_FOUND);
+    }
+
+    let variant = product.variants.id(cartItem.variantId);
+    // try the stored cart variant id against the current product variants
+
+    if (!variant) {
+        throw new AppError('Item is no longer available. Please remove it from cart.', HTTP_STATUS.BAD_REQUEST);
+    }
+    // stale cart variant ids should fail gracefully with a user-friendly message
+
+    if (quantity > variant.stockCount && quantity > cartItem.quantity) {
+        throw new AppError('Quantity exceeds available stock', HTTP_STATUS.BAD_REQUEST);
     }
 
     if (quantity > MAX_CART_ITEM_QUANTITY) {
-        throw new AppError('Quantity limit exceeded', 400);
+        throw new AppError('Quantity limit exceeded', HTTP_STATUS.BAD_REQUEST);
     }
 
     cartItem.quantity = quantity;
@@ -292,7 +305,7 @@ const removeCartItem = asyncHandler(async (userId, productId, variantId, req, se
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
-        throw new AppError('Cart not found', 404);
+        throw new AppError('Cart not found', HTTP_STATUS.NOT_FOUND);
     }
 
     const normalizedSelectedOfferId = normalizeSelectedOfferId(selectedOfferId);
@@ -304,7 +317,7 @@ const removeCartItem = asyncHandler(async (userId, productId, variantId, req, se
     );
 
     if (itemIndex === -1) {
-        throw new AppError('Cart item not found', 404);
+        throw new AppError('Cart item not found', HTTP_STATUS.NOT_FOUND);
     }
 
     cart.items.splice(itemIndex, 1);

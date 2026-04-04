@@ -12,6 +12,7 @@ const {
 } = require('../controllers/auth.controller');
 // const { verifyToken } = require('../middleware/auth.middleware'); // Removed
 const { validate } = require('../middleware/validate.middleware');
+const { authLimiter } = require('../middleware/rate-limit.middleware');
 const {
   signupSchema,
   loginSchema,
@@ -25,12 +26,12 @@ const router = express.Router();
 
 
 
-router.post('/signup', validate(signupSchema), signup);
+router.post('/signup', authLimiter, validate(signupSchema), signup);
 
-router.post('/login', validate(loginSchema), login);
-router.post('/verify-otp', validate(verifyOtpSchema), verifyOtp);
+router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/verify-otp', authLimiter, validate(verifyOtpSchema), verifyOtp);
 router.post('/resend-otp', validate(resendOtpSchema), resendOtp);
-router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 router.post('/logout', require('../controllers/auth.controller').logout);
 

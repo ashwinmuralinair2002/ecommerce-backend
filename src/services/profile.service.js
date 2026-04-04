@@ -4,12 +4,13 @@ const bcrypt = require('bcryptjs');
 const emailService = require('./email.service');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
+const HTTP_STATUS = require('../constants/http-status');
 
 // Get Profile
 const getProfile = asyncHandler(async (userId) => {
     const user = await User.findById(userId).select('-password -otp -otpExpires -resetOtp -resetOtpExpires -emailChangeOtp -emailChangeOtpExpires');
     if (!user) {
-        throw new AppError('User not found', 404);
+        throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
     }
     return user;
 });
@@ -18,7 +19,7 @@ const getProfile = asyncHandler(async (userId) => {
 const updateProfile = asyncHandler(async (userId, data) => {
     const user = await User.findById(userId);
     if (!user) {
-        throw new AppError('User not found', 404);
+        throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
     }
 
     if (data.name) user.name = data.name;
@@ -39,12 +40,12 @@ const updateProfile = asyncHandler(async (userId, data) => {
 // Request Email Change
 const requestEmailChange = asyncHandler(async (userId, newEmail) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
-    if (newEmail === user.email) throw new AppError('New email cannot be same as current email', 400);
+    if (newEmail === user.email) throw new AppError('New email cannot be same as current email', HTTP_STATUS.BAD_REQUEST);
 
     const emailExists = await User.findOne({ email: newEmail, isDeleted: { $ne: true } });
-    if (emailExists) throw new AppError('Email already in use', 400);
+    if (emailExists) throw new AppError('Email already in use', HTTP_STATUS.BAD_REQUEST);
 
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -70,10 +71,10 @@ const requestEmailChange = asyncHandler(async (userId, newEmail) => {
 // Verify Email Change
 const verifyEmailChange = asyncHandler(async (userId, otp) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
-    if (user.emailChangeOtp !== otp) throw new AppError('Invalid OTP', 400);
-    if (user.emailChangeOtpExpires < Date.now()) throw new AppError('OTP expired', 400);
+    if (user.emailChangeOtp !== otp) throw new AppError('Invalid OTP', HTTP_STATUS.BAD_REQUEST);
+    if (user.emailChangeOtpExpires < Date.now()) throw new AppError('OTP expired', HTTP_STATUS.BAD_REQUEST);
 
     // Update Email
     user.email = user.newEmail;
@@ -88,10 +89,10 @@ const verifyEmailChange = asyncHandler(async (userId, otp) => {
 // Add Address
 const addAddress = asyncHandler(async (userId, addressData) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
     if (user.addresses.length >= 5) {
-        throw new AppError('Max address limit reached', 400);
+        throw new AppError('Max address limit reached', HTTP_STATUS.BAD_REQUEST);
     }
 
     // Check Duplicate (Simple check: all fields match)
@@ -102,7 +103,7 @@ const addAddress = asyncHandler(async (userId, addressData) => {
     );
 
     if (duplicate) {
-        throw new AppError('Address already exists', 400);
+        throw new AppError('Address already exists', HTTP_STATUS.BAD_REQUEST);
     }
 
     if (addressData.isDefault) {
@@ -117,10 +118,10 @@ const addAddress = asyncHandler(async (userId, addressData) => {
 // Update Address
 const updateAddress = asyncHandler(async (userId, addressId, addressData) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
     const address = user.addresses.id(addressId);
-    if (!address) throw new AppError('Address not found', 404);
+    if (!address) throw new AppError('Address not found', HTTP_STATUS.NOT_FOUND);
 
     if (addressData.isDefault) {
         user.addresses.forEach(addr => addr.isDefault = false);
@@ -147,10 +148,10 @@ const updateAddress = asyncHandler(async (userId, addressId, addressData) => {
 // Delete Address
 const deleteAddress = asyncHandler(async (userId, addressId) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
     const address = user.addresses.id(addressId);
-    if (!address) throw new AppError('Address not found', 404);
+    if (!address) throw new AppError('Address not found', HTTP_STATUS.NOT_FOUND);
 
     // address.remove(); // Deprecated
     user.addresses.pull(addressId);
@@ -163,7 +164,7 @@ const deleteAddress = asyncHandler(async (userId, addressId) => {
 // Delete User Account
 const deleteUser = asyncHandler(async (userId) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
     // Soft delete - mark as deleted, don't remove from database
     user.isDeleted = true;
@@ -174,12 +175,12 @@ const deleteUser = asyncHandler(async (userId) => {
 // Request Password Change
 const requestPasswordChange = asyncHandler(async (userId, oldPassword, newPassword) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
     // Verify Old Password
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
-        throw new AppError('Incorrect current password', 400);
+        throw new AppError('Incorrect current password', HTTP_STATUS.BAD_REQUEST);
     }
 
     // Generate OTP
@@ -204,10 +205,10 @@ const requestPasswordChange = asyncHandler(async (userId, oldPassword, newPasswo
 // Verify Password Change
 const verifyPasswordChange = asyncHandler(async (userId, otp, newPasswordHash) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
     if (user.otp !== otp || user.otpExpires < Date.now()) {
-        throw new AppError('Invalid or expired OTP', 400);
+        throw new AppError('Invalid or expired OTP', HTTP_STATUS.BAD_REQUEST);
     }
 
     // Success - update password
@@ -222,7 +223,7 @@ const verifyPasswordChange = asyncHandler(async (userId, otp, newPasswordHash) =
 // Resend Password Change OTP
 const resendPasswordChangeOtp = asyncHandler(async (userId) => {
     const user = await User.findById(userId);
-    if (!user) throw new AppError('User not found', 404);
+    if (!user) throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
 
     // Cooldown check (optional but good practice)
     // We reuse lastOtpSentAt if defined, or just rely on expiry window.

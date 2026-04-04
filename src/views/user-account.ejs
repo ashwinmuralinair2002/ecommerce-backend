@@ -364,6 +364,7 @@
               value="<%= user.email %>" readonly />
             <input name="phone" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50 text-gray-500"
               placeholder="Phone Number" value="<%= user.phone || '' %>" readonly />
+            <p class="text-sm text-gray-700">Your Referral Code: <strong><%= user.referralCode || 'N/A' %></strong></p>
 
             <!-- Action Buttons (Change Password & Edit Profile) -->
             <div class="pt-4 flex flex-col sm:flex-row gap-3">

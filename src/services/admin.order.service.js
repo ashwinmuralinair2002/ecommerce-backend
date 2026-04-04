@@ -4,6 +4,7 @@ const User = require('../models/user.model');
 const Product = require('../models/Product');
 const walletService = require('../services/wallet.service');
 const AppError = require('../utils/AppError');
+const HTTP_STATUS = require('../constants/http-status');
 
 const ALLOWED_ORDER_STATUSES = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
 const ALLOWED_BULK_ORDER_STATUSES = ['shipped', 'delivered', 'cancelled'];
@@ -141,7 +142,7 @@ const getAllOrders = async (filters = {}) => {
         };
     } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError('Admin order service failed', 500);
+        throw new AppError('Admin order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -152,7 +153,7 @@ const getOrderById = async (orderId) => {
             .lean();
 
         if (!order) {
-            throw new AppError('Order not found', 404);
+            throw new AppError('Order not found', HTTP_STATUS.NOT_FOUND);
         }
 
         return {
@@ -168,20 +169,20 @@ const getOrderById = async (orderId) => {
         };
     } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError('Admin order service failed', 500);
+        throw new AppError('Admin order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
 const updateOrderStatus = async (orderId, newStatus) => {
     try {
         if (!ALLOWED_ORDER_STATUSES.includes(newStatus)) {
-            throw new AppError('Invalid order status', 400);
+            throw new AppError('Invalid order status', HTTP_STATUS.BAD_REQUEST);
         }
 
         const order = await Order.findOne({ orderId, deleted: { $ne: true } });
 
         if (!order) {
-            throw new AppError('Order not found', 404);
+            throw new AppError('Order not found', HTTP_STATUS.NOT_FOUND);
         }
 
         const allItemsCancelled = Array.isArray(order.items) && order.items.length > 0
@@ -189,19 +190,19 @@ const updateOrderStatus = async (orderId, newStatus) => {
             : false;
 
         if (allItemsCancelled) {
-            throw new AppError('Cannot update a fully cancelled order', 400);
+            throw new AppError('Cannot update a fully cancelled order', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (order.orderStatus === 'cancelled') {
-            throw new AppError('Cancelled orders cannot be updated', 400);
+            throw new AppError('Cancelled orders cannot be updated', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (order.orderStatus === 'delivered') {
-            throw new AppError('Delivered orders cannot be updated', 400);
+            throw new AppError('Delivered orders cannot be updated', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (order.orderStatus === 'returned' || order.orderStatus === 'partially_returned') {
-            throw new AppError('Returned orders cannot be updated', 400);
+            throw new AppError('Returned orders cannot be updated', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (newStatus === 'delivered') {
@@ -217,18 +218,18 @@ const updateOrderStatus = async (orderId, newStatus) => {
         };
     } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError('Admin order service failed', 500);
+        throw new AppError('Admin order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
 const bulkUpdateOrderStatus = async (orderIds, status) => {
     try {
         if (!Array.isArray(orderIds) || orderIds.length === 0) {
-            throw new AppError('No orders selected', 400);
+            throw new AppError('No orders selected', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (!ALLOWED_BULK_ORDER_STATUSES.includes(status)) {
-            throw new AppError('Invalid bulk order status', 400);
+            throw new AppError('Invalid bulk order status', HTTP_STATUS.BAD_REQUEST);
         }
 
         const uniqueOrderIds = [...new Set(orderIds.filter(Boolean))];
@@ -274,14 +275,14 @@ const bulkUpdateOrderStatus = async (orderIds, status) => {
         };
     } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError('Admin order service failed', 500);
+        throw new AppError('Admin order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
 const processReturn = async (orderId, itemId, action) => {
     try {
         if (!['approve', 'reject'].includes(action)) {
-            throw new AppError('Invalid action', 400);
+            throw new AppError('Invalid action', HTTP_STATUS.BAD_REQUEST);
         }
 
         const session = await mongoose.startSession();
@@ -296,7 +297,7 @@ const processReturn = async (orderId, itemId, action) => {
                 }).session(session);
 
                 if (!order) {
-                    throw new AppError('Order not found', 404);
+                    throw new AppError('Order not found', HTTP_STATUS.NOT_FOUND);
                 }
 
                 const item = Array.isArray(order.items)
@@ -304,28 +305,28 @@ const processReturn = async (orderId, itemId, action) => {
                     : null;
 
                 if (!item) {
-                    throw new AppError('Item not found', 404);
+                    throw new AppError('Item not found', HTTP_STATUS.NOT_FOUND);
                 }
 
                 if (['returned', 'return_rejected'].includes(item.status)) {
-                    throw new AppError('Return already processed', 400);
+                    throw new AppError('Return already processed', HTTP_STATUS.BAD_REQUEST);
                 }
 
                 if (item.status !== 'return_requested') {
-                    throw new AppError('Invalid return state', 400);
+                    throw new AppError('Invalid return state', HTTP_STATUS.BAD_REQUEST);
                 }
 
                 if (action === 'approve') {
                     const product = await Product.findById(item.productId).session(session);
 
                     if (!product) {
-                        throw new AppError('Product not found', 404);
+                        throw new AppError('Product not found', HTTP_STATUS.NOT_FOUND);
                     }
 
                     const variant = product.variants.id(item.variantId);
 
                     if (!variant) {
-                        throw new AppError('Product variant not found', 404);
+                        throw new AppError('Product variant not found', HTTP_STATUS.NOT_FOUND);
                     }
 
                     variant.stockCount += Number(item.quantity || 0);
@@ -394,7 +395,7 @@ const processReturn = async (orderId, itemId, action) => {
         }
     } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError('Admin order service failed', 500);
+        throw new AppError('Admin order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -411,7 +412,7 @@ const processItemStatusUpdate = async (orderId, itemId, newStatus) => {
         });
 
         if (!order) {
-            throw new AppError('Order not found', 404);
+            throw new AppError('Order not found', HTTP_STATUS.NOT_FOUND);
         }
 
         const item = Array.isArray(order.items)
@@ -419,15 +420,15 @@ const processItemStatusUpdate = async (orderId, itemId, newStatus) => {
             : null;
 
         if (!item) {
-            throw new AppError('Item not found', 404);
+            throw new AppError('Item not found', HTTP_STATUS.NOT_FOUND);
         }
 
         if (['cancelled', 'returned', 'return_requested', 'return_rejected'].includes(item.status)) {
-            throw new AppError('Item status cannot be updated', 400);
+            throw new AppError('Item status cannot be updated', HTTP_STATUS.BAD_REQUEST);
         }
 
         if (allowedTransitions[item.status] !== newStatus) {
-            throw new AppError('Invalid item status transition', 400);
+            throw new AppError('Invalid item status transition', HTTP_STATUS.BAD_REQUEST);
         }
 
         item.status = newStatus;
@@ -452,7 +453,7 @@ const processItemStatusUpdate = async (orderId, itemId, newStatus) => {
         };
     } catch (error) {
         if (error instanceof AppError) throw error;
-        throw new AppError('Admin order service failed', 500);
+        throw new AppError('Admin order service failed', HTTP_STATUS.INTERNAL_SERVER_ERROR);
     }
 };
 

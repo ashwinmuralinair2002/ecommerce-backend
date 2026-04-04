@@ -1,6 +1,7 @@
 const User = require('../models/user.model');
 const Cart = require('../models/cart.model');
 const Wishlist = require('../models/wishlist.model');
+const generateReferralCode = require('../utils/generateReferralCode');
 
 const attachSessionUser = async (req, res, next) => {
     try {
@@ -10,7 +11,7 @@ const attachSessionUser = async (req, res, next) => {
         if (req.session && req.session.userId) {
             // Fetch user to populate res.locals.user for Navbar
             const [user, cart, wishlist] = await Promise.all([
-                User.findById(req.session.userId).select('name email role profileImage isBlocked phone addresses'),
+                User.findById(req.session.userId).select('name email role profileImage isBlocked phone addresses referralCode'),
                 Cart.findOne({ userId: req.session.userId }).select('items.quantity'),
                 Wishlist.findOne({ user: req.session.userId }).select('items.variantId')
             ]);
@@ -25,6 +26,28 @@ const attachSessionUser = async (req, res, next) => {
             }
 
             if (user) {
+                if (!user.referralCode) {
+                    try {
+                        const generatedReferralCode = generateReferralCode(user);
+                        const updatedUser = await User.findOneAndUpdate(
+                            { _id: user._id, referralCode: { $in: [null, ''] } },
+                            { $set: { referralCode: generatedReferralCode } },
+                            { new: true }
+                        ).select('name email role profileImage isBlocked phone addresses referralCode');
+
+                        if (updatedUser) {
+                            user.referralCode = updatedUser.referralCode;
+                        } else {
+                            const existingUser = await User.findById(user._id).select('referralCode');
+                            if (existingUser && existingUser.referralCode) {
+                                user.referralCode = existingUser.referralCode;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Failed to generate referral code for user:', user._id, error.message);
+                    }
+                }
+
                 // Check if user is blocked - OPTIONAL: Force logout here if strictly required,
                 // but let's stick to just exposing data for now to avoid side-effects in GET requests unless critical.
                 // However, for security, if they are blocked, we should probably kill the session.

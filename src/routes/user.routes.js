@@ -12,6 +12,7 @@ const walletRoutes = require('./wallet.routes');
 const paymentRoutes = require('./payment.routes');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
 const { requireUser } = require('../middleware/role-auth.middleware');
+const { generalLimiter } = require('../middleware/rate-limit.middleware');
 const redirectAdminHome = require('../middleware/admin-home-redirect.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const {
@@ -56,6 +57,7 @@ router.post(
   '/wishlist/add',
   ensureAuthenticated,
   requireUser,
+  generalLimiter,
   validate(addToWishlistSchema),
   wishlistController.addToWishlist
 );
@@ -63,6 +65,7 @@ router.delete(
   '/wishlist/remove',
   ensureAuthenticated,
   requireUser,
+  generalLimiter,
   validate(removeFromWishlistSchema),
   wishlistController.removeFromWishlist
 );
@@ -70,6 +73,7 @@ router.patch(
   '/wishlist/move-to-cart',
   ensureAuthenticated,
   requireUser,
+  generalLimiter,
   validate(moveToCartSchema),
   wishlistController.moveToCart
 );

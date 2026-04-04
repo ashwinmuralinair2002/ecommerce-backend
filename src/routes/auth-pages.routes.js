@@ -22,7 +22,11 @@ router.get('/forgot-password', ensureGuest, (req, res) => {
 });
 
 router.get('/reset-password', ensureGuest, (req, res) => {
-    res.render('auth/reset-password');
+    if (!req.session.resetVerified || !req.session.resetEmail) {
+        return res.redirect('/forgot-password');
+    }
+
+    res.render('auth/reset-password', { email: req.session.resetEmail });
 });
 
 router.get('/password-success', (req, res) => {

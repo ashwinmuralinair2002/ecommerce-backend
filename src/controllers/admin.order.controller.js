@@ -1,4 +1,5 @@
 const adminOrderService = require('../services/admin.order.service');
+const HTTP_STATUS = require('../constants/http-status');
 
 const getOrders = async (req, res) => {
     try {
@@ -10,7 +11,7 @@ const getOrders = async (req, res) => {
             data
         });
     } catch (error) {
-        return res.status(500).json({
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message
         });
@@ -44,7 +45,7 @@ const renderOrdersPage = async (req, res) => {
             }
         });
     } catch (error) {
-        return res.status(500).json({
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message
         });
@@ -120,7 +121,7 @@ const bulkUpdateStatus = async (req, res) => {
             skippedCount: result.skippedCount
         });
     } catch (error) {
-        return res.status(400).json({
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
             success: false,
             message: error.message
         });

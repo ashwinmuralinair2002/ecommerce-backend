@@ -7,38 +7,10 @@ const HeroBanner = require('../models/HeroBanner');
 const { getCachedOffers } = require('../utils/offer-cache');
 const { getApplicableOffers, getBestOffer, calculateOfferDiscount } = require('../utils/offer-engine');
 const { getBaseProductPrice } = require('../utils/pricing');
+const { asQueryArray, asSingleQueryValue } = require('../utils/array.utils');
+const { getArrayEnumValues, getSingleEnumValues } = require('../utils/validation.utils');
 const wishlistService = require('../services/wishlist.service');
-
-function asQueryArray(value) {
-    if (Array.isArray(value)) return value.filter(Boolean);
-    if (typeof value === 'string' && value.trim()) return [value.trim()];
-    return [];
-}
-
-function asSingleQueryValue(value) {
-    const values = asQueryArray(value);
-    return values.length > 0 ? values[0] : null;
-}
-
-function getArrayEnumValues(pathName) {
-    const schemaPath = Product.schema.path(pathName);
-    if (!schemaPath) return [];
-
-    const enumSource =
-        schemaPath.embeddedSchemaType?.enumValues ||
-        schemaPath.caster?.enumValues;
-
-    return Array.isArray(enumSource)
-        ? enumSource.filter(Boolean)
-        : [];
-}
-
-function getSingleEnumValues(pathName) {
-    const schemaPath = Product.schema.path(pathName);
-    return schemaPath && Array.isArray(schemaPath.enumValues)
-        ? schemaPath.enumValues.filter(Boolean)
-        : [];
-}
+const HTTP_STATUS = require('../constants/http-status');
 
 const ENUM_FILTER_OPTIONS = {
     noiseControlTypes: getArrayEnumValues('noiseControlTypes'),
@@ -376,7 +348,7 @@ exports.getBrandsPage = async (req, res) => {
         });
     } catch (error) {
         console.error('Error loading brands page:', error);
-        res.status(500).send('Error loading brands page');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Error loading brands page');
     }
 };
 
@@ -390,7 +362,7 @@ exports.getBrandDetailPage = async (req, res) => {
         const brandId = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(brandId)) {
-            return res.status(404).send('Brand not found');
+            return res.status(HTTP_STATUS.NOT_FOUND).send('Brand not found');
         }
 
         const brand = await Brand.findOne({
@@ -400,7 +372,7 @@ exports.getBrandDetailPage = async (req, res) => {
         }).lean();
 
         if (!brand) {
-            return res.status(404).send('Brand not found');
+            return res.status(HTTP_STATUS.NOT_FOUND).send('Brand not found');
         }
         const data = await buildProductListingData(req, { brand: String(brand._id) });
 
@@ -418,7 +390,7 @@ exports.getBrandDetailPage = async (req, res) => {
         });
     } catch (error) {
         console.error('Error loading brand detail page:', error);
-        res.status(500).send('Error loading brand page');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Error loading brand page');
     }
 };
 
@@ -432,17 +404,17 @@ exports.getCategoryDetailPage = async (req, res) => {
         const categoryId = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(categoryId)) {
-            return res.status(404).send('Category not found');
+            return res.status(HTTP_STATUS.NOT_FOUND).send('Category not found');
         }
 
         const category = await Category.findById(categoryId).lean();
 
         if (!category) {
-            return res.status(404).send('Category not found');
+            return res.status(HTTP_STATUS.NOT_FOUND).send('Category not found');
         }
 
         if (category.isBlocked === true || category.isDeleted === true) {
-            return res.status(404).send('Category not available');
+            return res.status(HTTP_STATUS.NOT_FOUND).send('Category not available');
         }
 
         const data = await buildProductListingData(req, {
@@ -463,7 +435,7 @@ exports.getCategoryDetailPage = async (req, res) => {
         });
     } catch (error) {
         console.error('Error loading category page:', error);
-        res.status(500).send('Error loading category page');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Error loading category page');
     }
 };
 
@@ -486,7 +458,7 @@ exports.getAllProducts = async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching products:', error);
-        res.status(500).send('Error loading products');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Error loading products');
     }
 };
 
@@ -506,7 +478,7 @@ exports.getBestSellersPage = async (req, res) => {
         });
     } catch (error) {
         console.error('Error loading best sellers:', error);
-        res.status(500).send('Error loading best sellers');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Error loading best sellers');
     }
 };
 
@@ -526,7 +498,7 @@ exports.getNewArrivalsPage = async (req, res) => {
         });
     } catch (error) {
         console.error('Error loading new arrivals:', error);
-        res.status(500).send('Error loading new arrivals');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Error loading new arrivals');
     }
 };
 
@@ -546,7 +518,7 @@ exports.getTodaysDealsPage = async (req, res) => {
         });
     } catch (error) {
         console.error('Error loading deals:', error);
-        res.status(500).send('Error loading deals');
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send('Error loading deals');
     }
 };
 
@@ -565,7 +537,7 @@ exports.getProductDetails = async (req, res) => {
 
         // Validate ObjectId
         if (!mongoose.Types.ObjectId.isValid(productId)) {
-            return res.status(404).render('user/product-unavailable', { homeUrl });
+            return res.status(HTTP_STATUS.NOT_FOUND).render('user/product-unavailable', { homeUrl });
         }
 
         // Fetch Product
@@ -574,7 +546,7 @@ exports.getProductDetails = async (req, res) => {
             .populate('category', 'name isBlocked isDeleted');
 
         if (!product || product.isListed === false || product.isDeleted === true || !product.category || !allowedCategorySet.has(String(product.category._id || product.category))) {
-            return res.status(404).render('user/product-unavailable', { homeUrl });
+            return res.status(HTTP_STATUS.NOT_FOUND).render('user/product-unavailable', { homeUrl });
         }
 
         const activeOffers = await getCachedOffers(Offer);
@@ -652,7 +624,7 @@ exports.getProductDetails = async (req, res) => {
     } catch (error) {
         console.error('Error fetching product details:', error);
         const homeUrl = req.session && req.session.userId ? '/home' : '/';
-        res.status(500).render('user/product-unavailable', { homeUrl });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('user/product-unavailable', { homeUrl });
     }
 };
 

@@ -1,6 +1,8 @@
 // Address management controller for user account
 const User = require('../models/user.model');
 const profileService = require('../services/profile.service');
+const HTTP_STATUS = require('../constants/http-status');
+const { toTitleCase } = require('../utils/string.utils');
 
 const getReturnPath = (req) => {
     const returnTo = req.body.returnTo || req.query.returnTo;
@@ -104,9 +106,6 @@ const addAddress = async (req, res) => {
     }
 
     try {
-        // Title-case helper
-        const toTitleCase = (s) => s.trim().replace(/\s+/g, ' ').replace(/\b[a-z]/g, c => c.toUpperCase());
-
         const normalizedIsDefault = isDefault === 'Yes' || isDefault === 'on' || isDefault === true;
 
         const addressData = {
@@ -125,7 +124,7 @@ const addAddress = async (req, res) => {
         await profileService.addAddress(userId, addressData);
         res.redirect(getReturnPath(req));
     } catch (error) {
-        res.status(500).render('add-address', {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('add-address', {
             user: req.user || {},
             errors: { general: 'Failed to save address. Please try again.' },
             formData: req.body,
@@ -200,9 +199,6 @@ const updateAddress = async (req, res) => {
     }
 
     try {
-        // Title-case helper
-        const toTitleCase = (s) => s.trim().replace(/\s+/g, ' ').replace(/\b[a-z]/g, c => c.toUpperCase());
-
         const normalizedIsDefault = isDefault === 'Yes' || isDefault === 'on' || isDefault === true;
 
         const addressData = {
@@ -222,7 +218,7 @@ const updateAddress = async (req, res) => {
         res.redirect(getReturnPath(req));
     } catch (error) {
         const mockAddress = { _id: req.params.id, ...req.body, zip: postalCode };
-        res.status(500).render('edit-address', {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('edit-address', {
             user: req.user || {},
             address: mockAddress,
             errors: { general: 'Failed to update address. Please try again.' },

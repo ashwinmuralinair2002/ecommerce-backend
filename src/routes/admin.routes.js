@@ -7,6 +7,8 @@ const router = express.Router();
 
 router.use(ensureAdminAuthenticated);
 
+router.get('/referral', ensureAdminAuthenticated, adminController.getReferralSettings);
+router.post('/referral', ensureAdminAuthenticated, adminController.updateReferralSettings);
 router.get('/offers', adminController.getOffersPage);
 router.get('/offers/create', adminController.getCreateOfferPage);
 router.get('/offers/:id', adminController.getOfferDetailsPage);
