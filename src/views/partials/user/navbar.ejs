@@ -50,7 +50,7 @@
             </a>
 
         <% const activePath = typeof currentPath === 'string' ? currentPath : ''; %>
-        <nav class="hidden gap-6 text-sm font-medium lg:flex">
+        <nav class="flex gap-6 text-sm font-medium">
             <a href="/products" class="theme-nav-hover rounded-md px-2 py-1 <%= activePath === '/products' ? 'bg-white/20 text-white' : '' %>">Products</a>
             <a href="/todays-deals" class="theme-nav-hover rounded-md px-2 py-1 <%= activePath === '/todays-deals' ? 'bg-white/20 text-white' : '' %>">Today’s Deals</a>
             <a href="/best-sellers" class="theme-nav-hover rounded-md px-2 py-1 <%= activePath === '/best-sellers' ? 'bg-white/20 text-white' : '' %>">Best Sellers</a>

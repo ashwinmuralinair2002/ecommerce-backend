@@ -117,7 +117,6 @@ const addToWishlist = asyncHandler(async (userId, productId, variantId) => {
     };
 
     let alreadyExists = false;
-    let wasInserted = false;
     let wishlist = await Wishlist.findOneAndUpdate(
         {
             user: userId,
@@ -139,18 +138,22 @@ const addToWishlist = asyncHandler(async (userId, productId, variantId) => {
             new: true
         }
     );
-    wasInserted = Boolean(wishlist);
-
     if (!wishlist) {
         wishlist = await Wishlist.findOne({ user: userId });
 
         if (!wishlist) {
             try {
-                wishlist = await Wishlist.create({
+                await Wishlist.create({
                     user: userId,
                     items: [wishlistItem]
                 });
-                wasInserted = true;
+
+                return {
+                    success: true,
+                    alreadyExists,
+                    wishlistCount: await getWishlistCount(userId),
+                    message: 'Added to wishlist'
+                };
             } catch (error) {
                 if (error && error.code !== 11000) {
                     throw error;
@@ -160,7 +163,7 @@ const addToWishlist = asyncHandler(async (userId, productId, variantId) => {
             }
         }
 
-        alreadyExists = !wasInserted && Array.isArray(wishlist.items)
+        alreadyExists = Array.isArray(wishlist.items)
             ? wishlist.items.some((item) => isMatchingItem(item, productId, variantId))
             : false;
 

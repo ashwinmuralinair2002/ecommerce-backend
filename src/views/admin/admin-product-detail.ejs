@@ -88,30 +88,32 @@
                                     <% } %>
 
                                     <div class="order-1 sm:order-2 flex-1">
-                                        <div id="imageContainer"
-                                            class="group relative w-full aspect-square bg-white rounded-xl border border-gray-200 shadow-sm flex justify-center items-center overflow-visible cursor-crosshair">
-                                            <img src="<%= heroUrl %>" alt="<%= product.title %>"
-                                                class="w-full h-full object-contain p-4 rounded-xl" id="mainImage">
+                                        <div class="relative overflow-visible">
+                                            <div id="imageContainer"
+                                                class="group relative w-full aspect-square bg-white rounded-xl border border-gray-200 shadow-sm flex justify-center items-center overflow-visible cursor-crosshair">
+                                                <img src="<%= heroUrl %>" alt="<%= product.title %>"
+                                                    class="w-full h-full object-contain p-4 rounded-xl" id="mainImage">
 
-                                            <button id="prevBtn"
-                                                class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
-                                                aria-label="Previous image">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                                                    stroke="currentColor" class="w-5 h-5">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                                                </svg>
-                                            </button>
-                                            <button id="nextBtn"
-                                                class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
-                                                aria-label="Next image">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                                                    stroke="currentColor" class="w-5 h-5">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                                </svg>
-                                            </button>
+                                                <button id="prevBtn"
+                                                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
+                                                    aria-label="Previous image">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                                        stroke="currentColor" class="w-5 h-5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                                                    </svg>
+                                                </button>
+                                                <button id="nextBtn"
+                                                    class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-800 p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-sm z-10"
+                                                    aria-label="Next image">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                                        stroke="currentColor" class="w-5 h-5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                                    </svg>
+                                                </button>
+                                            </div>
 
                                             <div id="zoomBox"
-                                                class="hidden xl:block absolute left-[102%] top-0 w-[95%] h-full bg-white border border-gray-200 shadow-2xl rounded-xl z-50 bg-no-repeat opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none"
+                                                class="xl:block absolute top-0 left-full ml-4 w-[400px] h-[400px] bg-white border border-gray-200 shadow-2xl rounded-xl z-[9999] bg-no-repeat opacity-0 invisible pointer-events-none transition-all duration-200"
                                                 style="background-size: 200%;">
                                             </div>
                                         </div>

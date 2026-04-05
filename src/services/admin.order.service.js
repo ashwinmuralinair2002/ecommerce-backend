@@ -372,7 +372,7 @@ const processReturn = async (orderId, itemId, action) => {
                             order.orderId
                         );
                     } catch (err) {
-                        throw new Error('Wallet refund failed. Cancellation aborted.');
+                        throw new Error('Wallet refund failed. Cancellation aborted.', { cause: err });
                     }
 
                     item.refundStatus = 'processed';
@@ -388,8 +388,6 @@ const processReturn = async (orderId, itemId, action) => {
             });
 
             return result;
-        } catch (error) {
-            throw error;
         } finally {
             await session.endSession();
         }

@@ -529,6 +529,10 @@ const resetPassword = async (email, newPassword) => {
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(newPassword, salt);
 
+        if (user.googleId && !user.isVerified) {
+            user.isVerified = true;
+        }
+
         // Clear reset fields
         user.resetOtp = undefined;
         user.resetOtpExpires = undefined;

@@ -128,7 +128,7 @@ async function buildProductListingData(req, forcedFilters = {}) {
         }
     }
 
-    let sortOption = { createdAt: -1 };
+    let sortOption;
     switch (sort) {
         case 'price_asc':
             sortOption = { price: 1 };

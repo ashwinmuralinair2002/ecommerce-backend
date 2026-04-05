@@ -61,7 +61,7 @@ const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
             });
         } catch (err) {
             console.error('Razorpay order creation failed:', err);
-            throw new Error('Failed to create Razorpay order');
+            throw new Error('Failed to create Razorpay order', { cause: err });
         }
 
         console.log('Razorpay order created:', razorpayOrder.id);
