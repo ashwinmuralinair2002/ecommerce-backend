@@ -325,7 +325,9 @@
             }
         })();
 
-        document.getElementById('editBrandForm').addEventListener('submit', function (e) {
+        const editBrandForm = document.getElementById('editBrandForm');
+
+        editBrandForm.addEventListener('submit', function (e) {
             let valid = true;
             document.querySelectorAll('[id^="err-"]').forEach(el => { el.textContent = ''; el.classList.add('hidden'); });
 
@@ -355,7 +357,18 @@
                 valid = false;
             }
 
-            if (!valid) e.preventDefault();
+            if (!valid) {
+                e.preventDefault();
+                return;
+            }
+
+            showLoader();
+        });
+    </script>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
         });
     </script>
 </body>

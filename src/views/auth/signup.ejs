@@ -23,6 +23,7 @@
             const confirmPassword = inputs[4].value;
             const referralCode = inputs[5].value.trim();
             const submitButton = document.getElementById('signup-submit-btn');
+            const btnText = submitButton.querySelector('.btn-text');
 
             // Message Helper
             const msgContainer = document.getElementById('auth-message');
@@ -43,7 +44,13 @@
 
             // Reset UI
             submitButton.disabled = true;
-            submitButton.textContent = 'Creating Account...';
+            btnText.textContent = 'Creating Account...';
+
+            if (!submitButton.querySelector('.btn-spinner')) {
+                const spinner = document.createElement('span');
+                spinner.className = 'btn-spinner';
+                submitButton.prepend(spinner);
+            }
 
             try {
                 // Client-side validation
@@ -99,8 +106,12 @@
 
             } catch (error) {
                 showMessage(error.message, 'error');
+            } finally {
                 submitButton.disabled = false;
-                submitButton.textContent = 'Create Account';
+                btnText.textContent = 'Create Account';
+
+                const spinnerEl = submitButton.querySelector('.btn-spinner');
+                if (spinnerEl) spinnerEl.remove();
             }
         }
 
@@ -213,8 +224,9 @@
                     </label>
                 </div>
 
-                <button id="signup-submit-btn" class="theme-primary-btn mb-3 h-10 w-full rounded-lg text-sm font-bold">
-                    Create Account
+                <button id="signup-submit-btn"
+                    class="theme-primary-btn mb-3 h-10 w-full rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                    <span class="btn-text">Create Account</span>
                 </button>
 
                 <button onclick="window.location.href='/api/auth/google'"

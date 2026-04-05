@@ -66,8 +66,9 @@
                     <input class="otp-input" type="text" inputmode="numeric" maxlength="1" pattern="[0-9]*" />
                 </div>
 
-                <button id="verifyOtpBtn" class="theme-primary-btn mb-4 h-10 w-full rounded-lg text-sm font-bold">
-                    Verify OTP
+                <button id="verifyOtpBtn"
+                    class="theme-primary-btn mb-4 h-10 w-full rounded-lg text-sm font-bold flex items-center justify-center gap-2">
+                    <span class="btn-text">Verify OTP</span>
                 </button>
 
                 <!-- Auth Message Container -->
@@ -180,6 +181,7 @@
 
                     // Verify OTP
                     const verifyButton = document.getElementById('verifyOtpBtn');
+                    const verifyBtnText = verifyButton.querySelector('.btn-text');
                     verifyButton.addEventListener('click', async () => {
                         const otp = Array.from(inputs).map(input => input.value).join('');
 
@@ -191,12 +193,18 @@
                             return;
                         }
 
-                        // --- RESET PASSWORD MODE ---
-                        if (mode === 'reset') {
-                            verifyButton.disabled = true;
-                            verifyButton.textContent = 'Verifying...';
+                        verifyButton.disabled = true;
+                        verifyBtnText.textContent = 'Verifying...';
 
-                            try {
+                        if (!verifyButton.querySelector('.btn-spinner')) {
+                            const spinner = document.createElement('span');
+                            spinner.className = 'btn-spinner';
+                            verifyButton.prepend(spinner);
+                        }
+
+                        try {
+                            // --- RESET PASSWORD MODE ---
+                            if (mode === 'reset') {
                                 const response = await fetch('/api/auth/verify-otp', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -223,20 +231,10 @@
                                     window.location.href = '/reset-password';
                                 }, 800);
                                 return;
-                            } catch (error) {
-                                showMessage(error.message, 'error');
-                                verifyButton.disabled = false;
-                                verifyButton.textContent = 'Verify OTP';
                             }
-                            return;
-                        }
 
-                        // --- PASSWORD CHANGE MODE ---
-                        if (mode === 'password_change') {
-                            verifyButton.disabled = true;
-                            verifyButton.textContent = 'Verifying...';
-
-                            try {
+                            // --- PASSWORD CHANGE MODE ---
+                            if (mode === 'password_change') {
                                 const response = await fetch('/api/profile/password/verify', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -261,20 +259,10 @@
                                 showMessage('Password updated successfully!', 'success');
                                 setTimeout(() => window.location.href = '/account', 1500);
                                 return;
-                            } catch (error) {
-                                showMessage(error.message, 'error');
-                                verifyButton.disabled = false;
-                                verifyButton.textContent = 'Verify OTP';
                             }
-                            return;
-                        }
 
-                        // --- EMAIL CHANGE MODE ---
-                        if (mode === 'email_change') {
-                            verifyButton.disabled = true;
-                            verifyButton.textContent = 'Verifying...';
-
-                            try {
+                            // --- EMAIL CHANGE MODE ---
+                            if (mode === 'email_change') {
                                 const response = await fetch('/api/profile/email/verify', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -302,19 +290,9 @@
                                     window.location.href = redirectTarget;
                                 }, 1000);
                                 return;
-                            } catch (error) {
-                                showMessage(error.message, 'error');
-                                verifyButton.disabled = false;
-                                verifyButton.textContent = 'Verify OTP';
                             }
-                            return;
-                        }
 
-                        // --- DEFAULT SIGNUP MODE ---
-                        verifyButton.disabled = true;
-                        verifyButton.textContent = 'Verifying...';
-
-                        try {
+                            // --- DEFAULT SIGNUP MODE ---
                             const response = await fetch('/api/auth/verify-otp', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -350,10 +328,11 @@
                         } catch (error) {
                             showMessage(error.message, 'error');
                         } finally {
-                            if (verifyButton.textContent !== 'Verify OTP') { // Only reset if not redirected (heuristic)
-                                verifyButton.disabled = false;
-                                verifyButton.textContent = 'Verify OTP';
-                            }
+                            verifyButton.disabled = false;
+                            verifyBtnText.textContent = 'Verify OTP';
+
+                            const spinnerEl = verifyButton.querySelector('.btn-spinner');
+                            if (spinnerEl) spinnerEl.remove();
                         }
                     });
 

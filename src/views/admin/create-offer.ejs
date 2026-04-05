@@ -252,7 +252,10 @@
             form.addEventListener('submit', (event) => {
                 if (!validateForm()) {
                     event.preventDefault();
+                    return;
                 }
+
+                showLoader();
             });
             toggleSections();
         });
@@ -447,6 +450,12 @@
             </section>
         </main>
     </div>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
+        });
+    </script>
 </body>
 
 </html>

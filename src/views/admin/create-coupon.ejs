@@ -424,7 +424,10 @@
                 syncActiveValue();
                 if (Object.values(fieldErrors).some(Boolean) || isCheckingCode || !validateForm()) {
                     event.preventDefault();
+                    return;
                 }
+
+                showLoader();
             });
 
             inputs.isActive.addEventListener('change', syncActiveValue);
@@ -594,6 +597,12 @@
             </section>
         </main>
     </div>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
+        });
+    </script>
 </body>
 
 </html>

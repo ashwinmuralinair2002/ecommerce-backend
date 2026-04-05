@@ -1451,6 +1451,7 @@
             const submitBtn = document.getElementById('updateProductBtn');
             submitBtn.disabled = true;
             submitBtn.querySelector('span').textContent = 'Updating...';
+            showLoader();
 
             try {
                 const res = await fetch('/admin/products/' + PRODUCT_ID, {
@@ -1461,15 +1462,23 @@
                 if (data.success) {
                     window.location.href = '/admin/products/' + PRODUCT_ID;
                 } else {
+                    hideLoader();
                     alert(data.message || 'Failed to update product');
                     submitBtn.disabled = false;
                     submitBtn.querySelector('span').textContent = 'Update Product';
                 }
             } catch (err) {
+                hideLoader();
                 alert('Error updating product. Please try again.');
                 submitBtn.disabled = false;
                 submitBtn.querySelector('span').textContent = 'Update Product';
             }
+        });
+    </script>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
         });
     </script>
 </body>

@@ -1011,6 +1011,7 @@
                     if (submitLabel) submitLabel.textContent = 'Creating...';
 
                     e.preventDefault();
+                    showLoader();
                     const response = await fetch(this.action || '/admin/products', {
                         method: 'POST',
                         body: new FormData(this),
@@ -1026,6 +1027,7 @@
                     }
 
                     const message = (data && data.message) ? data.message : 'Error creating product. Please try again.';
+                    hideLoader();
                     if (formError) {
                         formError.textContent = message;
                         formError.classList.add('visible');
@@ -1036,6 +1038,7 @@
                     if (submitLabel) submitLabel.textContent = 'Create Product';
                 } catch (err) {
                     e.preventDefault();
+                    hideLoader();
                     const message = 'Error creating product. Please try again.';
                     if (formError) {
                         formError.textContent = message;
@@ -1729,12 +1732,14 @@
     </script>
     <script>
         document.addEventListener('pageshow', function () {
+            hideLoader();
             const submitBtn = document.getElementById('createProductBtn');
             const submitLabel = submitBtn ? submitBtn.querySelector('span') : null;
             if (submitBtn) submitBtn.disabled = false;
             if (submitLabel) submitLabel.textContent = 'Create Product';
         });
     </script>
+    <script src="/js/loading.util.js"></script>
 </body>
 
 </html>

@@ -82,6 +82,15 @@
 
     <script>
         (function () {
+            const form = document.querySelector('form[action*="/admin/categories/"][action*="/edit"]');
+            if (!form) return;
+
+            form.addEventListener('submit', function () {
+                showLoader();
+            });
+        })();
+
+        (function () {
             const imageInput = document.getElementById('categoryImageInput');
             const previewWrap = document.getElementById('categoryImagePreviewWrap');
             const previewImg = document.getElementById('categoryImagePreview');
@@ -202,6 +211,12 @@
                 }, 'image/png');
             });
         })();
+    </script>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
+        });
     </script>
 </body>
 

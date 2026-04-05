@@ -743,6 +743,7 @@
                 isPlacingOrder = true;
                 placeOrderButton.disabled = true;
                 placeOrderButton.classList.add('pointer-events-none', 'opacity-50');
+                showLoader();
 
                 try {
                     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || null;
@@ -786,6 +787,7 @@
                             order_id: orderData.data.razorpayOrderId,
                             handler: async function (response) {
                                 try {
+                                    showLoader();
                                     const res = await fetch('/api/order/place', {
                                         method: 'POST',
                                         headers: {
@@ -805,10 +807,12 @@
                                     if (data.success) {
                                         window.location.href = `/order-success?orderId=${data.orderId}`;
                                     } else {
+                                        hideLoader();
                                         window.alert('Order placement failed');
                                     }
                                 } catch (err) {
                                     console.error('Order placement error:', err);
+                                    hideLoader();
                                     window.alert('Something went wrong');
                                 }
                             },
@@ -819,6 +823,7 @@
                             },
                             modal: {
                                 ondismiss: function () {
+                                    hideLoader();
                                     window.location.href = "/payment-failure";
                                 }
                             },
@@ -851,9 +856,11 @@
                         const rzp = new Razorpay(options);
                         rzp.on('payment.failed', function (response) {
                             console.error('RAZORPAY FAILURE:', response.error);
+                            hideLoader();
                             window.location.href = "/payment-failure";
                         });
                         rzp.open();
+                        hideLoader();
                         return;
                     }
 
@@ -861,6 +868,7 @@
                 } catch (error) {
                     notifyError('Unable to place order');
                 } finally {
+                    hideLoader();
                     isPlacingOrder = false;
                     placeOrderButton.disabled = false;
                     placeOrderButton.classList.remove('opacity-50', 'pointer-events-none');
@@ -870,6 +878,7 @@
     })();
 </script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/js/loading.util.js"></script>
 </body>
 
 </html>

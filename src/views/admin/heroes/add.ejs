@@ -109,6 +109,15 @@
 
     <script>
         (function () {
+            const form = document.getElementById('heroAddForm');
+            if (!form) return;
+
+            form.addEventListener('submit', function () {
+                showLoader();
+            });
+        })();
+
+        (function () {
             const refsData = {
                 product: <%- JSON.stringify((refs && refs.products) || []) %>,
                 category: <%- JSON.stringify((refs && refs.categories) || []) %>,
@@ -317,6 +326,12 @@
                 }, 'image/png');
             });
         })();
+    </script>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
+        });
     </script>
 </body>
 

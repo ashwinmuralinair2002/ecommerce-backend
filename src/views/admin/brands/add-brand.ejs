@@ -338,7 +338,18 @@
                 valid = false;
             }
 
-            if (!valid) e.preventDefault();
+            if (!valid) {
+                e.preventDefault();
+                return;
+            }
+
+            showLoader();
+        });
+    </script>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
         });
     </script>
 </body>

@@ -158,6 +158,7 @@
                     if (!nameInput) return;
                     await checkDuplicateName(nameInput.value);
                     if (!duplicateExists) {
+                        showLoader();
                         HTMLFormElement.prototype.submit.call(form);
                     }
                 });
@@ -289,6 +290,12 @@
                 }, 'image/png');
             });
         })();
+    </script>
+    <script src="/js/loading.util.js"></script>
+    <script>
+        window.addEventListener('pageshow', function () {
+            hideLoader();
+        });
     </script>
 </body>
 

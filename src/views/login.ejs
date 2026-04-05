@@ -23,6 +23,7 @@
             const emailInput = document.getElementById('email');
             const passwordInput = document.getElementById('password');
             const submitButton = document.getElementById('loginBtn');
+            const btnText = submitButton.querySelector('.btn-text');
 
             const email = emailInput.value.trim();
             const password = passwordInput.value;
@@ -45,9 +46,15 @@
                 return;
             }
 
-            // Disable button
+            // Disable button and show loading state without shifting layout
             submitButton.disabled = true;
-            submitButton.textContent = 'Logging in...';
+            btnText.textContent = 'Logging in...';
+
+            if (!submitButton.querySelector('.btn-spinner')) {
+                const spinner = document.createElement('span');
+                spinner.className = 'btn-spinner';
+                submitButton.prepend(spinner);
+            }
 
             try {
                 const response = await fetch('/api/auth/login', {
@@ -95,7 +102,10 @@
                 showMessage(error.message, 'error');
             } finally {
                 submitButton.disabled = false;
-                submitButton.textContent = 'Log In';
+                btnText.textContent = 'Log In';
+
+                const spinnerEl = submitButton.querySelector('.btn-spinner');
+                if (spinnerEl) spinnerEl.remove();
             }
         }
 
@@ -212,8 +222,9 @@
                     </button>
                 </div>
 
-                <button id="loginBtn" class="theme-primary-btn mb-3 h-10 w-full rounded-lg text-sm">
-                    Log In
+                <button id="loginBtn"
+                    class="theme-primary-btn mb-3 h-10 w-full rounded-lg text-sm flex items-center justify-center gap-2">
+                    <span class="btn-text">Log In</span>
                 </button>
 
                 <button onclick="window.location.replace('/api/auth/google')"
