@@ -186,7 +186,7 @@
 
 /* Hidden utility */
 .hidden {
-  display: none !important;
+  display: none;
 }
 
 /* Spinner */
