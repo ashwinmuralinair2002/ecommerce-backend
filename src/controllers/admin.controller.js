@@ -2392,10 +2392,15 @@ const downloadReport = async (req, res) => {
                 { header: 'Email', key: 'email', width: 25 },
                 { header: 'Product', key: 'product', width: 25 },
                 { header: 'Variant', key: 'variant', width: 15 },
+                { header: 'Coupon Code', key: 'couponCode', width: 18 },
+                { header: 'Base Price', key: 'basePrice', width: 14 },
                 { header: 'Quantity', key: 'quantity', width: 10 },
-                { header: 'Unit Price', key: 'price', width: 12 },
-                { header: 'Total GST', key: 'gst', width: 12 },
-                { header: 'Total', key: 'total', width: 15 },
+                { header: 'Base Total', key: 'baseTotal', width: 14 },
+                { header: 'Offer Discount', key: 'offerDiscount', width: 16 },
+                { header: 'Coupon Discount', key: 'couponDiscount', width: 17 },
+                { header: 'Subtotal (Before GST)', key: 'subtotal', width: 20 },
+                { header: 'GST', key: 'gst', width: 12 },
+                { header: 'Final Total', key: 'finalTotal', width: 15 },
                 { header: 'Payment Method', key: 'payment', width: 18 },
                 { header: 'Status', key: 'status', width: 15 }
             ];
@@ -2405,11 +2410,16 @@ const downloadReport = async (req, res) => {
                 const items = Array.isArray(order.items) ? order.items : [];
 
                 for (const item of items) {
+                    const basePrice = roundCurrency(Number(item.price || 0));
                     const quantity = Number(item.quantity || 0);
-                    const price = roundCurrency(Number(item.priceSnapshot || item.price || 0));
+                    const baseTotal = roundCurrency(Number(item.totalPrice || (basePrice * quantity)));
+                    const offerDiscount = roundCurrency(Number(item.offerDiscount || 0));
+                    const couponDiscount = roundCurrency(Number(item.couponDiscount || 0));
+                    const subtotal = roundCurrency(Number(item.finalSubtotal || 0));
                     const gst = roundCurrency(Number(item.gstAmount || 0));
-                    const total = roundCurrency(Number(item.finalPrice || 0));
+                    const finalTotal = roundCurrency(Number(item.finalPrice || 0));
                     const itemStatus = String(item.status || order.orderStatus || 'Unknown');
+                    const couponCode = order.coupon?.code || order.coupon || '';
 
                     worksheet.addRow({
                         date: formatReportDate(order.createdAt),
@@ -2418,10 +2428,15 @@ const downloadReport = async (req, res) => {
                         email: order.user?.email || 'N/A',
                         product: item.productName || 'Product',
                         variant: item.colorName || 'Default',
+                        couponCode,
+                        basePrice,
                         quantity,
-                        price,
+                        baseTotal,
+                        offerDiscount,
+                        couponDiscount,
+                        subtotal,
                         gst,
-                        total,
+                        finalTotal,
                         payment: normalizeReportPaymentMethod(order.paymentMethod),
                         status: itemStatus
                     });

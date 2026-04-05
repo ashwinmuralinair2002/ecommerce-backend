@@ -1,5 +1,7 @@
 // Brand management controller for admin dashboard
 const Brand = require('../models/Brand');
+const Product = require('../models/Product');
+const Order = require('../models/order.model');
 const cloudinary = require('../config/cloudinary');
 const HTTP_STATUS = require('../constants/http-status');
 
@@ -67,10 +69,12 @@ exports.getBrands = async (req, res) => {
             .skip(skip)
             .limit(limit);
 
-        brands.forEach(b => {
-            if (!b.logoUrl) b.logoUrl = '';
-            if (b.productCount === undefined) b.productCount = 0;
-        });
+        await Promise.all(brands.map(async (brand) => {
+            if (!brand.logoUrl) brand.logoUrl = '';
+            brand.productCount = await Product.countDocuments({
+                brand: brand._id
+            });
+        }));
 
         res.render('admin/admin-brands', {
             brands,
@@ -188,19 +192,68 @@ exports.getBrandDetails = async (req, res) => {
         const brand = await Brand.findById(req.params.id);
         if (!brand) return res.redirect('/admin/brands');
 
-        const products = [];
-        if (brand.productCount > 0) {
-            products.push({
-                _id: 'mock_prod_1',
-                name: 'Sample Product for ' + brand.name,
-                sku: 'SKU-001',
-                price: 2999,
-                stock: 15,
-                isActive: true
-            });
+        const products = await Product.find({
+            brand: brand._id
+        }).sort({ createdAt: -1 });
+
+        const productIds = products.map((product) => product._id);
+
+        let salesData = [];
+        if (productIds.length > 0) {
+            salesData = await Order.aggregate([
+                { $unwind: '$items' },
+                {
+                    $match: {
+                        'items.productId': { $in: productIds }
+                    }
+                },
+                {
+                    $group: {
+                        _id: '$items.productId',
+                        unitsSold: { $sum: '$items.quantity' },
+                        revenue: {
+                            $sum: {
+                                $multiply: ['$items.quantity', '$items.price']
+                            }
+                        },
+                        orderIds: { $addToSet: '$_id' }
+                    }
+                }
+            ]);
         }
 
-        const metrics = null;
+        const salesByProductId = new Map(
+            salesData.map((entry) => [
+                String(entry._id),
+                {
+                    unitsSold: entry.unitsSold || 0,
+                    revenue: entry.revenue || 0,
+                    orderIds: Array.isArray(entry.orderIds) ? entry.orderIds : []
+                }
+            ])
+        );
+
+        const uniqueOrderIds = new Set();
+        let totalUnits = 0;
+        let totalRevenue = 0;
+
+        products.forEach((product) => {
+            const sales = salesByProductId.get(String(product._id));
+            product.unitsSold = sales ? sales.unitsSold : 0;
+
+            if (sales) {
+                totalUnits += sales.unitsSold;
+                totalRevenue += sales.revenue;
+                sales.orderIds.forEach((orderId) => uniqueOrderIds.add(String(orderId)));
+            }
+        });
+
+        const metrics = {
+            totalProducts: products.length,
+            totalOrders: uniqueOrderIds.size,
+            totalUnits,
+            totalRevenue
+        };
 
         res.render('admin/brand-details', { brand, products, metrics });
     } catch (error) {

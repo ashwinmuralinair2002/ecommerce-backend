@@ -153,35 +153,27 @@
                     <div class="bg-[#D3CEEA] p-4 rounded-lg">
                         <p class="text-sm text-[#685BCB] mb-1">Total Products</p>
                         <p class="text-2xl font-bold text-[#1F1F1F]">
-                            <%= (metrics && metrics.totalProducts) || brand.productCount || 0 %>
+                            <%= (metrics && metrics.totalProducts) || 0 %>
                         </p>
                     </div>
-
-                    <% if (locals.metrics && metrics.totalSales) { %>
-                        <div class="bg-[#D3CEEA] p-4 rounded-lg">
-                            <p class="text-sm text-[#685BCB] mb-1">Total Sales</p>
-                            <p class="text-2xl font-bold text-[#1F1F1F]">₹<%= metrics.totalSales.toLocaleString() %>
-                            </p>
-                        </div>
-                        <div class="bg-[#D3CEEA] p-4 rounded-lg">
-                            <p class="text-sm text-[#685BCB] mb-1">Avg. Rating</p>
-                            <p class="text-2xl font-bold text-[#1F1F1F]">
-                                <%= metrics.avgRating %> <span class="text-sm text-[#685BCB]">/ 5.0</span>
-                            </p>
-                        </div>
-                        <div class="bg-[#D3CEEA] p-4 rounded-lg">
-                            <p class="text-sm text-[#685BCB] mb-1">Active Promos</p>
-                            <p class="text-2xl font-bold text-[#1F1F1F]">
-                                <%= metrics.activePromos %>
-                            </p>
-                        </div>
-                        <% } else { %>
-                            <div
-                                class="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-300 flex items-center justify-center col-span-1 md:col-span-3">
-                                <p class="text-sm text-gray-500">Sales and rating data will appear here once available.
-                                </p>
-                            </div>
-                            <% } %>
+                    <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                        <p class="text-sm text-[#685BCB] mb-1">Total Orders</p>
+                        <p class="text-2xl font-bold text-[#1F1F1F]">
+                            <%= (metrics && metrics.totalOrders) || 0 %>
+                        </p>
+                    </div>
+                    <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                        <p class="text-sm text-[#685BCB] mb-1">Total Units Sold</p>
+                        <p class="text-2xl font-bold text-[#1F1F1F]">
+                            <%= (metrics && metrics.totalUnits) || 0 %>
+                        </p>
+                    </div>
+                    <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                        <p class="text-sm text-[#685BCB] mb-1">Total Revenue</p>
+                        <p class="text-2xl font-bold text-[#1F1F1F]">
+                            ₹<%= Number((metrics && metrics.totalRevenue) || 0).toLocaleString() %>
+                        </p>
+                    </div>
                 </div>
 
                 <!-- PRODUCTS TABLE -->
@@ -194,6 +186,7 @@
                                 <th class="p-3 text-left text-sm font-medium text-[#685BCB]">SKU</th>
                                 <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Price</th>
                                 <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Stock</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Units Sold</th>
                                 <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Status</th>
                                 <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Actions</th>
                             </tr>
@@ -201,14 +194,14 @@
                         <tbody>
                             <% if (products.length===0) { %>
                                 <tr>
-                                    <td colspan="6" class="text-center py-8 text-gray-500">No products found for this
+                                    <td colspan="7" class="text-center py-8 text-gray-500">No products found for this
                                         brand.</td>
                                 </tr>
                                 <% } else { %>
                                     <% products.forEach(p=> { %>
                                         <tr class="border-t border-[#BCA6DB]">
                                             <td class="p-3 text-[#1F1F1F]">
-                                                <%= p.name %>
+                                                <%= p.title %>
                                             </td>
                                             <td class="p-3 text-[#685BCB]">
                                                 <%= p.sku %>
@@ -216,12 +209,15 @@
                                             <td class="p-3 text-[#1F1F1F]">₹<%= p.price %>
                                             </td>
                                             <td class="p-3 text-[#685BCB]">
-                                                <%= p.stock %>
+                                                <%= p.stockCount %>
+                                            </td>
+                                            <td class="p-3 text-[#685BCB]">
+                                                <%= p.unitsSold || 0 %>
                                             </td>
                                             <td class="p-3">
                                                 <span
-                                                    class="px-2 py-1 rounded-lg text-xs font-medium <%= p.isActive ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-gray-100 text-gray-600' %>">
-                                                    <%= p.isActive ? 'Listed' : 'Unlisted' %>
+                                                    class="px-2 py-1 rounded-lg text-xs font-medium <%= p.isListed ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-gray-100 text-gray-600' %>">
+                                                    <%= p.isListed ? 'Listed' : 'Unlisted' %>
                                                 </span>
                                             </td>
                                             <td class="p-3">

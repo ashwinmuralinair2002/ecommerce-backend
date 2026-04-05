@@ -284,12 +284,33 @@
                                                                             </label>
                                                                             <label class="flex flex-col min-w-40 flex-1">
                                                                                 <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Connector Type</p>
-                                                                                <input id="connectorType" name="connectorType" placeholder="e.g., 3.5mm Jack"
-                                                                                    pattern="^[a-zA-Z0-9 .]+$"
-                                                                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
-                                                                                    value="<%= product.connectorType || '' %>" />
-                                                                                <p class="field-error" id="connectorTypeError">Only letters, numbers, spaces, and
-                                                                                    periods allowed</p>
+                                                                                <% const connectorTypeOptions = [
+                                                                                    '3.5mm Jack (Mini-jack)',
+                                                                                    'USB-C',
+                                                                                    'Lightning',
+                                                                                    '6.35mm (1/4-inch) Jack',
+                                                                                    '2.5mm Jack',
+                                                                                    '4.4mm Pentaconn',
+                                                                                    'XLR (3-pin or 4-pin)',
+                                                                                    'Other'
+                                                                                ]; %>
+                                                                                <% let hasMatchingConnectorType = false; %>
+                                                                                <select id="connectorType" name="connectorType"
+                                                                                    class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 bg-[image:--select-button-svg] placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal">
+                                                                                    <option value="">Select Connector Type</option>
+                                                                                    <% connectorTypeOptions.forEach(function(option) { %>
+                                                                                        <% if (option === product.connectorType) hasMatchingConnectorType = true; %>
+                                                                                        <option value="<%= option %>" <%= option === product.connectorType ? 'selected' : '' %>>
+                                                                                            <%= option %>
+                                                                                        </option>
+                                                                                    <% }) %>
+                                                                                    <% if (product.connectorType && !hasMatchingConnectorType) { %>
+                                                                                        <option value="<%= product.connectorType %>" selected>
+                                                                                            <%= product.connectorType %> (Custom)
+                                                                                        </option>
+                                                                                    <% } %>
+                                                                                </select>
+                                                                                <p class="field-error" id="connectorTypeError">Please select a valid connector type</p>
                                                                             </label>
                                                                         </div>
                                                                         <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
@@ -1362,7 +1383,6 @@
             const connType = document.getElementById('connectionType').value;
             if (connType === 'Wired') {
                 if (!validateNumber('cableLength', 'cableLengthError', false)) valid = false;
-                if (!validatePattern('connectorType', 'connectorTypeError')) valid = false;
                 if (!validateNumber('impedance', 'impedanceError', false)) valid = false;
                 if (!validateNumber('driverSize', 'driverSizeError', false)) valid = false;
             } else if (connType === 'Wireless') {
