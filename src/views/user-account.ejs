@@ -11,10 +11,16 @@
   <title>SoundWave | User Account</title>
 
   <%- include('./partials/user/theme-config') %>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="/js/utils.js"></script>
   <script>
+    let profilePhotoCropper = null;
+    let pendingProfilePhotoFile = null;
+    let pendingProfilePhotoObjectUrl = '';
+
     function confirmDeleteAccount() {
       confirmAction({
         title: 'Delete Account?',
@@ -240,6 +246,85 @@
         }
       }
     }
+    function closeProfilePhotoCropModal() {
+      const cropModal = document.getElementById('profile-photo-crop-modal');
+      const cropImage = document.getElementById('profile-photo-cropper-image');
+      if (profilePhotoCropper) {
+        profilePhotoCropper.destroy();
+        profilePhotoCropper = null;
+      }
+      if (cropModal) {
+        cropModal.classList.add('hidden');
+        cropModal.classList.remove('flex');
+      }
+      if (cropImage) {
+        cropImage.src = '';
+      }
+    }
+
+    async function uploadProfilePhotoFile(file) {
+      const formData = new FormData();
+      formData.append('profileImage', file);
+
+      const statusEl = document.getElementById('upload-status');
+      statusEl.textContent = 'Uploading...';
+      statusEl.classList.remove('hidden', 'text-red-500', 'text-primary');
+      statusEl.classList.add('text-blue-600');
+
+      try {
+        const response = await fetch('/api/profile/upload-photo', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          document.getElementById('profile-image-preview').src = data.profileImage;
+          const navbarProfileImage = document.querySelector('a[href="/account"] img');
+          if (navbarProfileImage) {
+            navbarProfileImage.src = data.profileImage;
+          }
+          statusEl.textContent = 'Photo updated successfully';
+          statusEl.classList.remove('text-blue-600');
+          statusEl.classList.add('text-primary');
+          setTimeout(() => statusEl.classList.add('hidden'), 3000);
+          showInlineMessage('Profile photo updated', 'success');
+        } else {
+          throw new Error(data.error || 'Upload failed');
+        }
+      } catch (error) {
+        console.error('Upload Error:', error);
+        statusEl.textContent = 'Upload failed';
+        statusEl.classList.remove('text-blue-600');
+        statusEl.classList.add('text-red-500');
+        showInlineMessage(error.message, 'error');
+      }
+    }
+
+    async function saveProfilePhotoCrop() {
+      if (!profilePhotoCropper || !pendingProfilePhotoFile) return;
+
+      const canvas = profilePhotoCropper.getCroppedCanvas({
+        width: 500,
+        height: 500,
+        fillColor: '#ffffff'
+      });
+      if (!canvas) return;
+
+      const outputType = pendingProfilePhotoFile.type || 'image/jpeg';
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, 0.95));
+      if (!blob) return;
+
+      const croppedFile = new File([blob], pendingProfilePhotoFile.name, {
+        type: blob.type || outputType,
+        lastModified: Date.now()
+      });
+
+      closeProfilePhotoCropModal();
+      await uploadProfilePhotoFile(croppedFile);
+    }
+
     async function uploadProfilePhoto(input) {
       const file = input.files[0];
       if (!file) return;
@@ -258,42 +343,38 @@
         return;
       }
 
-      const formData = new FormData();
-      formData.append('profileImage', file);
-
-      const statusEl = document.getElementById('upload-status');
-      statusEl.textContent = 'Uploading...';
-      statusEl.classList.remove('hidden', 'text-red-500', 'text-primary');
-      statusEl.classList.add('text-blue-600');
-
-      try {
-        const response = await fetch('/api/profile/upload-photo', {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // Update Image Preview
-          document.getElementById('profile-image-preview').src = data.profileImage;
-          statusEl.textContent = 'Photo updated successfully';
-          statusEl.classList.remove('text-blue-600');
-          statusEl.classList.add('text-primary');
-          setTimeout(() => statusEl.classList.add('hidden'), 3000);
-          showInlineMessage('Profile photo updated', 'success');
-        } else {
-          throw new Error(data.error || 'Upload failed');
-        }
-      } catch (error) {
-        console.error('Upload Error:', error);
-        statusEl.textContent = 'Upload failed';
-        statusEl.classList.remove('text-blue-600');
-        statusEl.classList.add('text-red-500');
-        showInlineMessage(error.message, 'error');
-      } finally {
-        input.value = ''; // Reset for re-selection
+      pendingProfilePhotoFile = file;
+      if (pendingProfilePhotoObjectUrl) {
+        URL.revokeObjectURL(pendingProfilePhotoObjectUrl);
       }
+      pendingProfilePhotoObjectUrl = URL.createObjectURL(file);
+
+      const cropModal = document.getElementById('profile-photo-crop-modal');
+      const cropImage = document.getElementById('profile-photo-cropper-image');
+      if (!cropModal || !cropImage || typeof Cropper === 'undefined') {
+        await uploadProfilePhotoFile(file);
+        input.value = '';
+        return;
+      }
+
+      cropImage.src = pendingProfilePhotoObjectUrl;
+      cropModal.classList.remove('hidden');
+      cropModal.classList.add('flex');
+
+      cropImage.onload = function () {
+        if (profilePhotoCropper) profilePhotoCropper.destroy();
+        profilePhotoCropper = new Cropper(cropImage, {
+          aspectRatio: 1,
+          viewMode: 1,
+          movable: true,
+          zoomable: true,
+          scalable: false,
+          cropBoxResizable: true,
+          autoCropArea: 0.9
+        });
+      };
+
+      input.value = '';
     }
   </script>
 </head>
@@ -306,7 +387,7 @@
     <%- include('./partials/user/navbar') %>
 
       <!-- ================= CONTENT ================= -->
-      <main class="flex flex-1 gap-0 px-0 py-0 bg-white">
+	      <main class="flex flex-1 gap-0 px-0 py-0 bg-white">
 
         <!-- SIDEBAR -->
         <%- include('./partials/user/account-sidebar', { activePage: 'account' }) %>
@@ -392,8 +473,24 @@
           <!-- Original Delete Button Location (Removed) -->
         </section>
 
-      </main>
-  </div>
+	      </main>
+
+        <div id="profile-photo-crop-modal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+          <div class="w-full max-w-2xl rounded-xl bg-white p-4">
+            <div class="mb-3 flex items-center justify-between">
+              <h2 class="text-lg font-bold text-primary">Crop Profile Photo</h2>
+              <button type="button" onclick="closeProfilePhotoCropModal()" class="text-sm font-semibold text-primary">Close</button>
+            </div>
+            <div class="max-h-[70vh] overflow-hidden rounded-lg bg-gray-100">
+              <img id="profile-photo-cropper-image" src="" alt="Crop preview" class="max-w-full" />
+            </div>
+            <div class="mt-4 flex justify-end gap-3">
+              <button type="button" onclick="closeProfilePhotoCropModal()" class="rounded-xl bg-white px-5 py-2 text-sm font-semibold text-primary border border-primary-light/50">Cancel</button>
+              <button type="button" onclick="saveProfilePhotoCrop()" class="theme-primary-btn rounded-xl px-5 py-2 text-sm font-bold">Save Crop</button>
+            </div>
+          </div>
+        </div>
+    </div>
 </body>
 
 </html>

@@ -9,6 +9,8 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/js/utils.js"></script>
     <style>
@@ -347,8 +349,23 @@
 
                         <!-- Profile Summary -->
                         <section class="flex items-center gap-6 mb-8">
-                            <div class="w-24 h-24 rounded-full bg-cover bg-center border-2 border-[#D3CEEA]"
-                                style="background-image:url('/images/admin/profile.jpg');">
+                            <div class="relative">
+                                <div class="h-24 w-24 overflow-hidden rounded-full border-2 border-[#D3CEEA]">
+                                    <img id="admin-profile-image-preview"
+                                        src="<%= user && user.profileImage ? user.profileImage : '/images/admin/profile.jpg' %>"
+                                        alt="Admin profile"
+                                        class="h-full w-full object-cover" />
+                                </div>
+                                <label for="admin-profile-upload"
+                                    class="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-[#685BCB] text-white shadow-lg transition-colors hover:bg-[#5a4dc0]">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                </label>
+                                <input type="file" id="admin-profile-upload" accept="image/jpeg, image/jpg" class="hidden"
+                                    onchange="openAdminProfilePhotoCropper(this)" />
                             </div>
 
                             <div>
@@ -356,6 +373,7 @@
                                     <%= user ? user.name : 'Ashwin Murali Nair' %>
                                 </p>
                                 <p class="text-sm text-[#685BCB]">Super Admin</p>
+                                <p id="adminPhotoStatus" class="mt-2 hidden text-sm"></p>
                             </div>
                         </section>
 
@@ -429,9 +447,144 @@
                         </section>
 
                         <script>
+                        let adminProfilePhotoCropper = null;
+                        let pendingAdminProfilePhotoFile = null;
+                        let pendingAdminProfilePhotoObjectUrl = '';
                         const originalName = "<%= user ? user.name : 'Ashwin Murali Nair' %>";
                         const originalEmail = "<%= user ? user.email : 'admin@soundwave.com' %>";
                         const originalPhone = "<%= user && user.phone ? user.phone : '' %>";
+
+                        function closeAdminProfilePhotoCropModal() {
+                            const cropModal = document.getElementById('admin-profile-photo-crop-modal');
+                            const cropImage = document.getElementById('admin-profile-photo-cropper-image');
+                            if (adminProfilePhotoCropper) {
+                                adminProfilePhotoCropper.destroy();
+                                adminProfilePhotoCropper = null;
+                            }
+                            if (cropModal) {
+                                cropModal.classList.add('hidden');
+                                cropModal.classList.remove('flex');
+                            }
+                            if (cropImage) {
+                                cropImage.src = '';
+                            }
+                        }
+
+                        async function uploadAdminProfilePhotoFile(file) {
+                            const statusEl = document.getElementById('adminPhotoStatus');
+                            const formData = new FormData();
+                            formData.append('profileImage', file);
+
+                            if (statusEl) {
+                                statusEl.textContent = 'Uploading...';
+                                statusEl.classList.remove('hidden', 'text-red-600', 'text-green-700');
+                                statusEl.classList.add('text-blue-600');
+                            }
+
+                            try {
+                                const response = await fetch('/admin/profile/upload-photo', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                const data = await response.json();
+
+                                if (!response.ok) {
+                                    throw new Error(data.error || 'Upload failed');
+                                }
+
+                                const preview = document.getElementById('admin-profile-image-preview');
+                                if (preview) {
+                                    preview.src = data.profileImage;
+                                }
+
+                                if (statusEl) {
+                                    statusEl.textContent = 'Photo updated successfully';
+                                    statusEl.classList.remove('text-blue-600');
+                                    statusEl.classList.add('text-green-700');
+                                }
+
+                                showMessage('Profile photo updated successfully!', 'success');
+                            } catch (error) {
+                                if (statusEl) {
+                                    statusEl.textContent = error.message || 'Upload failed';
+                                    statusEl.classList.remove('text-blue-600');
+                                    statusEl.classList.add('text-red-600');
+                                }
+                                showMessage(error.message || 'Failed to upload profile photo', 'error');
+                            }
+                        }
+
+                        async function saveAdminProfilePhotoCrop() {
+                            if (!adminProfilePhotoCropper || !pendingAdminProfilePhotoFile) return;
+                            const canvas = adminProfilePhotoCropper.getCroppedCanvas({
+                                width: 500,
+                                height: 500,
+                                fillColor: '#ffffff'
+                            });
+                            if (!canvas) return;
+
+                            const outputType = pendingAdminProfilePhotoFile.type || 'image/jpeg';
+                            const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, 0.95));
+                            if (!blob) return;
+
+                            const croppedFile = new File([blob], pendingAdminProfilePhotoFile.name, {
+                                type: blob.type || outputType,
+                                lastModified: Date.now()
+                            });
+
+                            closeAdminProfilePhotoCropModal();
+                            await uploadAdminProfilePhotoFile(croppedFile);
+                        }
+
+                        async function openAdminProfilePhotoCropper(input) {
+                            const file = input.files[0];
+                            if (!file) return;
+
+                            if (!['image/jpeg', 'image/jpg'].includes(file.type)) {
+                                showMessage('Only JPG/JPEG images are allowed.', 'error');
+                                input.value = '';
+                                return;
+                            }
+
+                            if (file.size > 2 * 1024 * 1024) {
+                                showMessage('Image size must be less than 2MB.', 'error');
+                                input.value = '';
+                                return;
+                            }
+
+                            pendingAdminProfilePhotoFile = file;
+                            if (pendingAdminProfilePhotoObjectUrl) {
+                                URL.revokeObjectURL(pendingAdminProfilePhotoObjectUrl);
+                            }
+                            pendingAdminProfilePhotoObjectUrl = URL.createObjectURL(file);
+
+                            const cropModal = document.getElementById('admin-profile-photo-crop-modal');
+                            const cropImage = document.getElementById('admin-profile-photo-cropper-image');
+                            if (!cropModal || !cropImage || typeof Cropper === 'undefined') {
+                                await uploadAdminProfilePhotoFile(file);
+                                input.value = '';
+                                return;
+                            }
+
+                            cropImage.src = pendingAdminProfilePhotoObjectUrl;
+                            cropModal.classList.remove('hidden');
+                            cropModal.classList.add('flex');
+
+                            cropImage.onload = function () {
+                                if (adminProfilePhotoCropper) adminProfilePhotoCropper.destroy();
+                                adminProfilePhotoCropper = new Cropper(cropImage, {
+                                    aspectRatio: 1,
+                                    viewMode: 1,
+                                    movable: true,
+                                    zoomable: true,
+                                    scalable: false,
+                                    cropBoxResizable: true,
+                                    autoCropArea: 0.9
+                                });
+                            };
+
+                            input.value = '';
+                        }
 
                         function toggleEditMode() {
                             document.getElementById('viewMode').classList.add('hidden');
@@ -534,6 +687,22 @@
                             container.classList.remove('hidden');
                         }
                         </script>
+
+                        <div id="admin-profile-photo-crop-modal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
+                            <div class="w-full max-w-2xl rounded-xl bg-white p-4">
+                                <div class="mb-3 flex items-center justify-between">
+                                    <h2 class="text-lg font-bold text-[#1F1F1F]">Crop Profile Photo</h2>
+                                    <button type="button" onclick="closeAdminProfilePhotoCropModal()" class="text-sm font-semibold text-[#685BCB]">Close</button>
+                                </div>
+                                <div class="max-h-[70vh] overflow-hidden rounded-lg bg-gray-100">
+                                    <img id="admin-profile-photo-cropper-image" src="" alt="Crop preview" class="max-w-full" />
+                                </div>
+                                <div class="mt-4 flex justify-end gap-3">
+                                    <button type="button" onclick="closeAdminProfilePhotoCropModal()" class="h-10 rounded-xl border border-[#BCA6DB] bg-white px-6 font-bold text-[#1F1F1F] hover:bg-[#D3CEEA]">Cancel</button>
+                                    <button type="button" onclick="saveAdminProfilePhotoCrop()" class="h-10 rounded-xl bg-[#685BCB] px-6 font-bold text-white hover:bg-[#5a4dc0]">Save Crop</button>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- SECURITY & ACCOUNT ACTIONS -->
                         <section class="mt-10 pb-10 max-w-3xl">

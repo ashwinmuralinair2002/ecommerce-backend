@@ -768,6 +768,27 @@ const updateAdminProfile = async (req, res) => {
     }
 };
 
+// @desc    Upload Admin Profile Photo
+// @route   POST /admin/profile/upload-photo
+const uploadAdminProfilePhoto = async (req, res) => {
+    if (!req.file) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'No image uploaded' });
+    }
+
+    if (!req.user || req.user.role !== 'admin') {
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ error: 'Admin access required' });
+    }
+
+    try {
+        const imageUrl = req.file.path;
+        const user = await profileService.updateProfile(req.user.id, { profileImage: imageUrl });
+
+        res.json({ message: 'Profile photo uploaded', profileImage: imageUrl, user });
+    } catch (error) {
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: error.message });
+    }
+};
+
 // @desc    Render Change Password Page
 // @route   GET /admin/change-password
 const getChangePasswordPage = (req, res) => {
@@ -2555,6 +2576,7 @@ module.exports = {
     updateAdminNotes,
     getCustomerOrders,
     updateAdminProfile,
+    uploadAdminProfilePhoto,
     getChangePasswordPage,
     changeAdminPassword,
     renderAddCustomerPage,

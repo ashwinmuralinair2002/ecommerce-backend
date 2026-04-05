@@ -221,18 +221,22 @@
                             <% if (activePage > 1) { %>
                                 <a
                                     href="<%= buildPageHref(activePage - 1) %>"
-                                    class="inline-flex items-center justify-center rounded-lg h-9 px-4 border border-primary-light/50 bg-white text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
-                                    Prev
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    &laquo; Previous
                                 </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                    &laquo; Previous
+                                </span>
                             <% } %>
 
                             <% for (let i = visiblePageStart; i <= pageWindowEnd; i += 1) { %>
                                 <% if (i === activePage) { %>
-                                    <span class="inline-flex items-center justify-center rounded-lg h-9 min-w-9 px-3 bg-primary text-white text-sm font-medium"><%= i %></span>
+                                    <span class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold"><%= i %></span>
                                 <% } else { %>
                                     <a
                                         href="<%= buildPageHref(i) %>"
-                                        class="inline-flex items-center justify-center rounded-lg h-9 min-w-9 px-3 border border-primary-light/50 bg-white text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
+                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                         <%= i %>
                                     </a>
                                 <% } %>
@@ -241,9 +245,13 @@
                             <% if (activePage < pageCount) { %>
                                 <a
                                     href="<%= buildPageHref(activePage + 1) %>"
-                                    class="inline-flex items-center justify-center rounded-lg h-9 px-4 border border-primary-light/50 bg-white text-primary text-sm font-medium hover:bg-primary/5 transition-colors">
-                                    Next
+                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    Next &raquo;
                                 </a>
+                            <% } else { %>
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                    Next &raquo;
+                                </span>
                             <% } %>
                         </nav>
                     <% } %>

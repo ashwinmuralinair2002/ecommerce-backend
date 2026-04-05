@@ -39,6 +39,12 @@
 
                     <h1 class="text-2xl font-bold text-primary mb-6">Edit Address</h1>
 
+                    <% if (locals.errors && errors.general) { %>
+                        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                            <%= errors.general %>
+                        </div>
+                    <% } %>
+
                     <form action="/account/addresses/<%= address._id %>/update?_method=PATCH" method="POST" class="max-w-2xl">
                         <input type="hidden" name="returnTo" value="<%= returnTo || '' %>">
                         <!-- Two Column Grid -->

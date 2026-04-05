@@ -9,6 +9,15 @@ const getReturnPath = (req) => {
     return returnTo === 'cart' ? '/cart' : '/account/addresses';
 };
 
+const buildAddressRedirectPath = (req, successState) => {
+    const returnPath = getReturnPath(req);
+    if (returnPath !== '/account/addresses' || !successState) {
+        return returnPath;
+    }
+
+    return `${returnPath}?success=${successState}`;
+};
+
 // @desc    Render Address List Page
 // @route   GET /account/addresses
 const getAddresses = async (req, res) => {
@@ -122,11 +131,12 @@ const addAddress = async (req, res) => {
         };
 
         await profileService.addAddress(userId, addressData);
-        res.redirect(getReturnPath(req));
+        res.redirect(buildAddressRedirectPath(req, 'address_saved'));
     } catch (error) {
-        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('add-address', {
+        const isDuplicateAddress = error.message === 'Address already exists';
+        res.status(isDuplicateAddress ? HTTP_STATUS.BAD_REQUEST : HTTP_STATUS.INTERNAL_SERVER_ERROR).render('add-address', {
             user: req.user || {},
-            errors: { general: 'Failed to save address. Please try again.' },
+            errors: { general: isDuplicateAddress ? 'Address already exists' : 'Failed to save address. Please try again.' },
             formData: req.body,
             returnTo: req.body.returnTo || ''
         });
@@ -215,7 +225,7 @@ const updateAddress = async (req, res) => {
         };
 
         await profileService.updateAddress(userId, req.params.id, addressData);
-        res.redirect(getReturnPath(req));
+        res.redirect(buildAddressRedirectPath(req, 'address_updated'));
     } catch (error) {
         const mockAddress = { _id: req.params.id, ...req.body, zip: postalCode };
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).render('edit-address', {

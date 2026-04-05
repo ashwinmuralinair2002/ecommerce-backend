@@ -6,6 +6,7 @@ const categoryController = require('../controllers/admin.category.controller');
 const productController = require('../controllers/admin.product.controller');
 const brandUpload = require('../middleware/brand-upload.middleware');
 const categoryUpload = require('../middleware/category-upload.middleware');
+const profileUpload = require('../middleware/profile-upload.middleware');
 const productUpload = require('../middleware/upload.middleware');
 
 const router = express.Router();
@@ -13,8 +14,9 @@ const router = express.Router();
 router.use(ensureAdminAuthenticated);
 
 router.get('/dashboard', (req, res) => {
-    res.render('admin/dashboard');
+    res.render('admin/dashboard', { user: req.user || null });
 });
+router.post('/profile/upload-photo', profileUpload.single('profileImage'), adminController.uploadAdminProfilePhoto);
 router.get('/dashboard-stats', adminController.getDashboardStats);
 router.get('/order-status-stats', adminController.getOrderStatusStats);
 router.get('/revenue-trend', adminController.getRevenueTrend);
