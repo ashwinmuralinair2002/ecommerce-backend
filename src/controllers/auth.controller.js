@@ -283,7 +283,12 @@ const handleGoogleAuthCallback = (req, res, next) => {
                     console.error('Google Auth Session Save Error:', saveError);
                     return res.redirect('/login');
                 }
-                return res.redirect(req.user.role === 'admin' ? '/admin/dashboard' : '/');
+                const CLIENT_URL = process.env.CLIENT_URL || 'https://shop.ashwinmuralinair.com';
+                return res.redirect(
+                    req.user.role === 'admin'
+                    ? `${CLIENT_URL}/admin/dashboard`
+                    : `${CLIENT_URL}/`
+);
             });
         });
     })(req, res, next);
