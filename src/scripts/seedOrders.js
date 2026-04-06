@@ -1,10 +1,8 @@
 // Script to generate sample orders for users
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+require('../config/load-env');
 const Order = require('../models/order.model');
 const User = require('../models/user.model');
-
-dotenv.config();
 
 const seedOrders = async () => {
     try {

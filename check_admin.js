@@ -1,8 +1,6 @@
 const mongoose = require('mongoose');
 const User = require('./src/models/user.model');
-const dotenv = require('dotenv');
-
-dotenv.config();
+require('./src/config/load-env');
 
 const checkAdmin = async () => {
     try {

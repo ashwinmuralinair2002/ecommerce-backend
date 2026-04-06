@@ -3,7 +3,6 @@ const Cart = require('../models/cart.model');
 const Order = require('../models/order.model');
 const Payment = require('../models/payment.model');
 const orderService = require('../services/order.service');
-const { verifyRazorpaySignature } = require('../services/payment.service');
 const { buildBuyNowCartItem } = require('../utils/buy-now-checkout');
 const HTTP_STATUS = require('../constants/http-status');
 const MESSAGES = require('../constants/messages');
@@ -68,6 +67,7 @@ const placeOrder = async (req, res) => {
             : null;
 
         if (parsedPaymentMethod === 'online') {
+            const { verifyRazorpaySignature } = require('../services/payment.service');
             const onlineParse = onlineSchema.safeParse(req.body);
 
             if (!onlineParse.success) {

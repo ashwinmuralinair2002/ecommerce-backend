@@ -1,10 +1,8 @@
 // Script to seed dummy user accounts
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+require('../config/load-env');
 const bcrypt = require('bcryptjs');
 const User = require('../models/user.model');
-
-dotenv.config();
 
 const seedUsers = async () => {
     try {

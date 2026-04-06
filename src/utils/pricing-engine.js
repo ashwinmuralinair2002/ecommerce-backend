@@ -1,7 +1,7 @@
 const { getApplicableOffers, getBestOffer, calculateOfferDiscount } = require('./offer-engine');
 const { validateCoupon, calculateCouponDiscount } = require('./coupon-engine');
 
-const GST_RATE = Number(process.env.GST_RATE || 0.18);
+const getGstRate = () => Number(process.env.GST_RATE || 0.18);
 
 // Mirrors the existing rounding behavior currently duplicated in
 // cart.service.js, checkout.service.js, buy-now-checkout.js, and order.service.js.
@@ -209,7 +209,7 @@ const calculatePricing = async (cartItems = [], offers = [], coupon = null, user
     const discountedSubtotal = roundCurrency(
         itemsDetailedWithCoupon.reduce((sum, item) => sum + Number(item?.finalSubtotal ?? 0), 0)
     );
-    const gst = roundCurrency(discountedSubtotal * GST_RATE);
+    const gst = roundCurrency(discountedSubtotal * getGstRate());
     const gstShares = distributeAmountProportionally(
         itemsDetailedWithCoupon,
         gst,

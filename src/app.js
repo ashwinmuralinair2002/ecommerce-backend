@@ -5,7 +5,6 @@ const methodOverride = require('method-override');
 const path = require('path');
 const passport = require('passport');
 const configurePassport = require('./config/passport');
-const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth.routes');
 const profileRoutes = require('./routes/profile.routes');
 const addressRoutes = require('./routes/address.routes');
@@ -27,7 +26,6 @@ const attachSessionUser = require('./middleware/session-user.middleware');
 const injectDevOtp = require('./middleware/dev-otp-inject.middleware');
 const globalErrorHandler = require('./middleware/error-handler.middleware');
 const redirectAdminHome = require('./middleware/admin-home-redirect.middleware');
-require('dotenv').config();
 
 const app = express();
 app.set('trust proxy', 1);
@@ -92,8 +90,6 @@ app.use('/admin', adminWebRoutes);
 app.use('/admin', adminOrderRoutes);
 app.use('/admin', adminHeroRoutes);
 app.use('/', userRoutes);
-
-const PORT = process.env.PORT || 5000;
 
 // Global Error Handler
 app.use(globalErrorHandler);

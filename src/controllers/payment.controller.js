@@ -1,9 +1,9 @@
-const paymentService = require('../services/payment.service');
 const HTTP_STATUS = require('../constants/http-status');
 const MESSAGES = require('../constants/messages');
 
 const createRazorpayOrderController = async (req, res) => {
     try {
+        const paymentService = require('../services/payment.service');
         const userId = req.session && req.session.userId;
         const checkoutContext = req.session && req.session.checkoutContext ? req.session.checkoutContext : null;
 

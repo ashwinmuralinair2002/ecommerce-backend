@@ -1,9 +1,7 @@
 // Script to populate database with sample brands
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
+require('../config/load-env');
 const Brand = require('../models/brand.model');
-
-dotenv.config();
 
 const seedBrands = async () => {
     try {

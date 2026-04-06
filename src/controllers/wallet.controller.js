@@ -1,7 +1,6 @@
 const walletService = require('../services/wallet.service');
 const WalletTransaction = require('../models/wallet-transaction.model');
 const Order = require('../models/order.model');
-const { razorpayInstance, verifyRazorpaySignature } = require('../services/payment.service');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/http-status');
 const MESSAGES = require('../constants/messages');
@@ -163,6 +162,7 @@ const getTransactions = async (req, res, next) => {
 
 const createRechargeOrder = async (req, res) => {
     try {
+        const { getRazorpayInstance } = require('../services/payment.service');
         const userId = req.session && req.session.userId;
 
         if (!userId) {
@@ -179,6 +179,7 @@ const createRechargeOrder = async (req, res) => {
         const amount = parseRechargeAmount(req.body && req.body.amount);
         const amountInPaise = Math.round(amount * 100);
         const receipt = `wallet_${String(userId).slice(-6)}_${Date.now()}`.slice(0, 40);
+        const razorpayInstance = getRazorpayInstance();
         const razorpayOrder = await razorpayInstance.orders.create({
             amount: amountInPaise,
             currency: 'INR',
@@ -208,6 +209,7 @@ const createRechargeOrder = async (req, res) => {
 
 const verifyRecharge = async (req, res) => {
     try {
+        const { getRazorpayInstance, verifyRazorpaySignature } = require('../services/payment.service');
         const userId = req.session && req.session.userId;
 
         if (!userId) {
@@ -251,6 +253,7 @@ const verifyRecharge = async (req, res) => {
             return res.json({ success: true });
         }
 
+        const razorpayInstance = getRazorpayInstance();
         const order = await razorpayInstance.orders.fetch(razorpayOrderId);
 
         if (!order || !order.notes || String(order.notes.userId || '') !== String(userId)) {

@@ -42,8 +42,8 @@ const {
     buildDailyBuckets
 } = require('../utils/date.utils');
 
-const ENABLE_ADMIN_USER_EDIT = process.env.ENABLE_ADMIN_USER_EDIT === 'true';
 const { Types } = mongoose;
+const isAdminUserEditEnabled = () => process.env.ENABLE_ADMIN_USER_EDIT === 'true';
 const normalizeOfferDataForSave = (data) => {
     if (data.discountType === 'FLAT') {
         data.maxDiscountAmount = null;
@@ -527,7 +527,7 @@ const getCustomerDetails = async (req, res) => {
             orders,
             wallet,
             transactions,
-            adminUserEditEnabled: ENABLE_ADMIN_USER_EDIT
+            adminUserEditEnabled: isAdminUserEditEnabled()
         });
     } catch (error) {
         res.redirect('/admin/customers');
@@ -538,7 +538,7 @@ const getCustomerDetails = async (req, res) => {
 // @route   GET /admin/customers/:id/edit
 const renderEditCustomerPage = async (req, res) => {
     try {
-        if (!ENABLE_ADMIN_USER_EDIT) {
+        if (!isAdminUserEditEnabled()) {
             return res.redirect(`/admin/customers/${req.params.id}`);
         }
 
@@ -556,7 +556,7 @@ const renderEditCustomerPage = async (req, res) => {
 // @route   POST /admin/customers/:id/update
 const updateCustomer = async (req, res) => {
     try {
-        if (!ENABLE_ADMIN_USER_EDIT) {
+        if (!isAdminUserEditEnabled()) {
             return res.status(HTTP_STATUS.FORBIDDEN).json({
                 success: false,
                 message: 'Editing user details is currently disabled'

@@ -1,30 +1,71 @@
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
-const checkoutService = require('./checkout.service');
 const AppError = require('../utils/AppError');
-const { buildBuyNowCheckoutData } = require('../utils/buy-now-checkout');
 const HTTP_STATUS = require('../constants/http-status');
 
-const razorpayInstance = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+const RAZORPAY_INSTANCE_KEY = Symbol.for('app.razorpay.instance');
 
+/**
+ * Get Razorpay credentials safely (only when needed)
+ */
+const getRazorpayCredentials = () => {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+    if (!keyId || !keySecret) {
+        throw new AppError(
+            'Razorpay is not configured',
+            HTTP_STATUS.INTERNAL_SERVER_ERROR
+        );
+    }
+
+    return { keyId, keySecret };
+};
+
+/**
+ * Lazy initialize Razorpay instance (singleton)
+ */
+const getRazorpayInstance = () => {
+    if (globalThis[RAZORPAY_INSTANCE_KEY]) {
+        return globalThis[RAZORPAY_INSTANCE_KEY];
+    }
+
+    const { keyId, keySecret } = getRazorpayCredentials();
+
+    const instance = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret
+    });
+
+    globalThis[RAZORPAY_INSTANCE_KEY] = instance;
+
+    return instance;
+};
+
+/**
+ * Verify Razorpay signature
+ */
 const verifyRazorpaySignature = (orderId, paymentId, signature) => {
+    const { keySecret } = getRazorpayCredentials();
+
     const body = orderId + '|' + paymentId;
+
     const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-        .update(body.toString())
+        .createHmac('sha256', keySecret)
+        .update(body)
         .digest('hex');
 
     return expectedSignature === signature;
 };
 
+/**
+ * Create Razorpay Order (fully lazy + safe)
+ */
 const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
     try {
-        if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-            throw new AppError('Razorpay is not configured', HTTP_STATUS.INTERNAL_SERVER_ERROR);
-        }
+        // Load dependencies lazily (prevents circular + early execution)
+        const checkoutService = require('./checkout.service');
+        const { buildBuyNowCheckoutData } = require('../utils/buy-now-checkout');
 
         const checkoutData = buyNowItem
             ? await buildBuyNowCheckoutData(userId, buyNowItem, req)
@@ -35,34 +76,29 @@ const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
         }
 
         const finalTotal = Number(
-            checkoutData
-            && checkoutData.pricing
-            && Number.isFinite(Number(checkoutData.pricing.finalTotal))
-                ? checkoutData.pricing.finalTotal
-                : 0
+            checkoutData?.pricing?.finalTotal || 0
         );
 
         if (!finalTotal || finalTotal <= 0) {
-            throw new AppError('Invalid order amount', HTTP_STATUS.BAD_REQUEST);
+            throw new AppError(
+                'Invalid order amount',
+                HTTP_STATUS.BAD_REQUEST
+            );
         }
 
         const amountInPaise = Math.round(finalTotal * 100);
-        let razorpayOrder;
 
-        try {
-            razorpayOrder = await razorpayInstance.orders.create({
-                amount: amountInPaise,
-                currency: 'INR',
-                receipt: `u${userId.toString().slice(-6)}_${Date.now()}`,
-                payment_capture: 1,
-                notes: {
-                    userId: userId.toString()
-                }
-            });
-        } catch (err) {
-            console.error('Razorpay order creation failed:', err);
-            throw new Error('Failed to create Razorpay order', { cause: err });
-        }
+        const razorpay = getRazorpayInstance();
+
+        const razorpayOrder = await razorpay.orders.create({
+            amount: amountInPaise,
+            currency: 'INR',
+            receipt: `u${userId.toString().slice(-6)}_${Date.now()}`,
+            payment_capture: 1,
+            notes: {
+                userId: userId.toString()
+            }
+        });
 
         console.log('Razorpay order created:', razorpayOrder.id);
 
@@ -71,31 +107,38 @@ const createRazorpayOrder = async (userId, buyNowItem = null, req = null) => {
             amount: razorpayOrder.amount,
             currency: razorpayOrder.currency
         };
+
     } catch (error) {
         if (error instanceof AppError) {
             throw error;
         }
 
         if (
-            error
-            && (
-                error.statusCode
-                || error.error
-                || error.status
-                || error.message === 'Cart is empty'
-                || error.message === 'Invalid cart items present'
-                || error.message === 'No delivery address selected'
+            error &&
+            (
+                error.statusCode ||
+                error.error ||
+                error.status ||
+                error.message === 'Cart is empty' ||
+                error.message === 'Invalid cart items present' ||
+                error.message === 'No delivery address selected'
             )
         ) {
-            throw new AppError(error.message || 'Failed to create Razorpay order', error.statusCode || 400);
+            throw new AppError(
+                error.message || 'Failed to create Razorpay order',
+                error.statusCode || 400
+            );
         }
 
-        throw new AppError('Failed to create Razorpay order', HTTP_STATUS.INTERNAL_SERVER_ERROR);
+        throw new AppError(
+            'Failed to create Razorpay order',
+            HTTP_STATUS.INTERNAL_SERVER_ERROR
+        );
     }
 };
 
 module.exports = {
-    razorpayInstance,
+    getRazorpayInstance,
     createRazorpayOrder,
     verifyRazorpaySignature
 };
