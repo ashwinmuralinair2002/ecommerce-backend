@@ -226,6 +226,11 @@
                                                                         <span>- <%= formatCurrency(itemOfferDiscount) %></span>
                                                                     </div>
                                                                 <% } %>
+                                                                <% if (item.couponDiscount && item.couponDiscount > 0) { %>
+                                                                  <div class="text-sm text-green-600">
+                                                                    Coupon Discount: -₹<%= item.couponDiscount.toFixed(2) %>
+                                                                  </div>
+                                                                <% } %>
                                                                 <% if (Number(itemGST || 0) > 0) { %>
                                                                     <div class="price-row gst">
                                                                         <span>GST</span>

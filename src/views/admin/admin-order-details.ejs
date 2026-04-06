@@ -145,6 +145,12 @@
                                                             </div>
                                                         <% } %>
 
+                                                        <% if (item.couponDiscount && item.couponDiscount > 0) { %>
+                                                          <div class="text-sm text-green-600">
+                                                            Coupon Discount: -₹<%= item.couponDiscount.toFixed(2) %>
+                                                          </div>
+                                                        <% } %>
+
                                                         <% if (itemGST) { %>
                                                             <div style="font-size: 12px; color: #555;">
                                                                 GST: ₹ <%= Number(itemGST).toLocaleString('en-IN') %>
