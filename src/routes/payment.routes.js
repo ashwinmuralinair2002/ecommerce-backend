@@ -3,14 +3,14 @@ const paymentController = require('../controllers/payment.controller');
 const { requireUser } = require('../middleware/role-auth.middleware');
 const { paymentLimiter } = require('../middleware/rate-limit.middleware');
 const HTTP_STATUS = require('../constants/http-status');
+const MESSAGES = require('../constants/messages');
 
 const router = express.Router();
 
 const ensureAuthenticatedApi = (req, res, next) => {
     if (!req.user) {
         return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-            success: false,
-            message: 'Authentication required'
+            error: MESSAGES.AUTH_REQUIRED
         });
     }
 

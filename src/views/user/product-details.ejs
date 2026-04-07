@@ -983,10 +983,10 @@
                                         })
                                     });
 
-                                    const result = await response.json().catch(() => null);
+                                    const result = await window.readJsonResponse(response);
 
                                     if (!response.ok || !result || result.success !== true) {
-                                        throw new Error(result && result.message ? result.message : 'Unable to add item to cart');
+                                        throw new Error(window.getApiErrorMessage(response, result, 'Unable to add item to cart'));
                                     }
 
                                     const totalItems = result.data && typeof result.data.totalItems === 'number'
@@ -1048,10 +1048,10 @@
                                         })
                                     });
 
-                                    const result = await response.json().catch(() => null);
+                                    const result = await window.readJsonResponse(response);
 
                                     if (!response.ok || !result || result.success !== true) {
-                                        throw new Error(result && result.message ? result.message : 'Unable to proceed to checkout');
+                                        throw new Error(window.getApiErrorMessage(response, result, 'Unable to proceed to checkout'));
                                     }
 
                                     window.location.href = '/checkout/buy-now';
@@ -1097,13 +1097,18 @@
 
                                     const res = await fetch('/wishlist/add', {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-Requested-With': 'XMLHttpRequest'
+                                        },
                                         body: JSON.stringify({ productId: currentProductId, variantId })
                                     });
 
-                                    const data = await res.json();
+                                    const data = await window.readJsonResponse(res);
 
-                                    if (!data.success) throw new Error(data.message);
+                                    if (!res.ok || !data || data.success !== true) {
+                                        throw new Error(window.getApiErrorMessage(res, data, 'Unable to update wishlist'));
+                                    }
 
                                     wishlistVariantIds.add(variantId);
                                     syncWishlistButtons();

@@ -649,7 +649,8 @@
             const response = await fetch('/api/order/place', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     paymentMethod,
@@ -657,14 +658,14 @@
                 })
             });
 
-            const data = await response.json().catch(() => null);
+            const data = await window.readJsonResponse(response);
 
-            if (data && data.success) {
+            if (response.ok && data && data.success) {
                 window.location.href = `/order-success?orderId=${data.orderId}`;
                 return true;
             }
 
-            const message = data && data.message ? data.message : 'Unable to place order';
+            const message = window.getApiErrorMessage(response, data, 'Unable to place order');
             notifyError(message);
 
             return false;
@@ -763,17 +764,18 @@
                         const orderResponse = await fetch('/payment/create-order', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
                             },
                             body: JSON.stringify({
                                 couponCode: currentCouponCode || ''
                             })
                         });
 
-                        const orderData = await orderResponse.json().catch(() => null);
+                        const orderData = await window.readJsonResponse(orderResponse);
 
-                        if (!orderData || !orderData.success || !orderData.data) {
-                            const message = orderData && orderData.message ? orderData.message : 'Unable to initiate payment';
+                        if (!orderResponse.ok || !orderData || !orderData.success || !orderData.data) {
+                            const message = window.getApiErrorMessage(orderResponse, orderData, 'Unable to initiate payment');
                             notifyError(message);
                             return;
                         }
@@ -791,7 +793,8 @@
                                     const res = await fetch('/api/order/place', {
                                         method: 'POST',
                                         headers: {
-                                            'Content-Type': 'application/json'
+                                            'Content-Type': 'application/json',
+                                            'X-Requested-With': 'XMLHttpRequest'
                                         },
                                         body: JSON.stringify({
                                             paymentMethod: 'online',
@@ -802,13 +805,13 @@
                                         })
                                     });
 
-                                    const data = await res.json();
+                                    const data = await window.readJsonResponse(res);
 
-                                    if (data.success) {
+                                    if (res.ok && data && data.success) {
                                         window.location.href = `/order-success?orderId=${data.orderId}`;
                                     } else {
                                         hideLoader();
-                                        window.alert('Order placement failed');
+                                        notifyError(window.getApiErrorMessage(res, data, 'Order placement failed'));
                                     }
                                 } catch (err) {
                                     console.error('Order placement error:', err);

@@ -1,5 +1,17 @@
 // Authentication check middleware for view protection
 const User = require('../models/user.model');
+const HTTP_STATUS = require('../constants/http-status');
+const MESSAGES = require('../constants/messages');
+
+const isApiRequest = (req) => (
+    String(req.originalUrl || req.url || '').startsWith('/api/')
+    || req.xhr
+    || req.get('X-Requested-With') === 'XMLHttpRequest'
+);
+
+const sendUnauthorizedResponse = (res) => res.status(HTTP_STATUS.UNAUTHORIZED).json({
+    error: MESSAGES.AUTH_REQUIRED
+});
 
 const ensureAuthenticated = async (req, res, next) => {
     // Strict Session Check
@@ -9,7 +21,11 @@ const ensureAuthenticated = async (req, res, next) => {
 
     // No Session -> Redirect to Login
     console.log('[Auth Check Fail] Session:', req.sessionID, 'UserId:', req.session ? req.session.userId : 'No Session');
-    res.redirect('/login');
+    if (isApiRequest(req)) {
+        return sendUnauthorizedResponse(res);
+    }
+
+    return res.redirect('/login');
 };
 
 const ensureOtpVerified = (req, res, next) => {

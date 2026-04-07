@@ -579,10 +579,10 @@
                 body: JSON.stringify(payload)
             });
 
-            const result = await response.json().catch(() => null);
+            const result = await window.readJsonResponse(response);
 
             if (!response.ok || !result || result.success !== true) {
-                throw new Error(result && result.message ? result.message : 'Unable to update cart');
+                throw new Error(window.getApiErrorMessage(response, result, 'Unable to update cart'));
             }
 
             return result.data;
@@ -596,10 +596,10 @@
                 }
             });
 
-            const result = await response.json().catch(() => null);
+            const result = await window.readJsonResponse(response);
 
             if (!response.ok || !result || result.success !== true) {
-                throw new Error(result && result.message ? result.message : 'Unable to validate cart');
+                throw new Error(window.getApiErrorMessage(response, result, 'Unable to validate cart'));
             }
 
             return result.data;

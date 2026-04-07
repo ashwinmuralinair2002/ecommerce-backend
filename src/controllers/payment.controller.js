@@ -9,8 +9,7 @@ const createRazorpayOrderController = async (req, res) => {
 
         if (!userId) {
             return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-                success: false,
-                message: MESSAGES.AUTH_REQUIRED
+                error: MESSAGES.AUTH_REQUIRED
             });
         }
 

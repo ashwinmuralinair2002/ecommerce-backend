@@ -1,6 +1,6 @@
 const MESSAGES = {
     USER_NOT_FOUND: 'User not found',
-    AUTH_REQUIRED: 'Authentication required',
+    AUTH_REQUIRED: 'Please login to continue',
     OTP_REQUIRED: 'OTP is required',
     PRODUCT_NOT_FOUND: 'Product not found',
     PAYMENT_VERIFICATION_FAILED: 'Payment verification failed',

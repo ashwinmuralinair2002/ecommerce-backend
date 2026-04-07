@@ -105,6 +105,39 @@
 </header>
 <script>
     (() => {
+        window.AUTH_REQUIRED_MESSAGE = 'Please login to continue';
+
+        window.readJsonResponse = async (response) => {
+            if (!response) return null;
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                return null;
+            }
+
+            try {
+                return await response.json();
+            } catch (error) {
+                return null;
+            }
+        };
+
+        window.getApiErrorMessage = (response, data, fallbackMessage) => {
+            if (response && response.status === 401) {
+                return window.AUTH_REQUIRED_MESSAGE;
+            }
+
+            if (data && typeof data.error === 'string' && data.error.trim()) {
+                return data.error;
+            }
+
+            if (data && typeof data.message === 'string' && data.message.trim()) {
+                return data.message;
+            }
+
+            return fallbackMessage || 'Something went wrong';
+        };
+
         window.syncNavbarCartCount = (count) => {
             const target = document.querySelector('[data-cart-count]');
             if (target) target.textContent = String(Number(count) || 0);
@@ -125,10 +158,10 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                const data = await response.json().catch(() => ({}));
+                const data = await window.readJsonResponse(response);
 
-                if (!response.ok || data.success === false) {
-                    throw new Error(data.message || 'Failed to load wishlist count');
+                if (!response.ok || !data || data.success === false) {
+                    throw new Error(window.getApiErrorMessage(response, data, 'Failed to load wishlist count'));
                 }
 
                 const count = Number(data.count || 0);
