@@ -6,6 +6,7 @@ const orderService = require('../services/order.service');
 const { buildBuyNowCartItem } = require('../utils/buy-now-checkout');
 const HTTP_STATUS = require('../constants/http-status');
 const MESSAGES = require('../constants/messages');
+const logger = require('../utils/logger');
 
 const baseSchema = z.object({
     paymentMethod: z.preprocess((value) => {
@@ -211,17 +212,28 @@ const placeOrder = async (req, res) => {
                     }
                 }
             );
+
+            logger.info('Payment successful', { orderId });
         }
         // mark payment completed only after the order has been created successfully
 
         delete req.session.buyNowItem;
         delete req.session.checkoutContext;
 
+        logger.info('Order placed', { orderId, userId });
+
         return res.json({
             success: true,
             orderId
         });
     } catch (error) {
+        if (req.body?.paymentMethod === 'online' || req.body?.razorpay_payment_id || req.body?.razorpay_order_id) {
+            logger.error('Payment failed', {
+                error: error.message,
+                orderId: req.body?.razorpay_order_id || null
+            });
+        }
+
         if (error?.code === 11000 && req.body?.razorpay_payment_id) {
             const existingOrder = await Order.findOne({
                 razorpayPaymentId: req.body.razorpay_payment_id

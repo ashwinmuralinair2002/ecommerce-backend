@@ -1,3 +1,6 @@
 node_modules
 .env
 debug_output.txt
+logs/
+*.log
+*-audit.json

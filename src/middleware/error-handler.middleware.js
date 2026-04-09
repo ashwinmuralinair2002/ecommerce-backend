@@ -1,5 +1,12 @@
+const logger = require('../utils/logger');
+
 const globalErrorHandler = (err, req, res, next) => {
-    console.error(err);
+    logger.error(err.message, {
+        stack: err.stack,
+        url: req.originalUrl,
+        method: req.method,
+        user: req.user?._id || req.session?.userId || null
+    });
 
     if (res.headersSent) {
         return next(err);

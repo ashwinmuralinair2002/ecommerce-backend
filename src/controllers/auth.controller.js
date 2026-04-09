@@ -5,6 +5,7 @@ const authService = require('../services/auth.service');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/http-status');
 const MESSAGES = require('../constants/messages');
+const logger = require('../utils/logger');
 
 
 // @desc    Register a new user
@@ -64,17 +65,20 @@ const login = async (req, res, next) => {
     try {
         const data = await authService.loginUser(email, password);
         const user = data.user;
+        const userId = user.id.toString();
 
         // Regenerate Session for Security
         req.session.regenerate((err) => {
             if (err) return next(err);
 
             // Standardize Session Variables
-            req.session.userId = user.id.toString();
+            req.session.userId = userId;
             req.session.role = user.role;
 
             req.session.save((err) => {
                 if (err) return next(err);
+
+                logger.info('User login successful', { userId });
 
                 return res.status(HTTP_STATUS.OK).json({
                     message: 'Login successful',
@@ -90,6 +94,7 @@ const login = async (req, res, next) => {
         });
 
     } catch (error) {
+        logger.warn('User login failed', { email });
         res.status(HTTP_STATUS.UNAUTHORIZED).json({ error: error.message });
     }
 };

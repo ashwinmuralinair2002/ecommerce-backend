@@ -1,5 +1,6 @@
 const HTTP_STATUS = require('../constants/http-status');
 const MESSAGES = require('../constants/messages');
+const logger = require('../utils/logger');
 
 const createRazorpayOrderController = async (req, res) => {
     try {
@@ -37,6 +38,11 @@ const createRazorpayOrderController = async (req, res) => {
             data: razorpayOrder
         });
     } catch (error) {
+        logger.error('Payment failed', {
+            error: error.message,
+            orderId: req.body?.orderId || null
+        });
+
         return res.status(error.statusCode || HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
             success: false,
             message: error.message || 'Failed to create Razorpay order'

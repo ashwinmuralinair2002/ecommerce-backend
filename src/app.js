@@ -2,6 +2,7 @@
 const express = require('express');
 const session = require('express-session');
 const methodOverride = require('method-override');
+const morgan = require('morgan');
 const path = require('path');
 const passport = require('passport');
 const configurePassport = require('./config/passport');
@@ -21,11 +22,11 @@ const adminOrderRoutes = require('./routes/admin.order.routes');
 const { getHomePage } = require('./controllers/home.controller');
 const userRoutes = require('./routes/user.routes');
 const nocache = require('./middleware/nocache.middleware');
-const requestLogger = require('./middleware/request-logger.middleware');
 const attachSessionUser = require('./middleware/session-user.middleware');
 const injectDevOtp = require('./middleware/dev-otp-inject.middleware');
 const globalErrorHandler = require('./middleware/error-handler.middleware');
 const redirectAdminHome = require('./middleware/admin-home-redirect.middleware');
+const logger = require('./utils/logger');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -37,7 +38,11 @@ app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride('_method'));
 
 // Request Logger
-app.use(requestLogger);
+app.use(morgan('combined', {
+    stream: {
+        write: (message) => logger.info(message.trim())
+    }
+}));
 
 
 
