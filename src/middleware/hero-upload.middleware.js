@@ -1,6 +1,10 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
+const MESSAGES = require('../constants/messages');
+
+const MAX_HERO_IMAGE_SIZE = 2 * 1024 * 1024;
+const ALLOWED_HERO_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 const storage = new CloudinaryStorage({
     cloudinary,
@@ -12,16 +16,44 @@ const storage = new CloudinaryStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (allowedMimes.includes(file.mimetype)) {
+    if (ALLOWED_HERO_MIMES.includes(file.mimetype)) {
         cb(null, true);
+        return;
     } else {
-        cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'), false);
+        cb(new Error(MESSAGES.HERO_IMAGE_INVALID_TYPE), false);
     }
 };
 
-module.exports = multer({
+const upload = multer({
     storage,
     fileFilter,
-    limits: { fileSize: 6 * 1024 * 1024 }
+    limits: { fileSize: MAX_HERO_IMAGE_SIZE }
 });
+
+function getUploadErrorMessage(error) {
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+        return MESSAGES.HERO_IMAGE_TOO_LARGE;
+    }
+
+    return error.message || MESSAGES.HERO_IMAGE_INVALID_TYPE;
+}
+
+function wrapUpload(uploadHandler) {
+    return (req, res, next) => {
+        uploadHandler(req, res, (error) => {
+            if (!error) {
+                next();
+                return;
+            }
+
+            req.uploadValidationError = getUploadErrorMessage(error);
+            next();
+        });
+    };
+}
+
+module.exports = {
+    single(fieldName) {
+        return wrapUpload(upload.single(fieldName));
+    }
+};

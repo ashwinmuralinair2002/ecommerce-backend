@@ -1,5 +1,6 @@
 // Authentication business logic including OTP and hashing
 const bcrypt = require('bcryptjs');
+const validator = require("validator");
 // JWT removed
 const User = require('../models/user.model');
 const ReferralConfig = require('../models/referralConfig.model');
@@ -18,14 +19,26 @@ const createOtpTraceId = (label, email) => {
     return `${label}:${email}:${Date.now()}`;
 };
 
+const normalizeIndianPhone = (phone) => {
+    const normalizedPhone = String(phone || '').trim().replace(/[\s-]+/g, '');
+
+    if (!validator.isMobilePhone(normalizedPhone, 'en-IN')) {
+        throw new AppError('Please provide a valid Indian phone number', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    return normalizedPhone.replace(/^(\+91|91)/, '');
+};
+
 // Register a new user
 const registerUser = async (userData) => {
     try {
-        const { name, email, password, referralCode } = userData;
+        const { name, email, phone, password, referralCode } = userData;
+        const normalizedPhone = normalizeIndianPhone(phone);
         const otpTraceId = createOtpTraceId('signup', email);
         console.log('[SIGNUP TRACE] registerUser called with:', {
             name,
             email,
+            phone: normalizedPhone,
             hasPassword: !!password,
             hasReferralCode: !!referralCode
         });
@@ -39,6 +52,15 @@ const registerUser = async (userData) => {
         });
         if (userExists) {
             throw new AppError('User already exists', HTTP_STATUS.BAD_REQUEST);
+        }
+
+        const existingPhoneUser = await User.findOne({ phone: normalizedPhone });
+        console.log('[SIGNUP TRACE] existing phone check:', {
+            phone: normalizedPhone,
+            exists: !!existingPhoneUser
+        });
+        if (existingPhoneUser) {
+            throw new AppError('User already exists with this phone number', HTTP_STATUS.BAD_REQUEST);
         }
 
         // Hash password
@@ -63,6 +85,7 @@ const registerUser = async (userData) => {
         const user = await User.create({
             name,
             email,
+            phone: normalizedPhone,
             password: hashedPassword,
             otp,
             otpExpires,
@@ -208,6 +231,10 @@ const registerUser = async (userData) => {
             code: error?.code,
             stack: error?.stack
         });
+        if (error?.code === 11000 && error?.keyPattern?.phone) {
+            throw new AppError('Phone number already registered', HTTP_STATUS.BAD_REQUEST);
+        }
+
         if (error instanceof AppError) {
             throw error;
         }

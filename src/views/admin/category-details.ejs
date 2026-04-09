@@ -109,6 +109,68 @@
                     </div>
                 </div>
 
+                <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Key Metrics</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                        <p class="text-sm text-[#685BCB] mb-1">Total Products</p>
+                        <p class="text-2xl font-bold text-[#1F1F1F]">
+                            <%= (metrics && metrics.totalProducts) || 0 %>
+                        </p>
+                    </div>
+                    <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                        <p class="text-sm text-[#685BCB] mb-1">Total Units Sold</p>
+                        <p class="text-2xl font-bold text-[#1F1F1F]">
+                            <%= (metrics && metrics.totalUnitsSold) || 0 %>
+                        </p>
+                    </div>
+                    <div class="bg-[#D3CEEA] p-4 rounded-lg">
+                        <p class="text-sm text-[#685BCB] mb-1">Total Revenue</p>
+                        <p class="text-2xl font-bold text-[#1F1F1F]">
+                            ₹<%= Number((metrics && metrics.totalRevenue) || 0).toLocaleString() %>
+                        </p>
+                    </div>
+                </div>
+
+                <h2 class="text-lg font-bold text-[#1F1F1F] mb-4">Products</h2>
+                <div class="overflow-hidden rounded-lg border border-[#BCA6DB]">
+                    <table class="w-full">
+                        <thead class="bg-[#D3CEEA]">
+                            <tr>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Product</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">SKU</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Price</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Stock</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Status</th>
+                                <th class="p-3 text-left text-sm font-medium text-[#685BCB]">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (!products || products.length === 0) { %>
+                                <tr>
+                                    <td colspan="6" class="text-center py-8 text-gray-500">No products found for this category.</td>
+                                </tr>
+                            <% } else { %>
+                                <% products.forEach((product) => { %>
+                                    <tr class="border-t border-[#BCA6DB]">
+                                        <td class="p-3 text-[#1F1F1F]"><%= product.title %></td>
+                                        <td class="p-3 text-[#685BCB]"><%= product.sku %></td>
+                                        <td class="p-3 text-[#1F1F1F]">₹<%= product.price %></td>
+                                        <td class="p-3 text-[#685BCB]"><%= product.stockCount %></td>
+                                        <td class="p-3">
+                                            <span class="px-2 py-1 rounded-lg text-xs font-medium <%= product.isListed ? 'bg-[#e6f4ea] text-[#1e7e34]' : 'bg-gray-100 text-gray-600' %>">
+                                                <%= product.isListed ? 'Listed' : 'Unlisted' %>
+                                            </span>
+                                        </td>
+                                        <td class="p-3">
+                                            <a href="/admin/products/<%= product._id %>" class="text-[#53a145] hover:underline">View</a>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+
             </section>
         </main>
     </div>

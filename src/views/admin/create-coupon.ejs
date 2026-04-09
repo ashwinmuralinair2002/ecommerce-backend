@@ -118,6 +118,54 @@
 
             const normalizeCodeValue = (value) => String(value || '').trim().toUpperCase();
 
+            const isHighPercentageCoupon = () => {
+                const discountType = getSelectedDiscountType();
+                const discountValue = normalizeNumber(inputs.discountValue.value);
+
+                return discountType === 'PERCENTAGE'
+                    && discountValue != null
+                    && !Number.isNaN(discountValue)
+                    && (
+                        discountValue === rules.percentageDiscountMax
+                        || discountValue > rules.highPercentageDiscountThreshold
+                    );
+            };
+
+            const validateFlatCouponRule = () => {
+                const discountType = getSelectedDiscountType();
+                const discountValue = normalizeNumber(inputs.discountValue.value);
+                const minOrderValue = normalizeNumber(inputs.minOrderValue.value);
+
+                if (discountType !== 'FLAT') {
+                    if (getErrorNode('discountValue')?.textContent === 'Discount must be less than minimum order value') {
+                        clearError(inputs.discountValue);
+                    }
+
+                    return true;
+                }
+
+                if (
+                    discountValue == null
+                    || Number.isNaN(discountValue)
+                    || minOrderValue == null
+                    || Number.isNaN(minOrderValue)
+                ) {
+                    showError(inputs.discountValue, 'Discount must be less than minimum order value');
+                    return false;
+                }
+
+                if (discountValue >= minOrderValue) {
+                    showError(inputs.discountValue, 'Discount must be less than minimum order value');
+                    return false;
+                }
+
+                if (getErrorNode('discountValue')?.textContent === 'Discount must be less than minimum order value') {
+                    clearError(inputs.discountValue);
+                }
+
+                return true;
+            };
+
             const toggleMaxDiscount = () => {
                 const wrapper = inputs.maxDiscount.closest('.form-group');
                 const shouldShow = getSelectedDiscountType() === 'PERCENTAGE';
@@ -231,8 +279,13 @@
                     return false;
                 }
 
+                if (discountType === 'FLAT' && value > rules.discountValue.maxFlat) {
+                    showError(inputs.discountValue, `Flat discount cannot exceed ${rules.discountValue.maxFlat}`);
+                    return false;
+                }
+
                 clearError(inputs.discountValue);
-                return true;
+                return validateFlatCouponRule();
             };
 
             const validateMaxDiscount = () => {
@@ -242,6 +295,11 @@
                 if (discountType !== 'PERCENTAGE') {
                     clearError(inputs.maxDiscount);
                     return true;
+                }
+
+                if (isHighPercentageCoupon() && (value == null || Number(value) <= 0)) {
+                    showError(inputs.maxDiscount, 'Maximum discount is required for high percentage coupons');
+                    return false;
                 }
 
                 if (value == null) {
@@ -259,9 +317,10 @@
             };
 
             const validateMinOrderValue = () => {
+                const discountType = getSelectedDiscountType();
                 const value = normalizeNumber(inputs.minOrderValue.value);
 
-                if (value == null) {
+                if (value == null && discountType !== 'FLAT') {
                     clearError(inputs.minOrderValue);
                     return true;
                 }
@@ -272,7 +331,7 @@
                 }
 
                 clearError(inputs.minOrderValue);
-                return true;
+                return validateFlatCouponRule();
             };
 
             const validatePositiveIntField = (fieldName, input, messagePrefix) => {
@@ -395,6 +454,7 @@
                 input.addEventListener('change', () => {
                     toggleMaxDiscount();
                     validateDiscountValue();
+                    validateMinOrderValue();
                     validateMaxDiscount();
                 });
             });
@@ -402,7 +462,10 @@
                 input.addEventListener('input', () => {
                     normalizeNumericInputOnInput(input);
 
-                    if (input === inputs.discountValue) validateDiscountValue();
+                    if (input === inputs.discountValue) {
+                        validateDiscountValue();
+                        validateMaxDiscount();
+                    }
                     if (input === inputs.minOrderValue) validateMinOrderValue();
                     if (input === inputs.maxDiscount) validateMaxDiscount();
                     if (input === inputs.usageLimit) validatePositiveIntField('usageLimit', inputs.usageLimit, 'Usage limit');
@@ -412,7 +475,10 @@
                 input.addEventListener('blur', () => {
                     normalizeNumericInputOnBlur(input);
 
-                    if (input === inputs.discountValue) validateDiscountValue();
+                    if (input === inputs.discountValue) {
+                        validateDiscountValue();
+                        validateMaxDiscount();
+                    }
                     if (input === inputs.minOrderValue) validateMinOrderValue();
                     if (input === inputs.maxDiscount) validateMaxDiscount();
                     if (input === inputs.usageLimit) validatePositiveIntField('usageLimit', inputs.usageLimit, 'Usage limit');
@@ -482,7 +548,7 @@
                         <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <div>
                                 <label for="code" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Code</label>
-                                <input id="code" name="code" type="text" value="<%= formDataSafe.code || '' %>"
+                                <input id="code" name="code" type="text" value="<%= formDataSafe.code || '' %>" required
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.code ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
                                     placeholder="SAVE20" autocomplete="off">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('code') || '' %></p>
@@ -492,7 +558,7 @@
 
                             <div>
                                 <label for="discountValue" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Discount Value</label>
-                                <input id="discountValue" name="discountValue" type="number" step="0.01" min="0" value="<%= formDataSafe.discountValue || '' %>"
+                                <input id="discountValue" name="discountValue" type="number" step="0.01" min="0" inputmode="decimal" required value="<%= formDataSafe.discountValue || '' %>"
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.discountValue ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
                                     placeholder="10">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('discountValue') || '' %></p>
@@ -518,7 +584,7 @@
                         <div id="maxDiscountWrapper" class="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <div class="form-group">
                                 <label for="maxDiscount" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Max Discount</label>
-                                <input id="maxDiscount" name="maxDiscount" type="number" step="0.01" min="0" value="<%= formDataSafe.maxDiscount || '' %>"
+                                <input id="maxDiscount" name="maxDiscount" type="number" step="0.01" min="0" inputmode="decimal" value="<%= formDataSafe.maxDiscount || '' %>"
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.maxDiscount ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
                                     placeholder="500">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('maxDiscount') || '' %></p>
@@ -529,7 +595,7 @@
                         <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <div>
                                 <label for="minOrderValue" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Min Order Value</label>
-                                <input id="minOrderValue" name="minOrderValue" type="number" step="0.01" min="0" value="<%= formDataSafe.minOrderValue %>"
+                                <input id="minOrderValue" name="minOrderValue" type="number" step="0.01" min="0" inputmode="decimal" value="<%= formDataSafe.minOrderValue %>"
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.minOrderValue ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
                                     placeholder="0">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('minOrderValue') || '' %></p>
@@ -538,7 +604,7 @@
 
                             <div>
                                 <label for="usageLimit" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Usage Limit</label>
-                                <input id="usageLimit" name="usageLimit" type="number" step="1" min="1" value="<%= formDataSafe.usageLimit || '' %>"
+                                <input id="usageLimit" name="usageLimit" type="number" step="1" min="1" inputmode="numeric" value="<%= formDataSafe.usageLimit || '' %>"
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.usageLimit ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
                                     placeholder="Leave blank for unlimited">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('usageLimit') || '' %></p>
@@ -547,7 +613,7 @@
 
                             <div>
                                 <label for="usagePerUser" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Per User Limit</label>
-                                <input id="usagePerUser" name="usagePerUser" type="number" step="1" min="1" value="<%= formDataSafe.usagePerUser || '' %>"
+                                <input id="usagePerUser" name="usagePerUser" type="number" step="1" min="1" inputmode="numeric" value="<%= formDataSafe.usagePerUser || '' %>"
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.usagePerUser ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>"
                                     placeholder="Leave blank for unlimited">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('usagePerUser') || '' %></p>
@@ -558,7 +624,7 @@
                         <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                             <div>
                                 <label for="startDate" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">Start Date</label>
-                                <input id="startDate" name="startDate" type="date" value="<%= formDataSafe.startDate || '' %>"
+                                <input id="startDate" name="startDate" type="date" required value="<%= formDataSafe.startDate || '' %>"
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.startDate ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('startDate') || '' %></p>
                                 <p id="startDate-client-error" class="text-red-500 text-xs mt-1 hidden"></p>
@@ -566,7 +632,7 @@
 
                             <div>
                                 <label for="endDate" class="mb-2 block text-sm font-semibold text-[#1F1F1F]">End Date</label>
-                                <input id="endDate" name="endDate" type="date" value="<%= formDataSafe.endDate || '' %>"
+                                <input id="endDate" name="endDate" type="date" required value="<%= formDataSafe.endDate || '' %>"
                                     class="w-full rounded-xl border px-4 py-3 text-sm <%= fieldErrors.endDate ? 'border-red-400 bg-red-50' : 'border-[#CFC4EA]' %>">
                                 <p class="text-red-500 text-xs mt-1"><%= getError('endDate') || '' %></p>
                                 <p id="endDate-client-error" class="text-red-500 text-xs mt-1 hidden"></p>

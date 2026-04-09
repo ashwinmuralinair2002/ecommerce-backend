@@ -301,6 +301,8 @@
 
         document.getElementById('addBrandForm').addEventListener('submit', function (e) {
             let valid = true;
+            const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+            const fileTooLargeMessage = 'One or more images exceed the 2MB size limit.';
 
             // Clear previous JS errors
             document.querySelectorAll('[id^="err-"]').forEach(el => { el.textContent = ''; el.classList.add('hidden'); });
@@ -320,6 +322,17 @@
                 document.getElementById('err-logo').textContent = 'Please upload a brand logo.';
                 document.getElementById('err-logo').classList.remove('hidden');
                 valid = false;
+            } else {
+                const selectedLogo = logo.files[0];
+                if (selectedLogo && !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(selectedLogo.type)) {
+                    document.getElementById('err-logo').textContent = invalidTypeMessage;
+                    document.getElementById('err-logo').classList.remove('hidden');
+                    valid = false;
+                } else if (selectedLogo && selectedLogo.size > 2 * 1024 * 1024) {
+                    document.getElementById('err-logo').textContent = fileTooLargeMessage;
+                    document.getElementById('err-logo').classList.remove('hidden');
+                    valid = false;
+                }
             }
 
             if (website.value.trim()) {

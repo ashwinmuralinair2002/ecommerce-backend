@@ -204,12 +204,12 @@
 
                 try {
                     setCardLoading(card, true);
-                    await callWishlistEndpoint(`${endpoint}?${params.toString()}`, method);
+                    const data = await callWishlistEndpoint(`${endpoint}?${params.toString()}`, method);
                     removeCard(card);
                     Swal.fire({
                         icon: 'success',
                         title: 'Success',
-                        text: isMoveToCart ? 'Item moved to cart' : 'Item removed from wishlist',
+                        text: data.message || (isMoveToCart ? 'Item moved to cart' : 'Item removed from wishlist'),
                         timer: 1500,
                         showConfirmButton: false
                     });

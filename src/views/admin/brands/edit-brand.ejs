@@ -329,9 +329,12 @@
 
         editBrandForm.addEventListener('submit', function (e) {
             let valid = true;
+            const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+            const fileTooLargeMessage = 'One or more images exceed the 2MB size limit.';
             document.querySelectorAll('[id^="err-"]').forEach(el => { el.textContent = ''; el.classList.add('hidden'); });
 
             const name = this.querySelector('[name="name"]');
+            const logo = this.querySelector('[name="logo"]');
             const website = this.querySelector('[name="website"]');
             const contactEmail = this.querySelector('[name="contactEmail"]');
 
@@ -355,6 +358,19 @@
                 document.getElementById('err-contactEmail').textContent = 'Please enter a valid email address.';
                 document.getElementById('err-contactEmail').classList.remove('hidden');
                 valid = false;
+            }
+
+            if (logo && logo.files.length) {
+                const selectedLogo = logo.files[0];
+                if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(selectedLogo.type)) {
+                    document.getElementById('err-logo').textContent = invalidTypeMessage;
+                    document.getElementById('err-logo').classList.remove('hidden');
+                    valid = false;
+                } else if (selectedLogo.size > 2 * 1024 * 1024) {
+                    document.getElementById('err-logo').textContent = fileTooLargeMessage;
+                    document.getElementById('err-logo').classList.remove('hidden');
+                    valid = false;
+                }
             }
 
             if (!valid) {

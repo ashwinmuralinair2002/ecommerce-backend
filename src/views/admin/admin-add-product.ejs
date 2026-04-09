@@ -925,6 +925,8 @@
         let variants = [];
         let variantCropper = null;
         let variantCropState = { variantIndex: null, imageId: null };
+        const invalidImageTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+        const oversizedImageMessage = 'One or more images exceed the 2MB size limit.';
 
         function showVariantError(message) {
             if (!variantError) return;
@@ -1322,7 +1324,20 @@
                 }
                 if (input.dataset.role !== 'variant-files') return;
                 const idx = Number(input.dataset.index);
-                const selected = Array.from(input.files || []).filter((f) => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type));
+                const files = Array.from(input.files || []);
+                const hasInvalidType = files.some((f) => !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(f.type));
+                if (hasInvalidType) {
+                    showVariantError(invalidImageTypeMessage);
+                    input.value = '';
+                    return;
+                }
+                const hasOversizedFile = files.some((f) => f.size > 2 * 1024 * 1024);
+                if (hasOversizedFile) {
+                    showVariantError(oversizedImageMessage);
+                    input.value = '';
+                    return;
+                }
+                const selected = files;
                 const mapped = selected.map((file) => {
                     const previewUrl = URL.createObjectURL(file);
                     return {

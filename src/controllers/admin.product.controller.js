@@ -68,6 +68,16 @@ function normalizeCrop(rawCrop) {
     };
 }
 
+function validateVariantImageCount(images) {
+    if (images.length < 3) {
+        throw new Error('Each variant must have at least 3 images');
+    }
+
+    if (images.length > 10) {
+        throw new Error('Each variant can have a maximum of 10 images');
+    }
+}
+
 async function migrateLegacyProductImages(product) {
     if (!product) return product;
     const variants = Array.isArray(product.variants) ? product.variants : [];
@@ -121,9 +131,7 @@ async function buildVariantsFromRequest(req, existingVariants = []) {
         }));
 
         const mergedImages = [...keptImages, ...uploadedImages];
-        if (mergedImages.length < 3 || mergedImages.length > 10) {
-            throw new Error('Each variant must contain between 3 and 10 images.');
-        }
+        validateVariantImageCount(mergedImages);
 
         variants.push({
             _id: row._id || undefined,

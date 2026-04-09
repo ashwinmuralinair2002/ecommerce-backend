@@ -2,6 +2,13 @@
 const mongoose = require('mongoose');
 const generateReferralCode = require('../utils/generateReferralCode');
 
+const normalizePhone = (value) => {
+    if (value === undefined || value === null) return undefined;
+
+    const normalized = String(value).trim().replace(/[\s-]+/g, '').replace(/^(\+91|91)/, '');
+    return normalized || undefined;
+};
+
 const addressSchema = new mongoose.Schema({
     name: { type: String, trim: true },
     phone: { type: String, trim: true },
@@ -23,8 +30,11 @@ const userSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
+        unique: true,
+        sparse: true,
         trim: true,
-        default: '',
+        default: undefined,
+        set: normalizePhone,
     },
     profileImage: {
         type: String,

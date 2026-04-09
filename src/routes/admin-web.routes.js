@@ -6,7 +6,7 @@ const categoryController = require('../controllers/admin.category.controller');
 const productController = require('../controllers/admin.product.controller');
 const brandUpload = require('../middleware/brand-upload.middleware');
 const categoryUpload = require('../middleware/category-upload.middleware');
-const profileUpload = require('../middleware/profile-upload.middleware');
+const { handleProfileImageUpload } = require('../middleware/profile-upload.middleware');
 const productUpload = require('../middleware/upload.middleware');
 
 const router = express.Router();
@@ -16,7 +16,7 @@ router.use(ensureAdminAuthenticated);
 router.get('/dashboard', (req, res) => {
     res.render('admin/dashboard', { user: req.user || null });
 });
-router.post('/profile/upload-photo', profileUpload.single('profileImage'), adminController.uploadAdminProfilePhoto);
+router.post('/profile/upload-photo', handleProfileImageUpload, adminController.uploadAdminProfilePhoto);
 router.get('/dashboard-stats', adminController.getDashboardStats);
 router.get('/order-status-stats', adminController.getOrderStatusStats);
 router.get('/revenue-trend', adminController.getRevenueTrend);
@@ -59,34 +59,28 @@ router.post('/change-password', adminController.changeAdminPassword);
 
 router.get('/brands', brandController.getBrands);
 router.get('/brands/add', brandController.renderAddBrand);
-router.post('/brands', brandUpload.single('logo'), brandController.addBrand);
+router.post('/brands', brandUpload.single('logo', 'request'), brandController.addBrand);
 router.get('/brands/:id', brandController.getBrandDetails);
 router.get('/brands/:id/edit', brandController.renderEditBrand);
-router.patch('/brands/:id/edit', brandUpload.single('logo'), brandController.editBrand);
+router.patch('/brands/:id/edit', brandUpload.single('logo', 'request'), brandController.editBrand);
 router.patch('/brands/:id/toggle-status', brandController.toggleBrandStatus);
 router.post('/brands/:id/delete', brandController.deleteBrand);
 
 router.get('/categories', categoryController.getCategoriesPage);
 router.get('/categories/add', categoryController.renderAddCategory);
 router.get('/categories/check-name', categoryController.checkCategoryName);
-router.post('/categories', categoryUpload.fields([
-    { name: 'image', maxCount: 1 },
-    { name: 'heroImage', maxCount: 1 }
-]), categoryController.addCategory);
+router.post('/categories', categoryUpload.single('image', 'request'), categoryController.addCategory);
 router.get('/categories/:id', categoryController.getCategoryDetails);
 router.get('/categories/:id/edit', categoryController.renderEditCategory);
-router.patch('/categories/:id/edit', categoryUpload.fields([
-    { name: 'image', maxCount: 1 },
-    { name: 'heroImage', maxCount: 1 }
-]), categoryController.editCategory);
+router.patch('/categories/:id/edit', categoryUpload.single('image', 'request'), categoryController.editCategory);
 router.patch('/categories/:id/block-toggle', categoryController.toggleCategoryBlock);
 router.post('/categories/:id/delete', categoryController.deleteCategory);
 
 router.get('/products', productController.getProductsPage);
 router.get('/products/add', productController.getAddProductPage);
 router.get('/products/edit/:id', productController.getEditProductPage);
-router.post('/products', productUpload.any(), productController.createProduct);
-router.put('/products/:id', productUpload.any(), productController.updateProduct);
+router.post('/products', productUpload.any('json'), productController.createProduct);
+router.put('/products/:id', productUpload.any('json'), productController.updateProduct);
 router.delete('/products/:id/images/:imageId', productController.deleteProductImage);
 router.post('/products/soft-delete', productController.softDeleteProducts);
 router.delete('/products/:id', productController.softDeleteProduct);

@@ -2,18 +2,23 @@
 const express = require('express');
 const router = express.Router();
 const profileController = require('../controllers/profile.controller');
-const profileUpload = require('../middleware/profile-upload.middleware');
+const { handleProfileImageUpload } = require('../middleware/profile-upload.middleware');
 const { ensureAuthenticated } = require('../middleware/auth-check.middleware');
 const { requireUser } = require('../middleware/role-auth.middleware');
+const { validate } = require('../middleware/validate.middleware');
+const {
+    updateProfileSchema,
+    requestEmailChangeSchema
+} = require('../validations/profile.validation');
 
 router.use(ensureAuthenticated);
 router.use(requireUser);
 
 router.get('/', profileController.getProfile);
-router.put('/', profileController.updateProfile);
-router.post('/upload-photo', profileUpload.single('profileImage'), profileController.uploadProfilePhoto);
+router.put('/', validate(updateProfileSchema), profileController.updateProfile);
+router.post('/upload-photo', handleProfileImageUpload, profileController.uploadProfilePhoto);
 
-router.post('/email/request', profileController.requestEmailChange);
+router.post('/email/request', validate(requestEmailChangeSchema), profileController.requestEmailChange);
 router.post('/email/verify', profileController.verifyEmailChange);
 
 router.post('/password/request', profileController.requestPasswordChange);

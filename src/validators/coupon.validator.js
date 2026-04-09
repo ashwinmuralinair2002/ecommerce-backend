@@ -7,9 +7,11 @@ const couponValidationRules = {
         pattern: '^[A-Z0-9_-]+$'
     },
     discountValue: {
-        min: 0
+        min: 0,
+        maxFlat: 100000
     },
     percentageDiscountMax: 100,
+    highPercentageDiscountThreshold: 50,
     minOrderValue: {
         min: 0
     },
@@ -105,6 +107,37 @@ const createCouponSchema = z.object({
             path: ['discountValue'],
             message: `Percentage discount cannot exceed ${couponValidationRules.percentageDiscountMax}`
         });
+    }
+
+    if (data.discountType === 'PERCENTAGE') {
+        const requiresMaxDiscount = data.discountValue === couponValidationRules.percentageDiscountMax
+            || data.discountValue > couponValidationRules.highPercentageDiscountThreshold;
+
+        if (requiresMaxDiscount && (data.maxDiscount == null || Number(data.maxDiscount) <= 0)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['maxDiscount'],
+                message: 'Maximum discount is required for high percentage coupons'
+            });
+        }
+    }
+
+    if (data.discountType === 'FLAT') {
+        if (Number(data.discountValue) > couponValidationRules.discountValue.maxFlat) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['discountValue'],
+                message: `Flat discount cannot exceed ${couponValidationRules.discountValue.maxFlat}`
+            });
+        }
+
+        if (Number(data.discountValue) >= Number(data.minOrderValue || 0)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['discountValue'],
+                message: 'Discount must be less than minimum order value'
+            });
+        }
     }
 });
 

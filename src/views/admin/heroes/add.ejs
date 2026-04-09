@@ -8,6 +8,7 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" />
     <title>Admin · Add Hero Banner</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 </head>
@@ -76,7 +77,7 @@
 
                         <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
                             <p class="text-[#1F1F1F] font-medium mb-3">Hero Image <span class="text-red-500">*</span></p>
-                            <input id="heroImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                            <input id="heroImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/jpg,image/png,image/webp"
                                 class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
 
                             <% if (errors && errors.image) { %><p class="text-red-500 text-xs mt-1"><%= errors.image %></p><% } %>
@@ -111,8 +112,33 @@
         (function () {
             const form = document.getElementById('heroAddForm');
             if (!form) return;
+            const imageInput = document.getElementById('heroImageInput');
+            const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+            const fileTooLargeMessage = 'File too large. Maximum allowed size is 2MB.';
 
-            form.addEventListener('submit', function () {
+            function getValidationMessage(file) {
+                if (!file) return '';
+                if (!allowedMimeTypes.includes(file.type)) return invalidTypeMessage;
+                if (file.size > 2 * 1024 * 1024) return fileTooLargeMessage;
+                return '';
+            }
+
+            function showHeroUploadError(message) {
+                if (!message || typeof window.showToast !== 'function') return;
+                window.showToast(message, 'error');
+            }
+
+            form.addEventListener('submit', function (event) {
+                const file = imageInput && imageInput.files ? imageInput.files[0] : null;
+                const validationMessage = getValidationMessage(file);
+                if (validationMessage) {
+                    event.preventDefault();
+                    showHeroUploadError(validationMessage);
+                    if (typeof hideLoader === 'function') hideLoader();
+                    return;
+                }
+
                 showLoader();
             });
         })();
@@ -181,12 +207,16 @@
             const previewImg = document.getElementById('heroImagePreview');
             const recropBtn = document.getElementById('heroImageRecropBtn');
             const resolutionHint = document.getElementById('heroResolutionHint');
+            const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+            const fileTooLargeMessage = 'File too large. Maximum allowed size is 2MB.';
 
             if (!imageInput || !previewWrap || !previewImg || !recropBtn || !resolutionHint || typeof Cropper === 'undefined') return;
 
             let cropper = null;
             let currentSource = '';
             let latestObjectUrl = null;
+            let currentFileType = 'image/png';
 
             const cropModal = document.createElement('div');
             cropModal.id = 'heroCropModal';
@@ -233,6 +263,18 @@
                 }
             }
 
+            function getValidationMessage(file) {
+                if (!file) return '';
+                if (!allowedMimeTypes.includes(file.type)) return invalidTypeMessage;
+                if (file.size > 2 * 1024 * 1024) return fileTooLargeMessage;
+                return '';
+            }
+
+            function showHeroUploadError(message) {
+                if (!message || typeof window.showToast !== 'function') return;
+                window.showToast(message, 'error');
+            }
+
             function openModal(src) {
                 if (!src) return;
                 cropModal.classList.remove('hidden');
@@ -255,10 +297,20 @@
             }
 
             function setInputFile(blob, filename) {
-                const file = new File([blob], filename, { type: blob.type || 'image/png' });
+                const file = new File([blob], filename, {
+                    type: blob.type || currentFileType || 'image/png',
+                    lastModified: Date.now()
+                });
+                const validationMessage = getValidationMessage(file);
+                if (validationMessage) {
+                    showHeroUploadError(validationMessage);
+                    imageInput.value = '';
+                    return false;
+                }
                 const dt = new DataTransfer();
                 dt.items.add(file);
                 imageInput.files = dt.files;
+                return true;
             }
 
             function validateResolution(src) {
@@ -281,6 +333,16 @@
                     setPreview('');
                     return;
                 }
+
+                const validationMessage = getValidationMessage(file);
+                if (validationMessage) {
+                    showHeroUploadError(validationMessage);
+                    imageInput.value = '';
+                    setPreview('');
+                    return;
+                }
+
+                currentFileType = file.type || 'image/png';
 
                 const reader = new FileReader();
                 reader.onload = function (e) {
@@ -318,19 +380,29 @@
                     if (latestObjectUrl) {
                         URL.revokeObjectURL(latestObjectUrl);
                     }
-                    latestObjectUrl = URL.createObjectURL(blob);
+                    if (!setInputFile(blob, `hero-banner-${Date.now()}.${(currentFileType || 'image/png').split('/')[1] || 'png'}`)) {
+                        return;
+                    }
 
+                    latestObjectUrl = URL.createObjectURL(blob);
                     setPreview(latestObjectUrl);
-                    setInputFile(blob, `hero-banner-${Date.now()}.png`);
                     closeModal();
-                }, 'image/png');
+                }, currentFileType || 'image/png', 0.92);
             });
         })();
     </script>
+    <script src="/js/utils.js"></script>
     <script src="/js/loading.util.js"></script>
     <script>
         window.addEventListener('pageshow', function () {
             hideLoader();
+        });
+
+        window.addEventListener('DOMContentLoaded', function () {
+            const serverError = <%- JSON.stringify(error || (errors && errors.image) || '') %>;
+            if (serverError && typeof window.showToast === 'function') {
+                window.showToast(serverError, 'error');
+            }
         });
     </script>
 </body>

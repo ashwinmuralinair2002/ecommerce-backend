@@ -364,7 +364,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                     </svg>
                                 </label>
-                                <input type="file" id="admin-profile-upload" accept="image/jpeg, image/jpg" class="hidden"
+                                <input type="file" id="admin-profile-upload" accept="image/jpeg, image/jpg, image/png, image/webp" class="hidden"
                                     onchange="openAdminProfilePhotoCropper(this)" />
                             </div>
 
@@ -489,7 +489,7 @@
                                 const data = await response.json();
 
                                 if (!response.ok) {
-                                    throw new Error(data.error || 'Upload failed');
+                                    throw new Error(data.message || data.error || 'Upload failed');
                                 }
 
                                 const preview = document.getElementById('admin-profile-image-preview');
@@ -540,14 +540,14 @@
                             const file = input.files[0];
                             if (!file) return;
 
-                            if (!['image/jpeg', 'image/jpg'].includes(file.type)) {
-                                showMessage('Only JPG/JPEG images are allowed.', 'error');
+                            if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+                                showMessage('Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.', 'error');
                                 input.value = '';
                                 return;
                             }
 
                             if (file.size > 2 * 1024 * 1024) {
-                                showMessage('Image size must be less than 2MB.', 'error');
+                                showMessage('File too large. Maximum allowed size is 2MB.', 'error');
                                 input.value = '';
                                 return;
                             }

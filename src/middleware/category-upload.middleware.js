@@ -1,17 +1,25 @@
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../config/cloudinary');
+const { createAdminImageUpload } = require('./admin-image-upload.middleware');
 
-const storage = new CloudinaryStorage({
-    cloudinary,
-    params: {
-        folder: 'soundwave_categories',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
+const baseUpload = createAdminImageUpload({
+    folder: 'soundwave_categories'
+});
+
+function syncSingleCategoryFileShape(handler) {
+    return (req, res, next) => {
+        handler(req, res, () => {
+            if (req.file) {
+                req.files = {
+                    ...(req.files || {}),
+                    image: [req.file]
+                };
+            }
+            next();
+        });
+    };
+}
+
+module.exports = {
+    single(fieldName, nextMode = 'request') {
+        return syncSingleCategoryFileShape(baseUpload.single(fieldName, nextMode));
     }
-});
-
-module.exports = multer({
-    storage,
-    limits: { fileSize: 4 * 1024 * 1024 }
-});
-
+};

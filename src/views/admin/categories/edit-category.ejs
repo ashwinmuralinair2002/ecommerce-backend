@@ -67,6 +67,7 @@
                         </div>
                         <input id="categoryImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                             class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
+                        <p id="categoryImageClientError" class="text-red-500 text-xs mt-2 hidden"></p>
                     </div>
 
                     <div class="flex gap-3 pt-4">
@@ -83,11 +84,46 @@
     <script>
         (function () {
             const form = document.querySelector('form[action*="/admin/categories/"][action*="/edit"]');
+            const imageInput = document.getElementById('categoryImageInput');
+            const imageError = document.getElementById('categoryImageClientError');
+            const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+            const fileTooLargeMessage = 'One or more images exceed the 2MB size limit.';
             if (!form) return;
 
-            form.addEventListener('submit', function () {
+            const validateSelectedImage = () => {
+                if (!imageInput || !imageError) return true;
+                imageError.classList.add('hidden');
+                imageError.textContent = '';
+
+                const file = imageInput.files && imageInput.files[0];
+                if (!file) return true;
+
+                if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+                    imageError.textContent = invalidTypeMessage;
+                    imageError.classList.remove('hidden');
+                    return false;
+                }
+
+                if (file.size > 2 * 1024 * 1024) {
+                    imageError.textContent = fileTooLargeMessage;
+                    imageError.classList.remove('hidden');
+                    return false;
+                }
+
+                return true;
+            };
+
+            form.addEventListener('submit', function (event) {
+                if (!validateSelectedImage()) {
+                    event.preventDefault();
+                    return;
+                }
                 showLoader();
             });
+
+            if (imageInput) {
+                imageInput.addEventListener('change', validateSelectedImage);
+            }
         })();
 
         (function () {

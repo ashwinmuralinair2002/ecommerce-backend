@@ -322,6 +322,20 @@ exports.getEditHero = async (req, res) => {
 
 exports.createHero = async (req, res) => {
     try {
+        if (req.uploadValidationError) {
+            return await renderAddPage(res, {
+                statusCode: 400,
+                error: req.uploadValidationError,
+                errors: {},
+                oldInput: {
+                    type: req.body?.type || 'custom',
+                    refId: req.body?.refId || '',
+                    order: req.body?.order || 0,
+                    isActive: parseBoolean(req.body?.isActive, false)
+                }
+            });
+        }
+
         const errors = {};
         const type = String(req.body?.type || '').trim();
         const refId = parseOptionalObjectId(req.body?.refId);
@@ -391,6 +405,20 @@ exports.updateHero = async (req, res) => {
         const hero = await HeroBanner.findById(id);
         if (!hero) {
             return res.redirect('/admin/heroes?error=Hero%20banner%20not%20found.');
+        }
+
+        if (req.uploadValidationError) {
+            return await renderEditPage(res, hero.toObject(), {
+                statusCode: 400,
+                error: req.uploadValidationError,
+                errors: {},
+                oldInput: {
+                    type: req.body?.type || hero.type,
+                    refId: req.body?.refId || (hero.refId ? String(hero.refId) : ''),
+                    order: req.body?.order || hero.order || 0,
+                    isActive: parseBoolean(req.body?.isActive, false)
+                }
+            });
         }
 
         const errors = {};

@@ -4,6 +4,7 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
 const HeroBanner = require('../models/HeroBanner');
+const Cart = require('../models/cart.model');
 const { getCachedOffers } = require('../utils/offer-cache');
 const { getApplicableOffers, getBestOffer, calculateOfferDiscount } = require('../utils/offer-engine');
 const { getBaseProductPrice } = require('../utils/pricing');
@@ -530,6 +531,7 @@ exports.getTodaysDealsPage = async (req, res) => {
 exports.getProductDetails = async (req, res) => {
     try {
         const productId = req.params.id;
+        const fromOrder = req.query.fromOrder === 'true';
         const homeUrl = req.session && req.session.userId ? '/home' : '/';
         const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).select('_id').lean();
         const allowedCategoryIds = activeCategories.map(c => c._id);
@@ -545,7 +547,11 @@ exports.getProductDetails = async (req, res) => {
             .populate('brand', 'name')
             .populate('category', 'name isBlocked isDeleted');
 
-        if (!product || product.isListed === false || product.isDeleted === true || !product.category || !allowedCategorySet.has(String(product.category._id || product.category))) {
+        if (!product || product.isDeleted === true || !product.category || !allowedCategorySet.has(String(product.category._id || product.category))) {
+            return res.status(HTTP_STATUS.NOT_FOUND).render('user/product-unavailable', { homeUrl });
+        }
+
+        if (product.isListed === false && !fromOrder) {
             return res.status(HTTP_STATUS.NOT_FOUND).render('user/product-unavailable', { homeUrl });
         }
 
@@ -569,15 +575,23 @@ exports.getProductDetails = async (req, res) => {
 
         await migrateLegacyProductImages(product);
         let wishlistVariantIds = [];
+        let isProductInCart = false;
 
         if (req.session && req.session.userId) {
-            const wishlist = await wishlistService.getWishlist(req.session.userId);
+            const [wishlist, cart] = await Promise.all([
+                wishlistService.getWishlist(req.session.userId),
+                Cart.findOne({
+                    userId: req.session.userId,
+                    'items.productId': product._id
+                }).select('_id').lean()
+            ]);
             wishlistVariantIds = Array.isArray(wishlist && wishlist.items)
                 ? wishlist.items
                     .filter((item) => String(item.productId || '') === String(product._id))
                     .map((item) => String(item.variantId || ''))
                     .filter(Boolean)
                 : [];
+            isProductInCart = Boolean(cart);
         }
 
         // Get Similar Products (Same connection type, excluding current)
@@ -616,6 +630,7 @@ exports.getProductDetails = async (req, res) => {
             product: productView,
             offers: offerOptions,
             bestOfferId,
+            isProductInCart,
             wishlistVariantIds,
             relatedProducts,
             alsoBought

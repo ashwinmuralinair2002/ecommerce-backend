@@ -141,8 +141,23 @@
         return;
       }
 
-      if (phone && !/^\d+$/.test(phone)) {
-        showInlineMessage('Phone number must contain only digits', 'error');
+      if (!/^[A-Za-z ]+$/.test(name)) {
+        showInlineMessage('Name must contain only letters and spaces', 'error');
+        return;
+      }
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showInlineMessage('Invalid email format', 'error');
+        return;
+      }
+
+      if (!phone) {
+        showInlineMessage('Phone number is required', 'error');
+        return;
+      }
+
+      if (!/^(?:\+91)?[6-9]\d{9}$/.test(phone.replace(/\s+/g, ''))) {
+        showInlineMessage('Invalid phone format', 'error');
         return;
       }
 
@@ -291,14 +306,14 @@
           setTimeout(() => statusEl.classList.add('hidden'), 3000);
           showInlineMessage('Profile photo updated', 'success');
         } else {
-          throw new Error(data.error || 'Upload failed');
+          throw new Error(data.message || data.error || 'Upload failed');
         }
       } catch (error) {
         console.error('Upload Error:', error);
-        statusEl.textContent = 'Upload failed';
+        statusEl.textContent = error.message || 'Upload failed';
         statusEl.classList.remove('text-blue-600');
         statusEl.classList.add('text-red-500');
-        showInlineMessage(error.message, 'error');
+        showInlineMessage(error.message || 'Upload failed', 'error');
       }
     }
 
@@ -330,15 +345,15 @@
       if (!file) return;
 
       // Validate Type
-      if (!['image/jpeg', 'image/jpg'].includes(file.type)) {
-        showInlineMessage('Only JPG/JPEG images are allowed', 'error');
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
+        showInlineMessage('Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.', 'error');
         input.value = ''; // Reset
         return;
       }
 
       // Validate Size (2MB)
       if (file.size > 2 * 1024 * 1024) {
-        showInlineMessage('Image size must be less than 2MB', 'error');
+        showInlineMessage('File too large. Maximum allowed size is 2MB.', 'error');
         input.value = ''; // Reset
         return;
       }
@@ -413,7 +428,7 @@
                     d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </label>
-              <input type="file" id="profile-upload" accept="image/jpeg, image/jpg" class="hidden"
+              <input type="file" id="profile-upload" accept="image/jpeg, image/jpg, image/png, image/webp" class="hidden"
                 onchange="uploadProfilePhoto(this)" />
             </div>
             <div>
@@ -427,30 +442,56 @@
             </div>
           </div>
 
-          <div class="flex items-center justify-between mb-3">
+          <div class="mb-3">
             <h3 class="font-bold">Personal Information</h3>
-            <div id="action-btns" class="hidden flex gap-2">
-              <button onclick="saveProfile()" class="text-sm text-primary font-bold hover:underline">Save</button>
-              <button onclick="cancelEdit()" class="text-sm text-gray-500 font-bold hover:underline">Cancel</button>
-            </div>
           </div>
 
           <div class="space-y-4 max-w-md">
             <!-- Inline Message Container -->
             <div id="profile-message" class="hidden w-full p-3 rounded-lg text-sm font-medium transition-all"></div>
 
-            <input name="name" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Name"
-              value="<%= user.name %>" readonly />
-            <input name="email" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50" placeholder="Email"
-              value="<%= user.email %>" readonly />
-            <input name="phone" class="profile-input w-full h-12 rounded-lg border px-4 bg-gray-50 text-gray-500"
-              placeholder="Phone Number" value="<%= user.phone || '' %>" readonly />
-            <p class="text-sm text-gray-700">Your Referral Code: <strong><%= user.referralCode || 'N/A' %></strong></p>
+            <div class="space-y-1">
+              <p class="text-sm text-gray-500">Name</p>
+              <input name="name" class="profile-input w-full h-12 rounded-lg border border-primary-light/50 px-4 bg-gray-50 text-[#1F1F1F]"
+                placeholder="Name" value="<%= user.name %>" readonly />
+            </div>
+
+            <div class="space-y-1">
+              <p class="text-sm text-gray-500">Email</p>
+              <input name="email" class="profile-input w-full h-12 rounded-lg border border-primary-light/50 px-4 bg-gray-50 text-[#1F1F1F]"
+                placeholder="Email" value="<%= user.email %>" readonly />
+            </div>
+
+            <div class="space-y-1">
+              <p class="text-sm text-gray-500">Phone Number</p>
+              <input name="phone" class="profile-input w-full h-12 rounded-lg border border-primary-light/50 px-4 bg-gray-50 text-[#1F1F1F]"
+                placeholder="Phone Number" value="<%= user.phone || '' %>" readonly />
+            </div>
+
+            <div class="space-y-1">
+              <p class="text-sm text-gray-500">Referral Code</p>
+              <input
+                class="w-full h-12 rounded-lg border border-primary-light/50 px-4 bg-gray-50 text-[#1F1F1F]"
+                value="<%= user.referralCode || 'N/A' %>" readonly />
+            </div>
+
+            <div id="action-btns" class="hidden pt-2">
+              <div class="flex flex-col gap-3 sm:flex-row">
+                <button onclick="saveProfile()"
+                  class="theme-primary-btn h-10 rounded-lg px-6 text-sm font-bold sm:w-auto">
+                  Save
+                </button>
+                <button onclick="cancelEdit()"
+                  class="theme-secondary-btn h-10 rounded-lg px-6 text-sm sm:w-auto">
+                  Cancel
+                </button>
+              </div>
+            </div>
 
             <!-- Action Buttons (Change Password & Edit Profile) -->
             <div class="pt-4 flex flex-col sm:flex-row gap-3">
               <a href="/account/change-password"
-                class="theme-primary-btn flex h-10 flex-1 items-center justify-center rounded-lg text-sm">
+                class="theme-secondary-btn flex h-10 flex-1 items-center justify-center rounded-lg text-sm">
                 Change Password
               </a>
               <button id="edit-btn" onclick="toggleEdit()"

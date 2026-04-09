@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Cart = require('../models/cart.model');
+const Wishlist = require('../models/wishlist.model');
 const Offer = require('../models/offer.model');
 const Product = require('../models/Product');
 const AppError = require('../utils/AppError');
@@ -69,6 +70,22 @@ const findCartItemIndex = (items, productId, variantId, selectedOfferId = null) 
         && item.variantId.toString() === variantId.toString()
         && String(item.selectedOfferId || '') === String(selectedOfferId || '')
     ));
+};
+
+const findCartItemIndexByVariant = (items, productId, variantId) => {
+    return items.findIndex((item) => (
+        item.productId.toString() === productId.toString()
+        && item.variantId.toString() === variantId.toString()
+    ));
+};
+
+const isProductInCart = async (userId, productId) => {
+    const existingCartItem = await Cart.findOne({
+        userId,
+        'items.productId': productId
+    }).select('_id').lean();
+
+    return Boolean(existingCartItem);
 };
 
 const buildCartResponse = async (userId, req) => {
@@ -210,11 +227,10 @@ const addToCart = asyncHandler(async (userId, productId, variantId, quantity, re
         });
     }
 
-    const existingItemIndex = findCartItemIndex(
+    const existingItemIndex = findCartItemIndexByVariant(
         cart.items,
         productId,
-        variantId,
-        normalizedSelectedOfferId
+        variantId
     );
 
     if (existingItemIndex !== -1) {
@@ -244,6 +260,10 @@ const addToCart = asyncHandler(async (userId, productId, variantId, quantity, re
     }
 
     await cart.save();
+    await Wishlist.updateOne(
+        { user: userId },
+        { $pull: { items: { productId } } }
+    );
 
     return buildCartResponse(userId, req);
 });
@@ -301,23 +321,21 @@ const updateCartItemQuantity = asyncHandler(async (userId, productId, variantId,
     return buildCartResponse(userId, req);
 });
 
-const removeCartItem = asyncHandler(async (userId, productId, variantId, req, selectedOfferId = null) => {
+const removeCartItem = asyncHandler(async (userId, productId, variantId, req) => {
     const cart = await Cart.findOne({ userId });
 
     if (!cart) {
-        throw new AppError('Cart not found', HTTP_STATUS.NOT_FOUND);
+        return buildCartResponse(userId, req);
     }
 
-    const normalizedSelectedOfferId = normalizeSelectedOfferId(selectedOfferId);
-    const itemIndex = findCartItemIndex(
+    const itemIndex = findCartItemIndexByVariant(
         cart.items,
         productId,
-        variantId,
-        normalizedSelectedOfferId
+        variantId
     );
 
     if (itemIndex === -1) {
-        throw new AppError('Cart item not found', HTTP_STATUS.NOT_FOUND);
+        return buildCartResponse(userId, req);
     }
 
     cart.items.splice(itemIndex, 1);
@@ -328,6 +346,7 @@ const removeCartItem = asyncHandler(async (userId, productId, variantId, req, se
 });
 
 module.exports = {
+    isProductInCart,
     addToCart,
     getCart,
     updateCartItemQuantity,

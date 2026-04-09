@@ -125,6 +125,7 @@
                             <thead class="bg-white border-b">
                                 <tr>
                                     <th class="p-3 text-left">Category</th>
+                                    <th class="p-3 text-left">Products</th>
                                     <th class="p-3 text-left">Slug</th>
                                     <th class="p-3 text-left">Status</th>
                                     <th class="p-3 text-left">Last Updated</th>
@@ -134,7 +135,7 @@
                             <tbody>
                                 <% if (!categories || categories.length === 0) { %>
                                     <tr>
-                                        <td colspan="5" class="p-6 text-center text-[#685BCB]">No categories found</td>
+                                        <td colspan="6" class="p-6 text-center text-[#685BCB]">No categories found</td>
                                     </tr>
                                 <% } %>
                                 <% (categories || []).forEach(category => { %>
@@ -145,6 +146,7 @@
                                                 style="<%= category.image && category.image.url ? 'background-image:url(' + category.image.url + ')' : '' %>"></div>
                                             <span class="font-medium text-[#1F1F1F]"><%= category.name %></span>
                                         </td>
+                                        <td class="p-3 text-[#1F1F1F]"><%= category.productCount || 0 %></td>
                                         <td class="p-3 text-[#685BCB]"><%= category.slug || '-' %></td>
                                         <td class="p-3">
                                             <span class="px-4 py-1 rounded-lg text-sm font-medium <%= category.isBlocked ? 'bg-[#ffecec] text-red-600' : 'bg-[#e6f4ea] text-[#1e7e34]' %>">

@@ -14,14 +14,12 @@
     <script src="/js/utils.js"></script>
     <script>
         async function handleSignup() {
-            // Get inputs
-            const inputs = document.querySelectorAll('input');
-            const firstName = inputs[0].value.trim();
-            const lastName = inputs[1].value.trim();
-            const email = inputs[2].value.trim();
-            const password = inputs[3].value;
-            const confirmPassword = inputs[4].value;
-            const referralCode = inputs[5].value.trim();
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const referralCode = document.getElementById('referralCode').value.trim();
             const submitButton = document.getElementById('signup-submit-btn');
             const btnText = submitButton.querySelector('.btn-text');
 
@@ -54,22 +52,34 @@
 
             try {
                 // Client-side validation
-                if (!firstName || !lastName || !email || !password || !confirmPassword) {
+                if (!name || !email || !phone || !password || !confirmPassword) {
                     throw new Error('Please fill in all required fields');
+                }
+
+                if (!/^[A-Za-z ]+$/.test(name)) {
+                    throw new Error('Name can contain only letters and spaces');
+                }
+
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    throw new Error('Please enter a valid email address');
+                }
+
+                if (!/^(?:\+91)?[6-9]\d{9}$/.test(phone.replace(/\s+/g, ''))) {
+                    throw new Error('Please enter a valid Indian phone number');
                 }
 
                 if (password !== confirmPassword) {
                     throw new Error('Passwords do not match');
                 }
 
-                if (password.length < 6) {
-                    throw new Error('Password must be at least 6 characters');
+                if (password.length < 8) {
+                    throw new Error('Password must be at least 8 characters');
                 }
 
-                // Construct Payload (Mapping firstName + lastName -> name)
                 const payload = {
-                    name: `${firstName} ${lastName}`,
+                    name,
                     email: email,
+                    phone,
                     password: password,
                     referralCode: referralCode || undefined
                 };
@@ -143,32 +153,32 @@
                 </h2>
 
                 <div class="relative mb-3">
-                    <input id="firstName"
+                    <input id="name" maxlength="60"
                         class="peer form-input h-14 w-full rounded-lg border border-primary-light/70 bg-white px-4 pt-4 text-base placeholder-transparent focus:border-primary focus:outline-none"
-                        placeholder="First Name" />
-                    <label for="firstName"
+                        placeholder="Name" />
+                    <label for="name"
                         class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-primary/80 peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-primary pointer-events-none">
-                        First Name
+                        Name
                     </label>
                 </div>
 
                 <div class="relative mb-3">
-                    <input id="lastName"
+                    <input id="email" type="email"
                         class="peer form-input h-14 w-full rounded-lg border border-primary-light/70 bg-white px-4 pt-4 text-base placeholder-transparent focus:border-primary focus:outline-none"
-                        placeholder="Last Name" />
-                    <label for="lastName"
-                        class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-primary/80 peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-primary pointer-events-none">
-                        Last Name
-                    </label>
-                </div>
-
-                <div class="relative mb-3">
-                    <input id="email"
-                        class="peer form-input h-14 w-full rounded-lg border border-primary-light/70 bg-white px-4 pt-4 text-base placeholder-transparent focus:border-primary focus:outline-none"
-                        placeholder="Email / Phone" />
+                        placeholder="Email" />
                     <label for="email"
                         class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-primary/80 peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-primary pointer-events-none">
-                        Email / Phone
+                        Email
+                    </label>
+                </div>
+
+                <div class="relative mb-3">
+                    <input id="phone" type="tel" inputmode="numeric"
+                        class="peer form-input h-14 w-full rounded-lg border border-primary-light/70 bg-white px-4 pt-4 text-base placeholder-transparent focus:border-primary focus:outline-none"
+                        placeholder="Phone Number" />
+                    <label for="phone"
+                        class="absolute left-4 top-1 text-xs text-primary transition-all duration-200 peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-primary/80 peer-focus:top-1 peer-focus:-translate-y-0 peer-focus:text-xs peer-focus:text-primary pointer-events-none">
+                        Phone Number
                     </label>
                 </div>
 

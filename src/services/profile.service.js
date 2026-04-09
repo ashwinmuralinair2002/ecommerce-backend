@@ -22,6 +22,13 @@ const updateProfile = asyncHandler(async (userId, data) => {
         throw new AppError('User not found', HTTP_STATUS.NOT_FOUND);
     }
 
+    if (data.phone) {
+        const existingUser = await User.findOne({ phone: data.phone });
+        if (existingUser && existingUser._id.toString() !== userId.toString()) {
+            throw new AppError('Phone number already in use', HTTP_STATUS.BAD_REQUEST);
+        }
+    }
+
     if (data.name) user.name = data.name;
     if (data.phone) user.phone = data.phone;
     if (data.profileImage) user.profileImage = data.profileImage;

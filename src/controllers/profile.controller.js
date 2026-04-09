@@ -31,7 +31,10 @@ const updateProfile = async (req, res) => {
 // @route   POST /api/profile/upload-photo
 const uploadProfilePhoto = async (req, res) => {
     if (!req.file) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'No image uploaded' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: MESSAGES.PROFILE_IMAGE_MISSING,
+            error: MESSAGES.PROFILE_IMAGE_MISSING
+        });
     }
 
     try {
@@ -48,7 +51,10 @@ const uploadProfilePhoto = async (req, res) => {
 
         res.json({ message: 'Profile photo uploaded', profileImage: imageUrl, user });
     } catch (error) {
-        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: error.message });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+            message: error.message,
+            error: error.message
+        });
     }
 };
 

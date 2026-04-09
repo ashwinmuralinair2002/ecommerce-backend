@@ -353,7 +353,9 @@
                                             <% const threshold = parseInt(product.reorderThreshold, 10) || 5; %>
                                             <% const isProductUnavailable = product.isListed === false || product.isDeleted === true; %>
                                             <% const canAddToCartInitially = !isProductUnavailable && stock > 0; %>
-                                            <% if (stock === 0) { %>
+                                            <% if (isProductUnavailable) { %>
+                                                <span id="variantStockLabel" class="text-red-600 font-semibold">Product Unavailable</span>
+                                            <% } else if (stock === 0) { %>
                                                 <span id="variantStockLabel" class="text-red-600 font-semibold">Out of Stock</span>
                                             <% } else if (stock <= threshold) { %>
                                                 <span id="variantStockLabel" class="text-orange-600 font-semibold">Low Stock (<%= stock %> left)</span>
@@ -433,7 +435,7 @@
                                             <button id="addToCartButton" type="button"
                                                 class="theme-primary-btn w-full items-center justify-center overflow-hidden rounded-lg h-10 px-4 text-sm leading-normal tracking-[0.015em] <%= canAddToCartInitially ? 'cursor-pointer' : 'cursor-not-allowed opacity-50 pointer-events-none' %>"
                                                 <%= canAddToCartInitially ? '' : 'disabled aria-disabled="true"' %>>
-                                                <%= canAddToCartInitially ? 'Add to Cart' : 'Out of Stock' %>
+                                                <%= canAddToCartInitially ? 'Add to Cart' : (isProductUnavailable ? 'Unavailable' : 'Out of Stock') %>
                                             </button>
                                             <p id="addToCartFeedback" class="hidden text-xs"></p>
                                             <p id="productAvailabilityMessage" class="text-xs <%= isProductUnavailable ? 'text-red-600' : 'text-gray-500' %> <%= (isProductUnavailable || !canAddToCartInitially) ? '' : 'hidden' %>">
@@ -442,7 +444,8 @@
                                             <button
                                                 id="buyNowButton"
                                                 type="button"
-                                                class="theme-accent-btn w-full flex h-10 items-center justify-center rounded-lg px-6 text-sm font-bold">
+                                                class="theme-accent-btn w-full flex h-10 items-center justify-center rounded-lg px-6 text-sm font-bold <%= canAddToCartInitially ? 'cursor-pointer' : 'cursor-not-allowed opacity-50 pointer-events-none' %>"
+                                                <%= canAddToCartInitially ? '' : 'disabled aria-disabled="true"' %>>
                                                 Buy Now
                                             </button>
                                             <button
@@ -450,9 +453,10 @@
                                                 data-add-to-wishlist
                                                 data-product-id="<%= product._id %>"
                                                 data-variant-id="<%= selectedVariantId %>"
-                                                class="w-full flex items-center justify-center gap-2 rounded-lg h-10 border border-primary-light/45 text-primary hover:bg-primary-light/35">
+                                                class="w-full flex items-center justify-center gap-2 rounded-lg h-10 border border-primary-light/45 text-primary <%= isProductUnavailable ? 'cursor-not-allowed opacity-50 pointer-events-none' : 'hover:bg-primary-light/35' %>"
+                                                <%= isProductUnavailable ? 'disabled aria-disabled="true"' : '' %>>
                                                 <span>❤️</span>
-                                                <span data-wishlist-label>Add to Wishlist</span>
+                                                <span data-wishlist-label><%= isProductUnavailable ? 'Unavailable' : 'Add to Wishlist' %></span>
                                             </button>
                                         </div>
 
@@ -574,6 +578,7 @@
                         let currentVariantIndex = 0;
                         let selectedQuantity = 1;
                         let isAddingToCart = false;
+                        let isProductInCart = <%- JSON.stringify(Boolean(isProductInCart)) %>;
                         const variants = <%- JSON.stringify(product && Array.isArray(product.variants) ? product.variants : []) %>;
                         const productId = <%- JSON.stringify(product && product._id ? String(product._id) : '') %>;
                         const productPricing = {
@@ -661,14 +666,21 @@
                             if (!button) return;
 
                             const label = button.querySelector('[data-wishlist-label]');
+                            const shouldDisable = isProductUnavailable || isAdded;
+
                             if (label) {
-                                label.textContent = isAdded ? 'Added' : 'Add to Wishlist';
+                                if (isProductUnavailable) {
+                                    label.textContent = 'Unavailable';
+                                } else {
+                                    label.textContent = isAdded ? 'Added' : 'Add to Wishlist';
+                                }
                             }
 
-                            button.disabled = isAdded;
-                            button.classList.toggle('opacity-60', isAdded);
-                            button.classList.toggle('cursor-not-allowed', isAdded);
-                            button.classList.toggle('hover:bg-primary-light/35', !isAdded);
+                            button.disabled = shouldDisable;
+                            button.classList.toggle('opacity-60', shouldDisable);
+                            button.classList.toggle('cursor-not-allowed', shouldDisable);
+                            button.classList.toggle('pointer-events-none', shouldDisable);
+                            button.classList.toggle('hover:bg-primary-light/35', !shouldDisable);
                         }
 
                         function syncWishlistButtons() {
@@ -796,7 +808,9 @@
                                 let stockText = 'Out of Stock';
                                 let stockClass = 'text-red-600';
 
-                                if (stockCount > 0 && stockCount <= reorderThreshold) {
+                                if (isProductUnavailable) {
+                                    stockText = 'Product Unavailable';
+                                } else if (stockCount > 0 && stockCount <= reorderThreshold) {
                                     stockText = `Low Stock (${stockCount} left)`;
                                     stockClass = 'text-orange-600';
                                 } else if (stockCount > reorderThreshold) {
@@ -822,7 +836,7 @@
 
                             addToCartButton.disabled = !canAddToCart;
                             addToCartButton.setAttribute('aria-disabled', canAddToCart ? 'false' : 'true');
-                            addToCartButton.textContent = canAddToCart ? 'Add to Cart' : 'Out of Stock';
+                            addToCartButton.textContent = canAddToCart ? 'Add to Cart' : (isProductUnavailable ? 'Unavailable' : 'Out of Stock');
                             addToCartButton.classList.toggle('cursor-pointer', canAddToCart);
                             addToCartButton.classList.toggle('cursor-not-allowed', !canAddToCart);
                             addToCartButton.classList.toggle('opacity-50', !canAddToCart);
@@ -992,7 +1006,13 @@
                                     const totalItems = result.data && typeof result.data.totalItems === 'number'
                                         ? result.data.totalItems
                                         : 0;
+                                    isProductInCart = true;
+                                    wishlistVariantIds.delete(variantId);
+                                    syncWishlistButtons();
                                     syncNavbarCartCount(totalItems);
+                                    if (typeof window.refreshNavbarWishlistCount === 'function') {
+                                        window.refreshNavbarWishlistCount();
+                                    }
                                     Swal.fire({
                                         icon: 'success',
                                         title: 'Added to Cart',
@@ -1070,6 +1090,10 @@
 
                         wishlistButtons.forEach((button) => {
                             button.addEventListener('click', async () => {
+                                if (isProductUnavailable) {
+                                    return;
+                                }
+
                                 const activeVariant = variants[currentVariantIndex] || variants[0] || {};
                                 const activeVariantId = activeVariant && activeVariant._id ? String(activeVariant._id) : '';
                                 const variantId = activeVariantId || button.dataset.variantId;
@@ -1089,6 +1113,17 @@
 
                                 if (wishlistVariantIds.has(variantId)) {
                                     setWishlistButtonState(button, true);
+                                    return;
+                                }
+
+                                if (isProductInCart) {
+                                    Swal.fire({
+                                        icon: 'info',
+                                        title: 'Already in Cart',
+                                        text: 'Product is already in cart',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    });
                                     return;
                                 }
 
@@ -1121,7 +1156,7 @@
                                     Swal.fire({
                                         icon: 'success',
                                         title: 'Success',
-                                        text: data.alreadyExists ? 'Already in wishlist' : 'Added to wishlist',
+                                        text: data.message || (data.alreadyExists ? 'Already in wishlist' : 'Added to wishlist'),
                                         timer: 1500,
                                         showConfirmButton: false
                                     });

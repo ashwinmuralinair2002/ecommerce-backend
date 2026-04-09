@@ -235,6 +235,27 @@ const buildCouponFormView = ({
     };
 };
 
+const parseOptionalCouponNumber = (value) => {
+    if (value == null || String(value).trim() === '') {
+        return undefined;
+    }
+
+    return Number(value);
+};
+
+const normalizeCouponFormBody = (body = {}) => ({
+    ...body,
+    discountValue: Number(body.discountValue || 0),
+    minOrderValue: Number(body.minOrderValue || 0),
+    usageLimit: parseOptionalCouponNumber(body.usageLimit),
+    usagePerUser: parseOptionalCouponNumber(body.usagePerUser),
+    maxDiscount: parseOptionalCouponNumber(body.maxDiscount),
+    startDate: normalizeAdminDateInput(body.startDate),
+    endDate: normalizeAdminDateInput(body.endDate),
+    code: String(body.code || '').trim().toUpperCase(),
+    isActive: body.isActive === 'false' ? false : body.isActive === 'true' || body.isActive === 'on' || Boolean(body.isActive)
+});
+
 const getOfferOldInput = (offer = {}) => ({
     name: offer?.name || '',
     type: offer?.type || 'PRODUCT',
@@ -772,11 +793,17 @@ const updateAdminProfile = async (req, res) => {
 // @route   POST /admin/profile/upload-photo
 const uploadAdminProfilePhoto = async (req, res) => {
     if (!req.file) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'No image uploaded' });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
+            message: MESSAGES.PROFILE_IMAGE_MISSING,
+            error: MESSAGES.PROFILE_IMAGE_MISSING
+        });
     }
 
     if (!req.user || req.user.role !== 'admin') {
-        return res.status(HTTP_STATUS.FORBIDDEN).json({ error: 'Admin access required' });
+        return res.status(HTTP_STATUS.FORBIDDEN).json({
+            message: 'Admin access required',
+            error: 'Admin access required'
+        });
     }
 
     try {
@@ -785,7 +812,10 @@ const uploadAdminProfilePhoto = async (req, res) => {
 
         res.json({ message: 'Profile photo uploaded', profileImage: imageUrl, user });
     } catch (error) {
-        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ error: error.message });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+            message: error.message,
+            error: error.message
+        });
     }
 };
 
@@ -1211,22 +1241,7 @@ const getEditCouponPage = async (req, res) => {
 // @route   POST /admin/coupons/create
 const createCoupon = async (req, res) => {
     try {
-        const normalizedBody = {
-            ...req.body,
-            discountValue: Number(req.body.discountValue || 0),
-            minOrderValue: Number(req.body.minOrderValue || 0),
-            usageLimit: req.body.usageLimit ? Number(req.body.usageLimit) : undefined,
-            usagePerUser: req.body.usagePerUser ? Number(req.body.usagePerUser) : undefined,
-            maxDiscount:
-                req.body.maxDiscount && Number(req.body.maxDiscount) > 0
-                    ? Number(req.body.maxDiscount)
-                    : undefined,
-            startDate: normalizeAdminDateInput(req.body.startDate),
-            endDate: normalizeAdminDateInput(req.body.endDate),
-            code: String(req.body.code || '').trim().toUpperCase(),
-            isActive: req.body.isActive === 'false' ? false : Boolean(req.body.isActive)
-        };
-        const body = normalizedBody;
+        const body = normalizeCouponFormBody(req.body);
 
         const parsed = createCouponSchema.safeParse(body);
 
@@ -1271,11 +1286,10 @@ const createCoupon = async (req, res) => {
         console.error('FULL ERROR OBJECT:', error);
         console.error('========================');
 
-        return res.render('admin/create-coupon', {
+        return res.status(HTTP_STATUS.BAD_REQUEST).render('admin/create-coupon', buildCouponFormView({
             formError: error.message || 'Failed to create coupon',
-            formData: req.body,
-            errors: []
-        });
+            oldInput: normalizeCouponFormBody(req.body)
+        }));
     }
 };
 
@@ -1289,21 +1303,7 @@ const updateCoupon = async (req, res) => {
             return res.redirect('/admin/coupons');
         }
 
-        const body = {
-            ...req.body,
-            discountValue: Number(req.body.discountValue || 0),
-            minOrderValue: Number(req.body.minOrderValue || 0),
-            usageLimit: req.body.usageLimit ? Number(req.body.usageLimit) : undefined,
-            usagePerUser: req.body.usagePerUser ? Number(req.body.usagePerUser) : undefined,
-            maxDiscount:
-                req.body.maxDiscount && Number(req.body.maxDiscount) > 0
-                    ? Number(req.body.maxDiscount)
-                    : undefined,
-            startDate: normalizeAdminDateInput(req.body.startDate),
-            endDate: normalizeAdminDateInput(req.body.endDate),
-            code: String(req.body.code || '').trim().toUpperCase(),
-            isActive: req.body.isActive === 'false' ? false : req.body.isActive === 'true' || req.body.isActive === 'on'
-        };
+        const body = normalizeCouponFormBody(req.body);
 
         const parsed = createCouponSchema.safeParse(body);
 
@@ -1345,7 +1345,12 @@ const updateCoupon = async (req, res) => {
 
         return res.redirect(`/admin/coupons/${id}`);
     } catch (error) {
-        return res.redirect('/admin/coupons');
+        return res.status(HTTP_STATUS.BAD_REQUEST).render('admin/create-coupon', buildCouponFormView({
+            oldInput: normalizeCouponFormBody(req.body),
+            formError: error.message || 'Failed to update coupon',
+            coupon: { _id: req.params.id },
+            isEditMode: true
+        }));
     }
 };
 

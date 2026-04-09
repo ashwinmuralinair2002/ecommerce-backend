@@ -111,6 +111,14 @@ exports.renderAddBrand = (req, res) => {
 // @route   POST /admin/brands
 exports.addBrand = async (req, res) => {
     try {
+        if (req.uploadValidationError) {
+            return res.render('admin/brands/add-brand', {
+                error: req.uploadValidationError,
+                errors: {},
+                oldInput: req.body
+            });
+        }
+
         const { name, description, website, contactEmail, isActive } = req.body;
         const logoCrop = normalizeCrop(req.body.logoCrop);
         const errors = {};
@@ -277,6 +285,15 @@ exports.editBrand = async (req, res) => {
 
         if (!brand) {
             return res.redirect('/admin/brands');
+        }
+
+        if (req.uploadValidationError) {
+            return res.render('admin/brands/edit-brand', {
+                brand,
+                error: req.uploadValidationError,
+                errors: {},
+                oldInput: req.body
+            });
         }
 
         if (!name || name.trim().length < 2) {

@@ -1,5 +1,6 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
+const Order = require('../models/order.model');
 const cloudinary = require('../config/cloudinary');
 const AppError = require('../utils/AppError');
 const HTTP_STATUS = require('../constants/http-status');
@@ -30,6 +31,24 @@ async function destroyCloudinary(publicId) {
     if (!publicId) return;
     await cloudinary.uploader.destroy(publicId).catch(() => { });
 }
+
+const deliveredStatusExpr = {
+    $toLower: {
+        $ifNull: ['$orderStatus', '$status']
+    }
+};
+
+const itemRevenueExpression = {
+    $ifNull: [
+        '$items.finalPrice',
+        {
+            $multiply: [
+                { $ifNull: ['$items.price', 0] },
+                { $ifNull: ['$items.quantity', 0] }
+            ]
+        }
+    ]
+};
 
 // @route GET /admin/categories
 exports.getCategoriesPage = async (req, res) => {
@@ -64,9 +83,15 @@ exports.getCategoriesPage = async (req, res) => {
             .skip(skip)
             .limit(limit)
             .lean();
+        const categoriesWithProductCount = await Promise.all(
+            categories.map(async (category) => ({
+                ...category,
+                productCount: await Product.countDocuments({ category: category._id })
+            }))
+        );
 
         res.render('admin/admin-categories', {
-            categories,
+            categories: categoriesWithProductCount,
             search,
             status,
             currentSort: sort,
@@ -124,6 +149,14 @@ exports.checkCategoryName = async (req, res) => {
 // @route POST /admin/categories
 exports.addCategory = async (req, res) => {
     try {
+        if (req.uploadValidationError) {
+            return res.render('admin/categories/add-category', {
+                error: req.uploadValidationError,
+                errors: {},
+                oldInput: req.body
+            });
+        }
+
         const { name, description } = req.body;
         const errors = {};
 
@@ -210,11 +243,60 @@ exports.getCategoryDetails = async (req, res) => {
         const category = await Category.findOne({ _id: req.params.id, isDeleted: { $ne: true } }).lean();
         if (!category) return res.redirect('/admin/categories');
 
-        const productCount = await Product.countDocuments({
-            category: category._id
-        });
+        const [productCount, products, salesData] = await Promise.all([
+            Product.countDocuments({
+                category: category._id
+            }),
+            Product.find({
+                category: category._id
+            }).sort({ createdAt: -1 }).lean(),
+            Order.aggregate([
+                {
+                    $match: {
+                        $expr: { $eq: [deliveredStatusExpr, 'delivered'] }
+                    }
+                },
+                { $unwind: '$items' },
+                {
+                    $match: {
+                        'items.productId': { $exists: true, $ne: null }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'products',
+                        localField: 'items.productId',
+                        foreignField: '_id',
+                        as: 'product'
+                    }
+                },
+                { $unwind: '$product' },
+                {
+                    $match: {
+                        'product.category': category._id
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalUnitsSold: {
+                            $sum: { $ifNull: ['$items.quantity', 0] }
+                        },
+                        totalRevenue: {
+                            $sum: itemRevenueExpression
+                        }
+                    }
+                }
+            ])
+        ]);
 
-        return res.render('admin/category-details', { category, productCount });
+        const metrics = {
+            totalProducts: productCount,
+            totalUnitsSold: Number(salesData[0]?.totalUnitsSold || 0),
+            totalRevenue: Number(salesData[0]?.totalRevenue || 0)
+        };
+
+        return res.render('admin/category-details', { category, productCount, products, metrics });
     } catch (error) {
         return res.redirect('/admin/categories');
     }
@@ -242,6 +324,15 @@ exports.editCategory = async (req, res) => {
     try {
         const category = await Category.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
         if (!category) return res.redirect('/admin/categories');
+
+        if (req.uploadValidationError) {
+            return res.render('admin/categories/edit-category', {
+                category: category.toObject(),
+                error: req.uploadValidationError,
+                errors: {},
+                oldInput: req.body
+            });
+        }
 
         const { name, description } = req.body;
         const errors = {};

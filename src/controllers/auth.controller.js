@@ -209,10 +209,6 @@ const resetPassword = async (req, res) => {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Email and new password are required' });
     }
 
-    if (newPassword.length < 6) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({ error: 'Password must be at least 6 characters' });
-    }
-
     try {
         if (!req.session.resetVerified || req.session.resetEmail !== email) {
             throw new AppError(MESSAGES.UNAUTHORIZED, HTTP_STATUS.UNAUTHORIZED);

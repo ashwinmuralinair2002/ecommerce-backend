@@ -17,10 +17,14 @@ const ensureValidIds = (productId, variantId) => {
 const getValidatedProductAndVariant = async (productId, variantId) => {
     ensureValidIds(productId, variantId);
 
-    const product = await Product.findById(productId).select('title price discountPercentage images variants');
+    const product = await Product.findById(productId).select('title price discountPercentage images variants isListed isDeleted');
 
     if (!product) {
         throw new AppError('Product not found', HTTP_STATUS.NOT_FOUND);
+    }
+
+    if (product.isListed !== true || product.isDeleted === true) {
+        throw new AppError('Product not available', HTTP_STATUS.NOT_FOUND);
     }
 
     const variant = product.variants.id(variantId);
@@ -110,6 +114,12 @@ const getWishlistCount = asyncHandler(async (userId) => {
 
 const addToWishlist = asyncHandler(async (userId, productId, variantId) => {
     const { product } = await getValidatedProductAndVariant(productId, variantId);
+    const existsInCart = await cartService.isProductInCart(userId, productId);
+
+    if (existsInCart) {
+        throw new AppError('Product is already in cart', HTTP_STATUS.BAD_REQUEST);
+    }
+
     const wishlistItem = {
         productId,
         variantId,
@@ -205,6 +215,19 @@ const removeFromWishlist = asyncHandler(async (userId, productId, variantId) => 
 
 const moveToCart = asyncHandler(async (userId, productId, variantId) => {
     ensureValidIds(productId, variantId);
+
+    const alreadyInCart = await cartService.isProductInCart(userId, productId);
+
+    if (alreadyInCart) {
+        await removeFromWishlist(userId, productId, variantId);
+
+        return {
+            success: true,
+            wishlistCount: await getWishlistCount(userId),
+            message: 'Item already in cart, removed from wishlist'
+        };
+    }
+
     await cartService.addToCart(userId, productId, variantId, 1);
     await removeFromWishlist(userId, productId, variantId);
 
