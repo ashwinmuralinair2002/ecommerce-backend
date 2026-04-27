@@ -60,33 +60,6 @@
             window.location.href = '/admin/offers' + (query ? `?${query}` : '');
         }
 
-        function applyClientSearch() {
-            const searchValue = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
-            const rows = document.querySelectorAll('[data-offer-row]');
-            const emptyState = document.getElementById('offers-empty-state');
-            let visibleCount = 0;
-
-            rows.forEach((row) => {
-                const name = row.dataset.offerName || '';
-                const type = row.dataset.offerType || '';
-                const status = row.dataset.offerStatus || '';
-                const matches = !searchValue
-                    || name.includes(searchValue)
-                    || type.includes(searchValue)
-                    || status.includes(searchValue);
-
-                row.classList.toggle('hidden', !matches);
-
-                if (matches) {
-                    visibleCount += 1;
-                }
-            });
-
-            if (emptyState) {
-                emptyState.classList.toggle('hidden', visibleCount !== 0);
-            }
-        }
-
         async function toggleOffer(offerId, currentStatus) {
             const result = await Swal.fire({
                 title: currentStatus ? 'Deactivate offer?' : 'Activate offer?',
@@ -135,20 +108,27 @@
             window.location.reload();
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const searchInput = document.getElementById('searchInput');
-
-            if (searchInput && !searchInput.value) {
-                searchInput.value = params.get('search') || '';
-            }
-
-            applyClientSearch();
-        });
     </script>
 </head>
 
 <body>
+    <%
+        const activePage = Number(currentPage) > 0 ? Number(currentPage) : 1;
+        const pageCount = Number(totalPages) > 0 ? Number(totalPages) : 1;
+        const offerCount = Number(totalOffers) >= 0 ? Number(totalOffers) : (Array.isArray(offers) ? offers.length : 0);
+        const baseParams = new URLSearchParams();
+
+        if (filters?.search) baseParams.set('search', filters.search);
+        if (filters?.type) baseParams.set('type', filters.type);
+        if (filters?.status) baseParams.set('status', filters.status);
+        if (filters?.sort && filters.sort !== 'newest') baseParams.set('sort', filters.sort);
+
+        const buildPageHref = (pageNumber) => {
+            const params = new URLSearchParams(baseParams.toString());
+            params.set('page', pageNumber);
+            return `/admin/offers?${params.toString()}`;
+        };
+    %>
     <div class="min-h-screen flex flex-col bg-white" style='font-family: Inter, "Noto Sans", sans-serif;'>
         <%- include("../partials/admin/navbar") %>
 
@@ -188,9 +168,9 @@
                                 id="searchInput"
                                 type="text"
                                 name="search"
+                                value="<%= searchQuery || '' %>"
                                 placeholder="Search offers..."
                                 onkeydown="handleSearch(event)"
-                                oninput="applyClientSearch()"
                                 class="w-full h-12 rounded-xl bg-[#FFFFFF] border border-[#BCA6DB] pl-4 pr-12 text-[#1F1F1F] placeholder:text-[#685BCB] focus:outline-none focus:ring-2 focus:ring-[#685BCB]" />
                             <button onclick="clearSearch()"
                                 type="button"
@@ -248,15 +228,8 @@
                                     <tr id="offers-empty-state" class="<%= offers.length ? 'hidden' : '' %>">
                                         <td colspan="5" class="text-center py-4 text-sm text-[#685BCB]">No offers found</td>
                                     </tr>
-                                <% if (!offers.length) { %>
-                                    
-                                <% } %>
                                 <% offers.forEach((offer) => { %>
                                     <tr
-                                        data-offer-row
-                                        data-offer-name="<%= String(offer.name || '').toLowerCase() %>"
-                                        data-offer-type="<%= String(offer.type || '').toLowerCase() %>"
-                                        data-offer-status="<%= offer.isActive ? 'active' : 'inactive' %>"
                                         onclick="window.location='/admin/offers/<%= offer._id %>'"
                                         class="border-t border-t-[#BCA6DB] hover:bg-gray-50 cursor-pointer">
                                         <td class="h-[72px] px-4 py-2 text-sm font-medium leading-normal text-[#1F1F1F]"><%= offer.name %></td>
@@ -302,6 +275,52 @@
                             </table>
                         </div>
                     </div>
+
+                    <div class="flex justify-center items-center gap-2 mt-6">
+                        <% if (activePage > 1) { %>
+                            <a href="<%= buildPageHref(activePage - 1) %>"
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                &laquo; Previous
+                            </a>
+                        <% } else { %>
+                            <span
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                &laquo; Previous
+                            </span>
+                        <% } %>
+
+                        <div class="flex gap-1">
+                            <% for (let i = 1; i <= pageCount; i += 1) { %>
+                                <% if (i === activePage) { %>
+                                    <span
+                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold">
+                                        <%= i %>
+                                    </span>
+                                <% } else { %>
+                                    <a href="<%= buildPageHref(i) %>"
+                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                        <%= i %>
+                                    </a>
+                                <% } %>
+                            <% } %>
+                        </div>
+
+                        <% if (activePage < pageCount) { %>
+                            <a href="<%= buildPageHref(activePage + 1) %>"
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                Next &raquo;
+                            </a>
+                        <% } else { %>
+                            <span
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                Next &raquo;
+                            </span>
+                        <% } %>
+                    </div>
+
+                    <p class="text-center text-sm text-[#685BCB] mt-2">
+                        Showing page <%= activePage %> of <%= pageCount %> (<%= offerCount %> offers)
+                    </p>
                 </div>
             </section>
         </main>

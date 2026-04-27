@@ -474,10 +474,10 @@
                                                                             <p class="text-[#1F1F1F] text-base font-medium leading-normal pb-2">Discount (%) 
                                                                             </p>
                                                                             <input id="discountPercentage" name="discountPercentage" placeholder="e.g., 10"
-                                                                                type="number" step="0.01" min="0" max="100"
+                                                                                type="number" step="0.01" min="0" max="99"
                                                                                 class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-[#1F1F1F] focus:outline-0 focus:ring-0 border border-[#BCA6DB] bg-white focus:border-[#BCA6DB] h-14 placeholder:text-[#685BCB] p-[15px] text-base font-normal leading-normal"
                                                                                 value="" />
-                                                                            <p class="field-error" id="discountPercentageError">Must be between 0 and 100</p>
+                                                                            <p class="field-error" id="discountPercentageError">Discount must be less than 100%</p>
                                                                         </label>
                                                                     </div>
                                                                         </div>
@@ -1682,7 +1682,7 @@
             const price = getValue('productPrice');
             const discount = getValue('discountPercentage');
             if (!/^\d+(\.\d{1,2})?$/.test(price) || Number(price) <= 0) valid = setFieldError('productPrice', 'Price must be > 0 with up to 2 decimals.') && valid; else clearFieldError('productPrice');
-            if (!/^\d+(\.\d{1,2})?$/.test(discount) || Number(discount) < 0 || Number(discount) > 90) valid = setFieldError('discountPercentage', 'Discount must be between 0 and 90.') && valid; else clearFieldError('discountPercentage');
+            if (!/^\d+(\.\d{1,2})?$/.test(discount) || Number(discount) < 0 || Number(discount) >= 100) valid = setFieldError('discountPercentage', 'Discount must be less than 100%') && valid; else clearFieldError('discountPercentage');
 
             const reorder = getValue('reorderThreshold');
             if (!/^\d+$/.test(reorder)) valid = setFieldError('reorderThreshold', 'Reorder threshold is required and must be an integer >= 0.') && valid; else clearFieldError('reorderThreshold');

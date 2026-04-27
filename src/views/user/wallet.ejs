@@ -428,19 +428,11 @@
                         order_id: data.data.razorpayOrderId,
                         name: 'Wallet Recharge',
                         description: 'Add money to wallet',
-                        config: {
-                            display: {
-                                blocks: {
-                                    upi: {
-                                        name: 'Pay using UPI',
-                                        instruments: [{ method: 'upi' }]
-                                    }
-                                },
-                                sequence: ['upi'],
-                                preferences: {
-                                    show_default_blocks: false
-                                }
-                            }
+                        method: {
+                            upi: true,
+                            card: true,
+                            netbanking: true,
+                            wallet: true
                         },
                         handler: async function (response) {
                             const verifyRes = await fetch('/wallet/verify-recharge', {

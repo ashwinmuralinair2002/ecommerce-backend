@@ -433,6 +433,14 @@ const createProduct = async (req, res) => {
         }
 
         const categoryId = category;
+        const parsedDiscountPercentage = Number.parseFloat(discountPercentage);
+
+        if (Number.isFinite(parsedDiscountPercentage) && parsedDiscountPercentage >= 100) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
+                success: false,
+                message: 'Discount must be less than 100%'
+            });
+        }
 
 
         const product = new Product({
@@ -444,7 +452,7 @@ const createProduct = async (req, res) => {
             shortDescription: shortDescription || '',
             price: parseFloat(price),
             originalPrice: originalPrice ? parseFloat(originalPrice) : null,
-            discountPercentage: discountPercentage ? parseFloat(discountPercentage) : 0,
+            discountPercentage: Number.isFinite(parsedDiscountPercentage) ? parsedDiscountPercentage : 0,
             stockCount: totalVariantStock,
             reorderThreshold: parseInt(reorderThreshold) || 5,
             images: [],
@@ -542,6 +550,15 @@ const updateProduct = async (req, res) => {
             if (categoryDoc) categoryId = categoryDoc._id;
         }
 
+        const parsedDiscountPercentage = Number.parseFloat(discountPercentage);
+
+        if (Number.isFinite(parsedDiscountPercentage) && parsedDiscountPercentage >= 100) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({
+                success: false,
+                message: 'Discount must be less than 100%'
+            });
+        }
+
         // Update product fields
         product.title = title;
         product.sku = sku || product.sku;
@@ -551,7 +568,7 @@ const updateProduct = async (req, res) => {
         product.shortDescription = shortDescription || '';
         product.price = parseFloat(price);
         product.originalPrice = originalPrice ? parseFloat(originalPrice) : null;
-        product.discountPercentage = discountPercentage ? parseFloat(discountPercentage) : 0;
+        product.discountPercentage = Number.isFinite(parsedDiscountPercentage) ? parsedDiscountPercentage : 0;
         product.stockCount = totalVariantStock;
         product.reorderThreshold = parseInt(reorderThreshold) || 5;
         product.images = [];

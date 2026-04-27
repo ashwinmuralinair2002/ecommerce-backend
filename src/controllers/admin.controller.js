@@ -1001,8 +1001,13 @@ const addCustomer = async (req, res) => {
 // @route   GET /admin/offers
 const getOffersPage = async (req, res) => {
     try {
-        const { type = '', status = '', sort = 'newest' } = req.query;
+        const { page = 1, search: rawSearch = '', type = '', status = '', sort = 'newest' } = req.query;
+        const search = String(rawSearch || '').trim();
         const query = { isDeleted: false };
+
+        if (search) {
+            query.name = { $regex: escapeRegex(search), $options: 'i' };
+        }
 
         if (['PRODUCT', 'CATEGORY', 'BRAND'].includes(type)) {
             query.type = type;
@@ -1026,13 +1031,33 @@ const getOffersPage = async (req, res) => {
             sortOption = { discountValue: -1, createdAt: -1 };
         }
 
+        const currentPage = Math.max(Number(page) || 1, 1);
+        const limit = 10;
+        const totalOffers = await Offer.countDocuments(query);
+        const totalPages = Math.max(Math.ceil(totalOffers / limit), 1);
+
+        if (currentPage > totalPages && totalOffers > 0) {
+            const params = new URLSearchParams(req.query);
+            params.set('page', totalPages);
+            return res.redirect(`/admin/offers?${params.toString()}`);
+        }
+
+        const skip = (currentPage - 1) * limit;
+
         const offers = await Offer.find(query)
             .sort(sortOption)
+            .skip(skip)
+            .limit(limit)
             .lean();
 
         return res.render('admin/offers', {
             offers,
+            currentPage,
+            totalPages,
+            totalOffers,
+            searchQuery: search,
             filters: {
+                search,
                 type,
                 status,
                 sort
@@ -1041,7 +1066,12 @@ const getOffersPage = async (req, res) => {
     } catch (error) {
         return res.render('admin/offers', {
             offers: [],
+            currentPage: 1,
+            totalPages: 1,
+            totalOffers: 0,
+            searchQuery: '',
             filters: {
+                search: '',
                 type: '',
                 status: '',
                 sort: 'newest'
@@ -1142,10 +1172,19 @@ const getCouponsPage = async (req, res) => {
             Coupon.countDocuments(query)
         ]);
 
+        const totalPages = Math.max(Math.ceil(total / limit), 1);
+
+        if (currentPage > totalPages && total > 0) {
+            const params = new URLSearchParams(req.query);
+            params.set('page', totalPages);
+            return res.redirect(`/admin/coupons?${params.toString()}`);
+        }
+
         return res.render('admin/coupons', {
             coupons,
             currentPage,
-            totalPages: Math.max(Math.ceil(total / limit), 1),
+            totalPages,
+            totalCoupons: total,
             searchQuery: search,
             filters: {
                 search,
@@ -1159,6 +1198,7 @@ const getCouponsPage = async (req, res) => {
             coupons: [],
             currentPage: 1,
             totalPages: 1,
+            totalCoupons: 0,
             searchQuery: '',
             filters: {
                 search: '',
