@@ -124,7 +124,7 @@ exports.getCategoriesPage = async (req, res) => {
 
 // @route GET /admin/categories/add
 exports.renderAddCategory = (req, res) => {
-    res.render('admin/categories/add-category', { error: null, errors: {}, oldInput: {} });
+    res.render('admin/categories/add-category', { error: null, errors: {}, oldInput: {}, existingImage: '' });
 };
 
 // @route GET /admin/categories/check-name
@@ -149,11 +149,15 @@ exports.checkCategoryName = async (req, res) => {
 // @route POST /admin/categories
 exports.addCategory = async (req, res) => {
     try {
+        const uploadedImageUrl = req.file?.path || req.file?.url || '';
+        const existingImage = uploadedImageUrl || String(req.body.existingImage || '').trim();
+
         if (req.uploadValidationError) {
             return res.render('admin/categories/add-category', {
                 error: req.uploadValidationError,
                 errors: {},
-                oldInput: req.body
+                oldInput: req.body,
+                existingImage
             });
         }
 
@@ -162,6 +166,10 @@ exports.addCategory = async (req, res) => {
 
         if (!name || name.trim().length < 2) {
             errors.name = 'Category name is required (min 2 characters).';
+        }
+
+        if (!description || !description.trim()) {
+            errors.description = 'Category description is required.';
         }
 
         const normalizedName = String(name || '').trim();
@@ -173,26 +181,28 @@ exports.addCategory = async (req, res) => {
             errors.name = 'Category name already exists';
         }
 
-        if (!req.file && (!req.files || !Array.isArray(req.files.image) || req.files.image.length === 0)) {
-            throw new AppError('Category image is required', 400);
+        if (!req.file && (!req.files || !Array.isArray(req.files.image) || req.files.image.length === 0) && !existingImage) {
+            errors.image = 'Category image is required.';
         }
 
         if (Object.keys(errors).length > 0) {
             return res.render('admin/categories/add-category', {
                 error: null,
                 errors,
-                oldInput: req.body
+                oldInput: req.body,
+                existingImage
             });
         }
 
-        const image = getImageData(req.files && req.files.image) || { url: '', public_id: '' };
+        const image = getImageData(req.files && req.files.image)
+            || (existingImage ? { url: existingImage, public_id: '' } : { url: '', public_id: '' });
         const baseSlug = slugify(normalizedName);
 
         // If a soft-deleted category with the same name exists, restore it.
         if (existing && existing.isDeleted === true) {
             existing.name = normalizedName;
             existing.slug = await buildUniqueSlug(baseSlug, existing._id);
-            existing.description = description || existing.description || '';
+            existing.description = description.trim();
             existing.isDeleted = false;
             existing.isBlocked = false;
 
@@ -208,7 +218,7 @@ exports.addCategory = async (req, res) => {
         await Category.create({
             name: normalizedName,
             slug,
-            description: description || '',
+            description: description.trim(),
             image,
             isBlocked: false,
             isDeleted: false
@@ -232,7 +242,8 @@ exports.addCategory = async (req, res) => {
         return res.render('admin/categories/add-category', {
             error: errorMessage,
             errors,
-            oldInput: req.body
+            oldInput: req.body,
+            existingImage: uploadedImageUrl || String(req.body.existingImage || '').trim()
         });
     }
 };
@@ -341,12 +352,22 @@ exports.editCategory = async (req, res) => {
             errors.name = 'Category name is required (min 2 characters).';
         }
 
+        if (!description || !description.trim()) {
+            errors.description = 'Category description is required.';
+        }
+
         const existing = await Category.findOne({
             _id: { $ne: req.params.id },
             name: { $regex: new RegExp(`^${escapeRegex(String(name || '').trim())}$`, 'i') },
             isDeleted: { $ne: true }
         }).lean();
         if (existing) errors.name = 'Category name already exists.';
+
+        const hasUploadedImage = req.file || (req.files && Array.isArray(req.files.image) && req.files.image.length > 0);
+        const hasExistingImage = Boolean(category.image && category.image.url);
+        if (!hasUploadedImage && !hasExistingImage) {
+            errors.image = 'Category image is required.';
+        }
 
         if (Object.keys(errors).length > 0) {
             return res.render('admin/categories/edit-category', {
@@ -359,7 +380,7 @@ exports.editCategory = async (req, res) => {
 
         category.name = name.trim();
         category.slug = await buildUniqueSlug(slugify(name), category._id);
-        category.description = description || '';
+        category.description = description.trim();
 
         const image = getImageData(req.files && req.files.image);
         if (image) {

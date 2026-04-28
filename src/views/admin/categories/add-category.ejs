@@ -36,6 +36,7 @@
                 <% } %>
 
                 <form action="/admin/categories" method="POST" enctype="multipart/form-data" class="max-w-lg space-y-5" id="addCategoryForm">
+                    <input type="hidden" name="existingImage" id="existingImageInput" value="<%= existingImage || '' %>">
                     <div>
                         <label class="block text-sm text-[#685BCB] mb-1">Category Name <span class="text-red-500">*</span></label>
                         <input type="text" id="categoryNameInput" name="name" value="<%= oldInput && oldInput.name ? oldInput.name : '' %>"
@@ -45,19 +46,20 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm text-[#685BCB] mb-1">Description</label>
+                        <label class="block text-sm text-[#685BCB] mb-1">Description <span class="text-red-500">*</span></label>
                         <textarea name="description" rows="3"
-                            class="w-full rounded-xl bg-[#FFFFFF] px-4 py-3 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]"
+                            class="w-full rounded-xl bg-[#FFFFFF] px-4 py-3 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (errors && errors.description) ? 'ring-2 ring-red-400' : '' %>"
                             placeholder="Category description"><%= oldInput && oldInput.description ? oldInput.description : '' %></textarea>
+                        <p id="categoryDescriptionError" class="text-red-500 text-xs mt-1 <%= (errors && errors.description) ? '' : 'hidden' %>"><%= (errors && errors.description) ? errors.description : '' %></p>
                     </div>
 
                     <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
-                        <p class="text-[#1F1F1F] font-medium mb-3">Category Image</p>
+                        <p class="text-[#1F1F1F] font-medium mb-3">Category Image <span class="text-red-500">*</span></p>
                         <input id="categoryImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required
                             class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
-                        <p id="categoryImageClientError" class="text-red-500 text-xs mt-2 hidden"></p>
-                        <div id="categoryImagePreviewWrap" class="hidden mt-3 p-3 bg-white rounded-lg border border-gray-100">
-                            <img id="categoryImagePreview" src="" alt="Category preview" class="h-40 w-full object-contain rounded-lg">
+                        <p id="categoryImageClientError" class="text-red-500 text-xs mt-2 <%= (errors && errors.image) ? '' : 'hidden' %>"><%= (errors && errors.image) ? errors.image : '' %></p>
+                        <div id="categoryImagePreviewWrap" class="<%= existingImage ? '' : 'hidden' %> mt-3 p-3 bg-white rounded-lg border border-gray-100">
+                            <img id="categoryImagePreview" src="<%= existingImage || '' %>" alt="Category preview" class="h-40 w-full object-contain rounded-lg">
                             <div class="mt-3 flex justify-end">
                                 <button type="button" id="categoryImageRecropBtn"
                                     class="text-xs font-semibold px-3 py-2 rounded-lg bg-[#685BCB] text-white hover:bg-[#5a4dc0]">
@@ -82,10 +84,13 @@
         (function () {
             const form = document.getElementById('addCategoryForm');
             const nameInput = document.getElementById('categoryNameInput');
+            const descriptionInput = form ? form.querySelector('textarea[name="description"]') : null;
             const imageInput = document.getElementById('categoryImageInput');
+            const existingImageInput = document.getElementById('existingImageInput');
             const imageError = document.getElementById('categoryImageClientError');
             const submitBtn = document.getElementById('createCategoryBtn');
             const duplicateError = document.getElementById('categoryNameClientError');
+            const descriptionError = document.getElementById('categoryDescriptionError');
             let duplicateCheckTimer = null;
             let activeDuplicateRequest = null;
             let duplicateExists = <%= (errors && errors.name === 'Category name already exists') ? 'true' : 'false' %>;
@@ -98,7 +103,13 @@
                 imageError.textContent = '';
 
                 const file = imageInput.files && imageInput.files[0];
-                if (!file) return true;
+                const hasExistingImage = Boolean(existingImageInput && existingImageInput.value.trim());
+                if (!file) {
+                    if (hasExistingImage) return true;
+                    imageError.textContent = 'Category image is required.';
+                    imageError.classList.remove('hidden');
+                    return false;
+                }
 
                 if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
                     imageError.textContent = invalidTypeMessage;
@@ -113,6 +124,34 @@
                 }
 
                 return true;
+            };
+
+            const validateName = () => {
+                if (!nameInput || !duplicateError) return true;
+                const value = nameInput.value.trim();
+                if (value.length >= 2) return true;
+                duplicateError.textContent = 'Category name is required (min 2 characters).';
+                duplicateError.classList.remove('hidden');
+                nameInput.classList.add('ring-2', 'ring-red-400');
+                return false;
+            };
+
+            const validateDescription = () => {
+                if (!descriptionInput) return true;
+                if (descriptionError) {
+                    descriptionError.classList.add('hidden');
+                    descriptionError.textContent = '';
+                }
+                descriptionInput.classList.remove('ring-2', 'ring-red-400');
+
+                if (descriptionInput.value.trim()) return true;
+
+                if (descriptionError) {
+                    descriptionError.textContent = 'Category description is required.';
+                    descriptionError.classList.remove('hidden');
+                }
+                descriptionInput.classList.add('ring-2', 'ring-red-400');
+                return false;
             };
 
             const updateDuplicateUI = (message) => {
@@ -184,8 +223,12 @@
                 form.addEventListener('submit', async function (event) {
                     event.preventDefault();
                     if (!nameInput) return;
-                    await checkDuplicateName(nameInput.value);
-                    if (!duplicateExists && validateSelectedImage()) {
+                    const hasValidName = validateName();
+                    const hasValidDescription = validateDescription();
+                    if (hasValidName) {
+                        await checkDuplicateName(nameInput.value);
+                    }
+                    if (hasValidName && hasValidDescription && !duplicateExists && validateSelectedImage()) {
                         showLoader();
                         HTMLFormElement.prototype.submit.call(form);
                     }
@@ -199,6 +242,7 @@
 
         (function () {
             const imageInput = document.getElementById('categoryImageInput');
+            const existingImageInput = document.getElementById('existingImageInput');
             const previewWrap = document.getElementById('categoryImagePreviewWrap');
             const previewImg = document.getElementById('categoryImagePreview');
             const recropBtn = document.getElementById('categoryImageRecropBtn');
@@ -267,10 +311,14 @@
                 if (!currentSource) {
                     previewWrap.classList.add('hidden');
                     previewImg.src = '';
+                    if (existingImageInput) existingImageInput.value = '';
                     return;
                 }
                 previewImg.src = currentSource;
                 previewWrap.classList.remove('hidden');
+                if (existingImageInput && /^https?:\/\//.test(currentSource)) {
+                    existingImageInput.value = currentSource;
+                }
             }
 
             function setInputFile(blob, filename) {

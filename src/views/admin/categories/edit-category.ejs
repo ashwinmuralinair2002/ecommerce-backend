@@ -46,14 +46,15 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm text-[#685BCB] mb-1">Description</label>
+                        <label class="block text-sm text-[#685BCB] mb-1">Description <span class="text-red-500">*</span></label>
                         <textarea name="description" rows="3"
-                            class="w-full rounded-xl bg-[#FFFFFF] px-4 py-3 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB]"
+                            class="w-full rounded-xl bg-[#FFFFFF] px-4 py-3 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (errors && errors.description) ? 'ring-2 ring-red-400' : '' %>"
                             placeholder="Category description"><%= oldInput && oldInput.description ? oldInput.description : (category.description || '') %></textarea>
+                        <% if (errors && errors.description) { %><p class="text-red-500 text-xs mt-1"><%= errors.description %></p><% } %>
                     </div>
 
                     <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
-                        <p class="text-[#1F1F1F] font-medium mb-3">Category Image</p>
+                        <p class="text-[#1F1F1F] font-medium mb-3">Category Image <span class="text-red-500">*</span></p>
                         <div id="categoryImagePreviewWrap" class="<%= category.image && category.image.url ? '' : 'hidden' %> mb-3 p-3 bg-white rounded-lg border border-gray-100">
                             <img id="categoryImagePreview"
                                 src="<%= category.image && category.image.url ? category.image.url : '' %>"
@@ -67,7 +68,7 @@
                         </div>
                         <input id="categoryImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                             class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
-                        <p id="categoryImageClientError" class="text-red-500 text-xs mt-2 hidden"></p>
+                        <p id="categoryImageClientError" class="text-red-500 text-xs mt-2 <%= (errors && errors.image) ? '' : 'hidden' %>"><%= (errors && errors.image) ? errors.image : '' %></p>
                     </div>
 
                     <div class="flex gap-3 pt-4">
