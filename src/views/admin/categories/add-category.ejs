@@ -31,35 +31,35 @@
                 <h1 class="text-[32px] font-bold text-[#1F1F1F] mb-2">Add New Category</h1>
                 <p class="text-sm text-[#685BCB] mb-6">Add category details and images for user-side display</p>
 
-                <% if (locals.error) { %>
-                    <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800"><%= error %></div>
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="mb-4 p-3 rounded-xl text-sm font-medium bg-red-100 text-red-800"><%= typeof error !== 'undefined' ? error : '' %></div>
                 <% } %>
 
                 <form action="/admin/categories" method="POST" enctype="multipart/form-data" class="max-w-lg space-y-5" id="addCategoryForm">
-                    <input type="hidden" name="existingImage" id="existingImageInput" value="<%= existingImage || '' %>">
+                    <input type="hidden" name="existingImage" id="existingImageInput" value="<%= typeof existingImage !== 'undefined' ? existingImage : '' %>">
                     <div>
                         <label class="block text-sm text-[#685BCB] mb-1">Category Name <span class="text-red-500">*</span></label>
-                        <input type="text" id="categoryNameInput" name="name" value="<%= oldInput && oldInput.name ? oldInput.name : '' %>"
-                            class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
+                        <input type="text" id="categoryNameInput" name="name" value="<%= typeof oldInput !== 'undefined' && oldInput && oldInput.name ? oldInput.name : '' %>"
+                            class="w-full h-12 rounded-xl bg-[#FFFFFF] px-4 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (typeof errors !== 'undefined' && errors && errors.name) ? 'ring-2 ring-red-400' : '' %>"
                             placeholder="Enter category name" />
-                        <p id="categoryNameClientError" class="text-red-500 text-xs mt-1 <%= (errors && errors.name) ? '' : 'hidden' %>"><%= (errors && errors.name) ? errors.name : 'Category already exists' %></p>
+                        <p id="categoryNameClientError" class="text-red-500 text-xs mt-1 <%= (typeof errors !== 'undefined' && errors && errors.name) ? '' : 'hidden' %>"><%= (typeof errors !== 'undefined' && errors && errors.name) ? errors.name : 'Category already exists' %></p>
                     </div>
 
                     <div>
                         <label class="block text-sm text-[#685BCB] mb-1">Description <span class="text-red-500">*</span></label>
                         <textarea name="description" rows="3"
                             class="w-full rounded-xl bg-[#FFFFFF] px-4 py-3 border-none text-[#1F1F1F] focus:ring-2 focus:ring-[#685BCB] <%= (errors && errors.description) ? 'ring-2 ring-red-400' : '' %>"
-                            placeholder="Category description"><%= oldInput && oldInput.description ? oldInput.description : '' %></textarea>
-                        <p id="categoryDescriptionError" class="text-red-500 text-xs mt-1 <%= (errors && errors.description) ? '' : 'hidden' %>"><%= (errors && errors.description) ? errors.description : '' %></p>
+                            placeholder="Category description"><%= typeof oldInput !== 'undefined' && oldInput && oldInput.description ? oldInput.description : '' %></textarea>
+                        <p id="categoryDescriptionError" class="text-red-500 text-xs mt-1 <%= (typeof errors !== 'undefined' && errors && errors.description) ? '' : 'hidden' %>"><%= (typeof errors !== 'undefined' && errors && errors.description) ? errors.description : '' %></p>
                     </div>
 
                     <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
                         <p class="text-[#1F1F1F] font-medium mb-3">Category Image <span class="text-red-500">*</span></p>
                         <input id="categoryImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required
                             class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
-                        <p id="categoryImageClientError" class="text-red-500 text-xs mt-2 <%= (errors && errors.image) ? '' : 'hidden' %>"><%= (errors && errors.image) ? errors.image : '' %></p>
-                        <div id="categoryImagePreviewWrap" class="<%= existingImage ? '' : 'hidden' %> mt-3 p-3 bg-white rounded-lg border border-gray-100">
-                            <img id="categoryImagePreview" src="<%= existingImage || '' %>" alt="Category preview" class="h-40 w-full object-contain rounded-lg">
+                        <p id="categoryImageClientError" class="text-red-500 text-xs mt-2 <%= (typeof errors !== 'undefined' && errors && errors.image) ? '' : 'hidden' %>"><%= (typeof errors !== 'undefined' && errors && errors.image) ? errors.image : '' %></p>
+                        <div id="categoryImagePreviewWrap" class="<%= (typeof existingImage !== 'undefined' && existingImage) ? '' : 'hidden' %> mt-3 p-3 bg-white rounded-lg border border-gray-100">
+                            <img id="categoryImagePreview" src="<%= typeof existingImage !== 'undefined' ? existingImage : '' %>" alt="Category preview" class="h-40 w-full object-contain rounded-lg">
                             <div class="mt-3 flex justify-end">
                                 <button type="button" id="categoryImageRecropBtn"
                                     class="text-xs font-semibold px-3 py-2 rounded-lg bg-[#685BCB] text-white hover:bg-[#5a4dc0]">
@@ -93,7 +93,7 @@
             const descriptionError = document.getElementById('categoryDescriptionError');
             let duplicateCheckTimer = null;
             let activeDuplicateRequest = null;
-            let duplicateExists = <%= (errors && errors.name === 'Category name already exists') ? 'true' : 'false' %>;
+            let duplicateExists = <%= (typeof errors !== 'undefined' && errors && errors.name === 'Category name already exists') ? 'true' : 'false' %>;
             const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
             const fileTooLargeMessage = 'One or more images exceed the 2MB size limit.';
 

@@ -174,27 +174,30 @@
                         </table>
                     </div>
 
-                    <% if (pagination && pagination.totalPages > 1) { %>
+                    <% if (pagination) { %>
                         <% var qp = [];
                            if (search) qp.push('search=' + encodeURIComponent(search));
                            if (status && status !== 'all') qp.push('status=' + encodeURIComponent(status));
                            if (currentSort && currentSort !== 'newest') qp.push('sort=' + encodeURIComponent(currentSort));
-                           var baseQs = qp.length > 0 ? '&' + qp.join('&') : ''; %>
+                           var baseQs = qp.length > 0 ? '&' + qp.join('&') : '';
+                           var totalPages = pagination.totalPages > 0 ? pagination.totalPages : 1;
+                           var currentPage = pagination.currentPage > 0 ? pagination.currentPage : 1;
+                           var hasMultiplePages = totalPages > 1; %>
                         <div class="flex justify-center items-center gap-2 mt-6">
-                            <% if (pagination.hasPrevPage) { %>
+                            <% if (hasMultiplePages && pagination.hasPrevPage) { %>
                                 <a href="/admin/categories?page=<%= pagination.currentPage - 1 %><%= baseQs %>"
                                     class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                     &laquo; Previous
                                 </a>
                             <% } else { %>
-                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium opacity-50 cursor-not-allowed">
                                     &laquo; Previous
                                 </span>
                             <% } %>
 
                             <div class="flex gap-1">
-                                <% for (let i = 1; i <= pagination.totalPages; i++) { %>
-                                    <% if (i === pagination.currentPage) { %>
+                                <% for (let i = 1; i <= totalPages; i++) { %>
+                                    <% if (!hasMultiplePages || i === currentPage) { %>
                                         <span class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold"><%= i %></span>
                                     <% } else { %>
                                         <a href="/admin/categories?page=<%= i %><%= baseQs %>"
@@ -205,20 +208,20 @@
                                 <% } %>
                             </div>
 
-                            <% if (pagination.hasNextPage) { %>
+                            <% if (hasMultiplePages && pagination.hasNextPage) { %>
                                 <a href="/admin/categories?page=<%= pagination.currentPage + 1 %><%= baseQs %>"
                                     class="flex items-center justify-center h-10 px-4 rounded-lg bg-[#FFFFFF] text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
                                     Next &raquo;
                                 </a>
                             <% } else { %>
-                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
+                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium opacity-50 cursor-not-allowed">
                                     Next &raquo;
                                 </span>
                             <% } %>
                         </div>
 
                         <p class="text-center text-sm text-[#685BCB] mt-2">
-                            Showing page <%= pagination.currentPage %> of <%= pagination.totalPages %> (<%= pagination.totalCategories %> categories)
+                            Showing page <%= currentPage %> of <%= totalPages %> (<%= pagination.totalCategories %> categories)
                         </p>
                     <% } %>
                 </div>
