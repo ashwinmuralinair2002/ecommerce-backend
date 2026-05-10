@@ -380,7 +380,13 @@ exports.getBrandDetailPage = async (req, res) => {
         const heroBanners = await HeroBanner.find({
             isActive: true,
             type: 'brand',
-            refId: brand._id
+            refId: brand._id,
+            $or: [
+                { placements: 'brand' },
+                { placements: { $exists: false } },
+                { placements: null },
+                { placements: { $size: 0 } }
+            ]
         }).sort({ order: 1 }).limit(10).lean();
 
         res.render('user/brand-detail', {
@@ -425,7 +431,13 @@ exports.getCategoryDetailPage = async (req, res) => {
         const heroBanners = await HeroBanner.find({
             isActive: true,
             type: 'category',
-            refId: category._id
+            refId: category._id,
+            $or: [
+                { placements: 'category' },
+                { placements: { $exists: false } },
+                { placements: null },
+                { placements: { $size: 0 } }
+            ]
         }).sort({ order: 1 }).limit(10).lean();
 
         res.render('user/category-detail', {

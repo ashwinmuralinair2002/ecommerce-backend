@@ -16,6 +16,7 @@ const MAX_ACTIVE_HERO_BANNERS = 10;
 const MAX_ACTIVE_ERROR = 'Maximum 10 active hero banners allowed. Please unlist one before activating another.';
 const HERO_TYPES = ['product', 'category', 'brand', 'custom'];
 const HERO_SEARCHABLE_TYPES = ['product', 'category', 'brand'];
+const HERO_PLACEMENTS = ['home', 'brand', 'category'];
 
 function parseOptionalObjectId(value) {
     if (value === undefined || value === null || value === '') return null;
@@ -25,6 +26,56 @@ function parseOptionalObjectId(value) {
         throw error;
     }
     return value;
+}
+
+function normalizeHeroPlacementsInput(value) {
+    if (Array.isArray(value)) {
+        return value.map((item) => String(item || '').trim().toLowerCase()).filter(Boolean);
+    }
+
+    if (typeof value === 'string' && value.trim()) {
+        return [value.trim().toLowerCase()];
+    }
+
+    return [];
+}
+
+function getDefaultPlacementForType(type) {
+    if (type === 'product') return 'home';
+    return HERO_PLACEMENTS.includes(type) ? type : null;
+}
+
+function parseHeroPlacements(value, type) {
+    const rawPlacements = normalizeHeroPlacementsInput(value);
+    const uniquePlacements = [...new Set(rawPlacements)];
+    const hasInvalidPlacement = uniquePlacements.some((placement) => !HERO_PLACEMENTS.includes(placement));
+
+    if (hasInvalidPlacement) {
+        const error = new Error('Please select valid hero placements.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (uniquePlacements.length > 0) {
+        return uniquePlacements;
+    }
+
+    const fallbackPlacement = getDefaultPlacementForType(type);
+    return fallbackPlacement ? [fallbackPlacement] : [];
+}
+
+function getEffectiveHeroPlacements(heroLike) {
+    const existingPlacements = Array.isArray(heroLike?.placements)
+        ? heroLike.placements.map((placement) => String(placement || '').trim().toLowerCase()).filter(Boolean)
+        : [];
+
+    const validPlacements = [...new Set(existingPlacements)].filter((placement) => HERO_PLACEMENTS.includes(placement));
+    if (validPlacements.length > 0) {
+        return validPlacements;
+    }
+
+    const fallbackPlacement = getDefaultPlacementForType(String(heroLike?.type || '').trim().toLowerCase());
+    return fallbackPlacement ? [fallbackPlacement] : [];
 }
 
 function parseHeroImageFromFile(file, fallbackImage = null) {
@@ -121,6 +172,7 @@ async function renderAddPage(res, payload) {
         errors: payload.errors || {},
         oldInput: payload.oldInput || {},
         refs,
+        heroPlacements: HERO_PLACEMENTS,
         maxActiveError: MAX_ACTIVE_ERROR
     });
 }
@@ -135,6 +187,8 @@ async function renderEditPage(res, hero, payload) {
         oldInput: payload.oldInput || null,
         hero,
         refs,
+        heroEffectivePlacements: getEffectiveHeroPlacements(payload.oldInput || hero),
+        heroPlacements: HERO_PLACEMENTS,
         maxActiveError: MAX_ACTIVE_ERROR
     });
 }
@@ -346,6 +400,7 @@ exports.getAddHero = async (req, res) => {
         return await renderAddPage(res, {
             oldInput: {
                 type: 'custom',
+                placements: [],
                 refId: '',
                 order: 0,
                 isActive: true
@@ -386,6 +441,7 @@ exports.createHero = async (req, res) => {
                 errors: {},
                 oldInput: {
                     type: req.body?.type || 'custom',
+                    placements: normalizeHeroPlacementsInput(req.body?.placements),
                     refId: req.body?.refId || '',
                     order: req.body?.order || 0,
                     isActive: parseBoolean(req.body?.isActive, false)
@@ -395,12 +451,19 @@ exports.createHero = async (req, res) => {
 
         const errors = {};
         const type = String(req.body?.type || '').trim();
+        let placements = [];
         const refId = parseOptionalObjectId(req.body?.refId);
         const order = parseOrder(req.body?.order, 0);
         const isActive = parseBoolean(req.body?.isActive, false);
 
         if (!HERO_TYPES.includes(type)) {
             errors.type = 'Please select a valid hero type.';
+        }
+
+        try {
+            placements = parseHeroPlacements(req.body?.placements, type);
+        } catch (error) {
+            errors.placements = error.message;
         }
 
         const image = buildHeroImagePayload(req, null);
@@ -415,6 +478,7 @@ exports.createHero = async (req, res) => {
                 errors,
                 oldInput: {
                     type,
+                    placements: normalizeHeroPlacementsInput(req.body?.placements),
                     refId: req.body?.refId || '',
                     order: req.body?.order || 0,
                     isActive
@@ -428,6 +492,7 @@ exports.createHero = async (req, res) => {
 
         await HeroBanner.create({
             type,
+            placements,
             refId,
             headline: '',
             subHeadline: '',
@@ -446,6 +511,7 @@ exports.createHero = async (req, res) => {
             error: getFriendlyError(error, 'Failed to create hero banner.'),
             oldInput: {
                 type: req.body?.type || 'custom',
+                placements: normalizeHeroPlacementsInput(req.body?.placements),
                 refId: req.body?.refId || '',
                 order: req.body?.order || 0,
                 isActive: parseBoolean(req.body?.isActive, false)
@@ -473,6 +539,7 @@ exports.updateHero = async (req, res) => {
                 errors: {},
                 oldInput: {
                     type: req.body?.type || hero.type,
+                    placements: normalizeHeroPlacementsInput(req.body?.placements),
                     refId: req.body?.refId || (hero.refId ? String(hero.refId) : ''),
                     order: req.body?.order || hero.order || 0,
                     isActive: parseBoolean(req.body?.isActive, false)
@@ -482,6 +549,7 @@ exports.updateHero = async (req, res) => {
 
         const errors = {};
         const type = String(req.body?.type || '').trim();
+        let placements = [];
         const refId = parseOptionalObjectId(req.body?.refId);
         const order = parseOrder(req.body?.order, hero.order || 0);
         const isActive = parseBoolean(req.body?.isActive, false);
@@ -490,12 +558,19 @@ exports.updateHero = async (req, res) => {
             errors.type = 'Please select a valid hero type.';
         }
 
+        try {
+            placements = parseHeroPlacements(req.body?.placements, type);
+        } catch (error) {
+            errors.placements = error.message;
+        }
+
         if (Object.keys(errors).length > 0) {
             return await renderEditPage(res, hero.toObject(), {
                 statusCode: 400,
                 errors,
                 oldInput: {
                     type,
+                    placements: normalizeHeroPlacementsInput(req.body?.placements),
                     refId: req.body?.refId || '',
                     order: req.body?.order || hero.order || 0,
                     isActive
@@ -512,6 +587,7 @@ exports.updateHero = async (req, res) => {
         const oldAssetIdsToDelete = getHeroReplacementAssetIds(hero, updatedImage, updatedMobileImage);
 
         hero.type = type;
+        hero.placements = placements;
         hero.refId = refId;
         hero.order = order;
         hero.isActive = isActive;
@@ -538,6 +614,7 @@ exports.updateHero = async (req, res) => {
             error: getFriendlyError(error, 'Failed to update hero banner.'),
             oldInput: {
                 type: req.body?.type || hero.type,
+                placements: normalizeHeroPlacementsInput(req.body?.placements),
                 refId: req.body?.refId || (hero.refId ? String(hero.refId) : ''),
                 order: req.body?.order || hero.order || 0,
                 isActive: parseBoolean(req.body?.isActive, false)

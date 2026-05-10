@@ -52,6 +52,28 @@
                                 <% if (errors && errors.type) { %><p class="text-red-500 text-xs mt-1"><%= errors.type %></p><% } %>
                             </div>
 
+                            <div class="md:col-span-2">
+                                <label class="block text-sm text-[#685BCB] mb-2">Where This Banner Appears</label>
+                                <div class="rounded-xl border border-[#BCA6DB] bg-[#F8F6FD] p-4">
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                        <% const selectedPlacements = Array.isArray(oldInput && oldInput.placements) ? oldInput.placements : []; %>
+                                        <% (heroPlacements || []).forEach((placement) => { %>
+                                            <label class="flex items-center gap-3 rounded-lg border border-[#D8CFEE] bg-white px-4 py-3 text-sm text-[#1F1F1F] hover:border-[#685BCB] transition-colors">
+                                                <input
+                                                    type="checkbox"
+                                                    name="placements"
+                                                    value="<%= placement %>"
+                                                    <%= selectedPlacements.includes(placement) ? 'checked' : '' %>
+                                                    class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]" />
+                                                <span><%= placement.charAt(0).toUpperCase() + placement.slice(1) %></span>
+                                            </label>
+                                        <% }) %>
+                                    </div>
+                                    <p class="mt-3 text-xs text-[#685BCB]">If no placement is selected, visibility falls back from the banner type: brand to Brand, category to Category, product to Home.</p>
+                                    <% if (errors && errors.placements) { %><p class="text-red-500 text-xs mt-2"><%= errors.placements %></p><% } %>
+                                </div>
+                            </div>
+
                             <div>
                                 <label class="block text-sm text-[#685BCB] mb-1">Reference (Optional)</label>
                                 <select id="heroRefId" name="refId"

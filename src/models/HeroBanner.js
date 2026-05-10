@@ -1,11 +1,23 @@
 const mongoose = require('mongoose');
 
+const HERO_BANNER_PLACEMENTS = ['home', 'brand', 'category'];
+
+function getDefaultPlacementsForType(type) {
+    if (type === 'product') return ['home'];
+    if (HERO_BANNER_PLACEMENTS.includes(type)) return [type];
+    return [];
+}
+
 const heroBannerSchema = new mongoose.Schema({
     type: {
         type: String,
         enum: ['product', 'category', 'brand', 'custom'],
         required: true
     },
+    placements: [{
+        type: String,
+        enum: HERO_BANNER_PLACEMENTS
+    }],
     refId: {
         type: mongoose.Schema.Types.ObjectId,
         default: null
@@ -55,6 +67,17 @@ const heroBannerSchema = new mongoose.Schema({
         default: true
     }
 }, { timestamps: true });
+
+heroBannerSchema.pre('validate', function sanitizeHeroPlacements() {
+    const rawPlacements = Array.isArray(this.placements)
+        ? this.placements.map((placement) => String(placement || '').trim().toLowerCase()).filter(Boolean)
+        : [];
+    const validPlacements = [...new Set(rawPlacements)].filter((placement) => HERO_BANNER_PLACEMENTS.includes(placement));
+
+    this.placements = validPlacements.length > 0
+        ? validPlacements
+        : getDefaultPlacementsForType(String(this.type || '').trim().toLowerCase());
+});
 
 heroBannerSchema.index({ isActive: 1 });
 heroBannerSchema.index({ order: 1 });

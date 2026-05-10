@@ -2,7 +2,7 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const HeroBanner = require('../models/HeroBanner');
-const HERO_BANNER_TYPES = ['custom', 'product'];
+const LEGACY_HOME_HERO_TYPES = ['custom', 'product'];
 
 async function migrateLegacyProductImages(product) {
     if (!product) return product;
@@ -50,7 +50,17 @@ exports.getHomePage = async (req, res) => {
             getProductsByBadge('Deal', categoryIds),
             HeroBanner.find({
                 isActive: true,
-                type: { $in: HERO_BANNER_TYPES }
+                $or: [
+                    { placements: 'home' },
+                    {
+                        type: { $in: LEGACY_HOME_HERO_TYPES },
+                        $or: [
+                            { placements: { $exists: false } },
+                            { placements: null },
+                            { placements: { $size: 0 } }
+                        ]
+                    }
+                ]
             })
                 .select('image mobileImage type refId order')
                 .sort({ order: 1 })
