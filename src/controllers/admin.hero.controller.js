@@ -18,6 +18,44 @@ const HERO_TYPES = ['product', 'category', 'brand', 'custom'];
 const HERO_SEARCHABLE_TYPES = ['product', 'category', 'brand'];
 const HERO_PLACEMENTS = ['home', 'brand', 'category'];
 
+function buildPlacementFilterQuery(placement) {
+    if (!HERO_PLACEMENTS.includes(placement)) {
+        return null;
+    }
+
+    const fallbackTypes = placement === 'home'
+        ? ['product', 'custom']
+        : placement === 'brand'
+            ? ['brand']
+            : ['category'];
+
+    return {
+        $or: [
+            { placements: placement },
+            {
+                type: { $in: fallbackTypes },
+                $or: [
+                    { placements: { $exists: false } },
+                    { placements: null },
+                    { placements: { $size: 0 } }
+                ]
+            }
+        ]
+    };
+}
+
+function appendAndCondition(query, condition) {
+    if (!condition || typeof condition !== 'object') {
+        return;
+    }
+
+    if (!Array.isArray(query.$and)) {
+        query.$and = [];
+    }
+
+    query.$and.push(condition);
+}
+
 function parseOptionalObjectId(value) {
     if (value === undefined || value === null || value === '') return null;
     if (!mongoose.Types.ObjectId.isValid(value)) {
@@ -277,6 +315,9 @@ exports.getAllHeroes = async (req, res) => {
         const type = typeof req.query.type === 'string' && HERO_TYPES.includes(req.query.type.trim())
             ? req.query.type.trim()
             : '';
+        const placement = typeof req.query.placement === 'string' && HERO_PLACEMENTS.includes(req.query.placement.trim())
+            ? req.query.placement.trim()
+            : '';
         const refId = typeof req.query.refId === 'string' ? req.query.refId.trim() : '';
         const isActive = typeof req.query.isActive === 'string' ? req.query.isActive.trim().toLowerCase() : '';
         const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
@@ -298,6 +339,13 @@ exports.getAllHeroes = async (req, res) => {
             query.isActive = true;
         } else if (isActive === 'inactive') {
             query.isActive = false;
+        }
+
+        if (placement) {
+            const placementQuery = buildPlacementFilterQuery(placement);
+            if (placementQuery) {
+                appendAndCondition(query, placementQuery);
+            }
         }
 
         if (search) {
@@ -328,7 +376,9 @@ exports.getAllHeroes = async (req, res) => {
                         refId: { $in: match.ids }
                     }));
 
-                query.$or = orConditions.length > 0 ? orConditions : [{ _id: null }];
+                appendAndCondition(query, {
+                    $or: orConditions.length > 0 ? orConditions : [{ _id: null }]
+                });
             }
         }
 
@@ -356,6 +406,7 @@ exports.getAllHeroes = async (req, res) => {
             pagination,
             filters: {
                 type,
+                placement,
                 refId,
                 isActive,
                 search
@@ -379,6 +430,7 @@ exports.getAllHeroes = async (req, res) => {
             },
             filters: {
                 type: '',
+                placement: '',
                 refId: '',
                 isActive: '',
                 search: ''

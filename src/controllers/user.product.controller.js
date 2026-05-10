@@ -40,6 +40,7 @@ const DISCOUNT_RANGES = [
 ];
 
 const LISTING_BADGES = ['Best seller', 'New', 'Deal'];
+const HERO_BANNER_LIMIT = 10;
 
 async function migrateLegacyProductImages(product) {
     if (!product) return product;
@@ -57,6 +58,81 @@ async function migrateLegacyProductImages(product) {
         await product.save();
     }
     return product;
+}
+
+async function getPropagatedProductHeroBanners({ contextType, contextId, limit, allowedCategoryIds = null }) {
+    if (!['brand', 'category'].includes(contextType) || limit <= 0) {
+        return [];
+    }
+
+    const productQuery = {
+        isListed: true,
+        isDeleted: { $ne: true },
+        status: 'Active'
+    };
+
+    if (contextType === 'brand') {
+        productQuery.brand = contextId;
+        if (Array.isArray(allowedCategoryIds) && allowedCategoryIds.length > 0) {
+            productQuery.category = { $in: allowedCategoryIds };
+        } else {
+            return [];
+        }
+    } else {
+        productQuery.category = contextId;
+    }
+
+    const productIds = await Product.find(productQuery)
+        .distinct('_id');
+
+    if (productIds.length === 0) {
+        return [];
+    }
+
+    return HeroBanner.find({
+        isActive: true,
+        type: 'product',
+        placements: contextType,
+        refId: { $in: productIds }
+    })
+        .sort({ order: 1 })
+        .limit(limit)
+        .lean();
+}
+
+async function getHeroBannersForDetailContext({ contextType, contextId, nativeType, nativePlacement, nativeFallbackPlacements = true, allowedCategoryIds = null }) {
+    const nativePlacementConditions = [{ placements: nativePlacement }];
+
+    if (nativeFallbackPlacements) {
+        nativePlacementConditions.push(
+            { placements: { $exists: false } },
+            { placements: null },
+            { placements: { $size: 0 } }
+        );
+    }
+
+    const nativeBanners = await HeroBanner.find({
+        isActive: true,
+        type: nativeType,
+        refId: contextId,
+        $or: nativePlacementConditions
+    })
+        .sort({ order: 1 })
+        .limit(HERO_BANNER_LIMIT)
+        .lean();
+
+    if (nativeBanners.length >= HERO_BANNER_LIMIT) {
+        return nativeBanners;
+    }
+
+    const propagatedBanners = await getPropagatedProductHeroBanners({
+        contextType,
+        contextId,
+        limit: HERO_BANNER_LIMIT - nativeBanners.length,
+        allowedCategoryIds
+    });
+
+    return [...nativeBanners, ...propagatedBanners];
 }
 
 async function buildProductListingData(req, forcedFilters = {}) {
@@ -376,18 +452,18 @@ exports.getBrandDetailPage = async (req, res) => {
             return res.status(HTTP_STATUS.NOT_FOUND).send('Brand not found');
         }
         const data = await buildProductListingData(req, { brand: String(brand._id) });
+        const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } })
+            .select('_id')
+            .lean();
+        const allowedCategoryIds = activeCategories.map((item) => item._id);
 
-        const heroBanners = await HeroBanner.find({
-            isActive: true,
-            type: 'brand',
-            refId: brand._id,
-            $or: [
-                { placements: 'brand' },
-                { placements: { $exists: false } },
-                { placements: null },
-                { placements: { $size: 0 } }
-            ]
-        }).sort({ order: 1 }).limit(10).lean();
+        const heroBanners = await getHeroBannersForDetailContext({
+            contextType: 'brand',
+            contextId: brand._id,
+            nativeType: 'brand',
+            nativePlacement: 'brand',
+            allowedCategoryIds
+        });
 
         res.render('user/brand-detail', {
             ...data,
@@ -428,17 +504,12 @@ exports.getCategoryDetailPage = async (req, res) => {
             category: String(category._id)
         });
 
-        const heroBanners = await HeroBanner.find({
-            isActive: true,
-            type: 'category',
-            refId: category._id,
-            $or: [
-                { placements: 'category' },
-                { placements: { $exists: false } },
-                { placements: null },
-                { placements: { $size: 0 } }
-            ]
-        }).sort({ order: 1 }).limit(10).lean();
+        const heroBanners = await getHeroBannersForDetailContext({
+            contextType: 'category',
+            contextId: category._id,
+            nativeType: 'category',
+            nativePlacement: 'category'
+        });
 
         res.render('user/category-detail', {
             ...data,

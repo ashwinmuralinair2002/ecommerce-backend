@@ -55,13 +55,16 @@
                             <div class="md:col-span-2">
                                 <label class="block text-sm text-[#685BCB] mb-2">Where This Banner Appears</label>
                                 <div class="rounded-xl border border-[#BCA6DB] bg-[#F8F6FD] p-4">
-                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <div id="heroPlacementsGrid" class="grid grid-cols-2 md:grid-cols-3 gap-3">
                                         <% const selectedPlacements = Array.isArray(oldInput && oldInput.placements) ? oldInput.placements : []; %>
                                         <% (heroPlacements || []).forEach((placement) => { %>
-                                            <label class="flex items-center gap-3 rounded-lg border border-[#D8CFEE] bg-white px-4 py-3 text-sm text-[#1F1F1F] hover:border-[#685BCB] transition-colors">
+                                            <label
+                                                data-placement-card="<%= placement %>"
+                                                class="flex items-center gap-3 rounded-lg border border-[#D8CFEE] bg-white px-4 py-3 text-sm text-[#1F1F1F] hover:border-[#685BCB] transition-colors">
                                                 <input
                                                     type="checkbox"
                                                     name="placements"
+                                                    data-placement-checkbox="<%= placement %>"
                                                     value="<%= placement %>"
                                                     <%= selectedPlacements.includes(placement) ? 'checked' : '' %>
                                                     class="h-4 w-4 rounded border-[#BCA6DB] text-[#685BCB] focus:ring-[#685BCB]" />
@@ -69,7 +72,7 @@
                                             </label>
                                         <% }) %>
                                     </div>
-                                    <p class="mt-3 text-xs text-[#685BCB]">If no placement is selected, visibility falls back from the banner type: brand to Brand, category to Category, product to Home.</p>
+                                    <p id="heroPlacementHint" class="mt-3 text-xs text-[#685BCB]">Choose where this banner is allowed to appear based on its ownership type.</p>
                                     <% if (errors && errors.placements) { %><p class="text-red-500 text-xs mt-2"><%= errors.placements %></p><% } %>
                                 </div>
                             </div>
@@ -224,10 +227,72 @@
             const refSelect = document.getElementById('heroRefId');
             const refHint = document.getElementById('heroRefHint');
             const selectedRefId = '<%= oldInput && oldInput.refId ? oldInput.refId : "" %>';
+            const placementHint = document.getElementById('heroPlacementHint');
+            const placementCheckboxes = Array.from(document.querySelectorAll('[data-placement-checkbox]'));
+            const placementRules = {
+                product: ['home', 'brand', 'category'],
+                category: ['home', 'category'],
+                brand: ['home', 'brand'],
+                custom: ['home']
+            };
+            const defaultPlacementByType = {
+                product: 'home',
+                category: 'category',
+                brand: 'brand',
+                custom: 'home'
+            };
+            const hasInitialPlacementSelection = placementCheckboxes.some((checkbox) => checkbox.checked);
+            let hasPlacementInteraction = hasInitialPlacementSelection;
 
             function refLabelByType(type, item) {
                 if (type === 'product') return item.title || 'Untitled Product';
                 return item.name || 'Untitled';
+            }
+
+            function updatePlacementHint(type, allowedPlacements) {
+                if (!placementHint) return;
+                const label = allowedPlacements.map((placement) => placement.charAt(0).toUpperCase() + placement.slice(1)).join(', ');
+                placementHint.textContent = `Allowed placements for ${type}: ${label}. Disabled options are not valid for this ownership type.`;
+            }
+
+            function applyPlacementConstraints(options = {}) {
+                if (!typeSelect || placementCheckboxes.length === 0) return;
+
+                const type = typeSelect.value;
+                const allowedPlacements = placementRules[type] || [];
+                const shouldAutoDefault = options.autoDefault === true;
+
+                placementCheckboxes.forEach((checkbox) => {
+                    const placement = checkbox.value;
+                    const card = checkbox.closest('[data-placement-card]');
+                    const isAllowed = allowedPlacements.includes(placement);
+
+                    if (!isAllowed && checkbox.checked) {
+                        checkbox.checked = false;
+                    }
+
+                    checkbox.disabled = !isAllowed;
+
+                    if (card) {
+                        card.classList.toggle('opacity-50', !isAllowed);
+                        card.classList.toggle('cursor-not-allowed', !isAllowed);
+                        card.classList.toggle('bg-gray-100', !isAllowed);
+                        card.classList.toggle('text-gray-400', !isAllowed);
+                        card.classList.toggle('border-gray-200', !isAllowed);
+                        card.classList.toggle('hover:border-[#685BCB]', isAllowed);
+                    }
+                });
+
+                const hasCheckedAllowedPlacement = placementCheckboxes.some((checkbox) => !checkbox.disabled && checkbox.checked);
+                if (shouldAutoDefault && !hasPlacementInteraction && !hasCheckedAllowedPlacement) {
+                    const defaultPlacement = defaultPlacementByType[type];
+                    const defaultCheckbox = placementCheckboxes.find((checkbox) => checkbox.value === defaultPlacement && !checkbox.disabled);
+                    if (defaultCheckbox) {
+                        defaultCheckbox.checked = true;
+                    }
+                }
+
+                updatePlacementHint(type, allowedPlacements);
             }
 
             function populateRefOptions() {
@@ -266,8 +331,18 @@
                 }
             }
 
-            typeSelect.addEventListener('change', populateRefOptions);
+            placementCheckboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    hasPlacementInteraction = true;
+                });
+            });
+
+            typeSelect.addEventListener('change', () => {
+                populateRefOptions();
+                applyPlacementConstraints({ autoDefault: true });
+            });
             populateRefOptions();
+            applyPlacementConstraints({ autoDefault: true });
         })();
 
         (function () {

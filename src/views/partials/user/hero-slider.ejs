@@ -1,5 +1,5 @@
 <% if (banners && banners.length > 0) { %>
-    <section class="w-full relative overflow-hidden" style="height: calc(100vh - 64px);">
+    <section class="w-full relative overflow-hidden" style="height: calc(100vh - 64px); touch-action: pan-y;">
         <div class="hero-slider relative w-full h-full">
             <% banners.forEach((banner, index) => { %>
                 <a href="/hero/redirect/<%= banner._id %>"
@@ -19,7 +19,21 @@
             <% }) %>
         </div>
 
-        <div class="hero-left absolute left-0 top-0 h-full w-1/2 cursor-pointer z-10"></div>
-        <div class="hero-right absolute right-0 top-0 h-full w-1/2 cursor-pointer z-10"></div>
+        <% if (banners.length > 1) { %>
+            <div class="absolute inset-x-0 top-1/2 z-20 flex -translate-y-1/2 items-center justify-between px-3 sm:px-4 pointer-events-none">
+                <button
+                    type="button"
+                    class="hero-nav-btn hero-nav-prev pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-[#1F1F1F] shadow-md backdrop-blur-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/90 focus:ring-offset-2 focus:ring-offset-transparent sm:h-11 sm:w-11"
+                    aria-label="Previous hero banner">
+                    <span aria-hidden="true" class="text-xl leading-none">&#8249;</span>
+                </button>
+                <button
+                    type="button"
+                    class="hero-nav-btn hero-nav-next pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/80 text-[#1F1F1F] shadow-md backdrop-blur-sm transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-white/90 focus:ring-offset-2 focus:ring-offset-transparent sm:h-11 sm:w-11"
+                    aria-label="Next hero banner">
+                    <span aria-hidden="true" class="text-xl leading-none">&#8250;</span>
+                </button>
+            </div>
+        <% } %>
     </section>
 <% } %>

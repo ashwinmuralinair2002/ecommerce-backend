@@ -2,6 +2,7 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
 const HeroBanner = require('../models/HeroBanner');
+const { resolveHeroBannerRedirectPath, HERO_REDIRECT_FALLBACK_PATH } = require('../services/hero-banner-link.service');
 const LEGACY_HOME_HERO_TYPES = ['custom', 'product'];
 
 async function migrateLegacyProductImages(product) {
@@ -83,24 +84,9 @@ exports.getHomePage = async (req, res) => {
 exports.redirectHeroBanner = async (req, res) => {
     try {
         const banner = await HeroBanner.findById(req.params.id).lean();
-
-        if (!banner) {
-            return res.redirect('/');
-        }
-
-        switch (banner.type) {
-            case 'product':
-                return res.redirect(`/product/${banner.refId}`);
-            case 'category':
-                return res.redirect(`/shop?category=${encodeURIComponent(String(banner.refId || ''))}`);
-            case 'brand':
-                return res.redirect(`/shop?brand=${encodeURIComponent(String(banner.refId || ''))}`);
-            case 'custom':
-                return res.redirect(banner.ctaLink || '/');
-            default:
-                return res.redirect('/');
-        }
+        const redirectPath = await resolveHeroBannerRedirectPath(banner);
+        return res.redirect(redirectPath);
     } catch (error) {
-        return res.redirect('/');
+        return res.redirect(HERO_REDIRECT_FALLBACK_PATH);
     }
 };

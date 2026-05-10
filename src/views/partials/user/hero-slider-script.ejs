@@ -1,17 +1,20 @@
 <script>
     (() => {
         const heroSliders = document.querySelectorAll('.hero-slider');
+        const SWIPE_THRESHOLD = 30;
 
         heroSliders.forEach((slider) => {
             const slides = slider.querySelectorAll('.hero-slide');
             const container = slider.closest('section');
-            const leftZone = container ? container.querySelector('.hero-left') : null;
-            const rightZone = container ? container.querySelector('.hero-right') : null;
+            const prevButton = container ? container.querySelector('.hero-nav-prev') : null;
+            const nextButton = container ? container.querySelector('.hero-nav-next') : null;
 
             if (!slides.length) return;
 
             let currentIndex = 0;
             let intervalId = null;
+            let pointerStart = null;
+            let suppressClick = false;
 
             function showSlide(index) {
                 slides.forEach((slide) => {
@@ -40,17 +43,68 @@
                 startAuto();
             }
 
-            if (rightZone) {
-                rightZone.addEventListener('click', () => {
+            function handleNavButtonClick(event, direction) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (direction === 'prev') {
+                    prevSlide();
+                } else {
                     nextSlide();
-                    resetAuto();
+                }
+
+                resetAuto();
+            }
+
+            function handleSwipe(deltaX, deltaY) {
+                if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) <= Math.abs(deltaY)) {
+                    return false;
+                }
+
+                if (deltaX < 0) {
+                    nextSlide();
+                } else {
+                    prevSlide();
+                }
+
+                resetAuto();
+                suppressClick = true;
+                window.setTimeout(() => {
+                    suppressClick = false;
+                }, 0);
+                return true;
+            }
+
+            slider.addEventListener('pointerdown', (event) => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                pointerStart = { x: event.clientX, y: event.clientY };
+            });
+
+            slider.addEventListener('pointerup', (event) => {
+                if (!pointerStart || slides.length <= 1) return;
+                handleSwipe(event.clientX - pointerStart.x, event.clientY - pointerStart.y);
+                pointerStart = null;
+            });
+
+            slider.addEventListener('pointercancel', () => {
+                pointerStart = null;
+            });
+
+            slider.addEventListener('click', (event) => {
+                if (!suppressClick) return;
+                event.preventDefault();
+                event.stopPropagation();
+            }, true);
+
+            if (prevButton) {
+                prevButton.addEventListener('click', (event) => {
+                    handleNavButtonClick(event, 'prev');
                 });
             }
 
-            if (leftZone) {
-                leftZone.addEventListener('click', () => {
-                    prevSlide();
-                    resetAuto();
+            if (nextButton) {
+                nextButton.addEventListener('click', (event) => {
+                    handleNavButtonClick(event, 'next');
                 });
             }
 
