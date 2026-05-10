@@ -6,9 +6,15 @@
                     class="hero-slide absolute inset-0 w-full h-full transition-opacity duration-500"
                     style="opacity: <%= index === 0 ? 1 : 0 %>;"
                     data-index="<%= index %>">
-                    <img src="<%= banner.image.url %>"
-                        class="w-full h-full object-cover"
-                        style="object-position: center top;" />
+                    <picture>
+                        <% if (banner.mobileImage && banner.mobileImage.url) { %>
+                            <source media="(max-width: 767px)" srcset="<%= banner.mobileImage.url %>">
+                        <% } %>
+                        <img src="<%= banner.image.url %>"
+                            alt="Hero banner"
+                            class="w-full h-full object-cover"
+                            style="object-position: center top;" />
+                    </picture>
                 </a>
             <% }) %>
         </div>

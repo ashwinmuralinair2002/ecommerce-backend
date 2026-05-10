@@ -6,6 +6,11 @@ const Brand = require('../models/Brand');
 const HTTP_STATUS = require('../constants/http-status');
 const { parseBoolean, parseOrder } = require('../utils/validation.utils');
 const { getFriendlyError } = require('../utils/string.utils');
+const {
+    destroyCloudinaryAssets,
+    getCloudinaryPublicId,
+    isDeletableCloudinaryPublicId
+} = require('../utils/cloudinary.utils');
 
 const MAX_ACTIVE_HERO_BANNERS = 10;
 const MAX_ACTIVE_ERROR = 'Maximum 10 active hero banners allowed. Please unlist one before activating another.';
@@ -22,7 +27,7 @@ function parseOptionalObjectId(value) {
     return value;
 }
 
-function parseImageFromFile(file, fallbackImage = null) {
+function parseHeroImageFromFile(file, fallbackImage = null) {
     if (file && file.path && file.filename) {
         return {
             url: file.path,
@@ -30,6 +35,54 @@ function parseImageFromFile(file, fallbackImage = null) {
         };
     }
     return fallbackImage;
+}
+
+function getDesktopHeroImageFile(req) {
+    return req.files?.image?.[0] || null;
+}
+
+function getMobileHeroImageFile(req) {
+    return req.files?.mobileImage?.[0] || null;
+}
+
+function buildHeroImagePayload(req, fallbackImage = null) {
+    return parseHeroImageFromFile(getDesktopHeroImageFile(req), fallbackImage);
+}
+
+function buildMobileHeroImagePayload(req, fallbackImage = null) {
+    return parseHeroImageFromFile(getMobileHeroImageFile(req), fallbackImage);
+}
+
+function getHeroReplacementAssetIds(hero, nextDesktopImage, nextMobileImage) {
+    const assetIdsToDelete = [];
+    const currentDesktopPublicId = getCloudinaryPublicId(hero && hero.image);
+    const nextDesktopPublicId = getCloudinaryPublicId(nextDesktopImage);
+    const currentMobilePublicId = getCloudinaryPublicId(hero && hero.mobileImage);
+    const nextMobilePublicId = getCloudinaryPublicId(nextMobileImage);
+
+    if (nextDesktopPublicId && currentDesktopPublicId && currentDesktopPublicId !== nextDesktopPublicId) {
+        assetIdsToDelete.push(currentDesktopPublicId);
+    }
+
+    if (nextMobilePublicId && currentMobilePublicId && currentMobilePublicId !== nextMobilePublicId) {
+        assetIdsToDelete.push(currentMobilePublicId);
+    }
+
+    return assetIdsToDelete.filter(isDeletableCloudinaryPublicId);
+}
+
+function getHeroAssetIdsForDeletion(hero) {
+    return [
+        getCloudinaryPublicId(hero && hero.image),
+        getCloudinaryPublicId(hero && hero.mobileImage)
+    ].filter(isDeletableCloudinaryPublicId);
+}
+
+function getEmptyHeroMobileImage() {
+    return {
+        url: null,
+        public_id: null
+    };
 }
 
 async function enforceMaxActiveLimit(excludeId = null) {
@@ -77,6 +130,7 @@ async function renderEditPage(res, hero, payload) {
     return res.status(payload.statusCode || 200).render('admin/heroes/edit', {
         page: 'heroes',
         error: payload.error || null,
+        success: payload.success || null,
         errors: payload.errors || {},
         oldInput: payload.oldInput || null,
         hero,
@@ -314,7 +368,10 @@ exports.getEditHero = async (req, res) => {
             return res.redirect('/admin/heroes?error=Hero%20banner%20not%20found.');
         }
 
-        return await renderEditPage(res, hero, {});
+        return await renderEditPage(res, hero, {
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
     } catch (error) {
         return res.redirect('/admin/heroes?error=Failed%20to%20load%20hero%20banner.');
     }
@@ -346,7 +403,8 @@ exports.createHero = async (req, res) => {
             errors.type = 'Please select a valid hero type.';
         }
 
-        const image = parseImageFromFile(req.file, null);
+        const image = buildHeroImagePayload(req, null);
+        const mobileImage = buildMobileHeroImagePayload(req, null);
         if (!image) {
             errors.image = 'Hero image is required.';
         }
@@ -376,6 +434,7 @@ exports.createHero = async (req, res) => {
             ctaText: 'Shop Now',
             ctaLink: '',
             image,
+            mobileImage,
             order,
             isActive
         });
@@ -448,15 +507,24 @@ exports.updateHero = async (req, res) => {
             await enforceMaxActiveLimit(hero._id);
         }
 
-        const updatedImage = parseImageFromFile(req.file, hero.image);
+        const updatedImage = buildHeroImagePayload(req, hero.image);
+        const updatedMobileImage = buildMobileHeroImagePayload(req, hero.mobileImage || null);
+        const oldAssetIdsToDelete = getHeroReplacementAssetIds(hero, updatedImage, updatedMobileImage);
 
         hero.type = type;
         hero.refId = refId;
         hero.order = order;
         hero.isActive = isActive;
         hero.image = updatedImage;
+        hero.mobileImage = updatedMobileImage;
 
         await hero.save();
+        await destroyCloudinaryAssets(oldAssetIdsToDelete, {
+            excludePublicIds: [
+                getCloudinaryPublicId(hero.image),
+                getCloudinaryPublicId(hero.mobileImage)
+            ]
+        });
 
         return res.redirect('/admin/heroes?success=Hero%20banner%20updated%20successfully.');
     } catch (error) {
@@ -511,13 +579,41 @@ exports.deleteHero = async (req, res) => {
             return res.redirect('/admin/heroes?error=Invalid%20hero%20banner%20id.');
         }
 
-        const deletedHero = await HeroBanner.findByIdAndDelete(id);
-        if (!deletedHero) {
+        const hero = await HeroBanner.findById(id);
+        if (!hero) {
             return res.redirect('/admin/heroes?error=Hero%20banner%20not%20found.');
         }
+
+        await destroyCloudinaryAssets(getHeroAssetIdsForDeletion(hero));
+        await hero.deleteOne();
 
         return res.redirect('/admin/heroes?success=Hero%20banner%20deleted%20successfully.');
     } catch (error) {
         return res.redirect('/admin/heroes?error=Failed%20to%20delete%20hero%20banner.');
+    }
+};
+
+exports.removeHeroMobileImage = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.redirect('/admin/heroes?error=Invalid%20hero%20banner%20id.');
+        }
+
+        const hero = await HeroBanner.findById(id);
+        if (!hero) {
+            return res.redirect('/admin/heroes?error=Hero%20banner%20not%20found.');
+        }
+
+        const oldMobilePublicId = getCloudinaryPublicId(hero.mobileImage);
+
+        hero.set('mobileImage', getEmptyHeroMobileImage());
+        hero.markModified('mobileImage');
+        await hero.save();
+        await destroyCloudinaryAssets([oldMobilePublicId]);
+
+        return res.redirect(`/admin/heroes/${id}/edit?success=${encodeURIComponent('Mobile hero image removed successfully.')}`);
+    } catch (error) {
+        return res.redirect(`/admin/heroes/${req.params.id}/edit?error=${encodeURIComponent(getFriendlyError(error, 'Failed to remove mobile hero image.'))}`);
     }
 };

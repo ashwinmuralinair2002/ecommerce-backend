@@ -76,10 +76,11 @@
                         </div>
 
                         <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
-                            <p class="text-[#1F1F1F] font-medium mb-3">Hero Image <span class="text-red-500">*</span></p>
+                            <p class="text-[#1F1F1F] font-medium mb-3">Desktop Hero Banner <span class="text-red-500">*</span></p>
                             <input id="heroImageInput" type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/jpg,image/png,image/webp"
                                 class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
 
+                            <p id="heroImageClientError" class="hidden text-red-500 text-xs mt-1"></p>
                             <% if (errors && errors.image) { %><p class="text-red-500 text-xs mt-1"><%= errors.image %></p><% } %>
                             <p id="heroResolutionHint" class="hidden text-xs mt-2 text-amber-800 bg-amber-100 border border-amber-200 rounded px-2 py-1"></p>
 
@@ -93,6 +94,26 @@
                                         Re-crop 16:9
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#D3CEEA] rounded-xl p-5 border border-[#BCA6DB]">
+                            <p class="text-[#1F1F1F] font-medium mb-3">Mobile Hero Image (Optional)</p>
+                            <input id="heroMobileImageInput" type="file" name="mobileImage" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/jpg,image/png,image/webp"
+                                class="block w-full text-sm text-[#1F1F1F] file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#e8f4e6] file:text-[#1F1F1F] hover:file:bg-[#BCA6DB]" />
+
+                            <div id="heroMobileImagePreviewWrap" class="hidden mt-4 p-4 bg-white rounded-lg border border-gray-100 w-full md:w-2/3">
+                                <div class="w-full aspect-[4/5] rounded-lg overflow-hidden bg-gray-100">
+                                    <img id="heroMobileImagePreview" src="" alt="Mobile hero preview" class="w-full h-full object-cover">
+                                </div>
+                                <p class="text-xs text-[#685BCB] mt-2">Mobile hero image preview</p>
+                            </div>
+
+                            <div id="heroMobileImageRemoveWrap" class="hidden mt-6 pt-4 border-t border-[#BCA6DB]">
+                                <button type="button" id="heroMobileImageRemoveBtn"
+                                    class="h-10 px-4 rounded-xl bg-red-100 font-semibold text-red-700 hover:bg-red-200 transition-colors">
+                                    Remove Mobile Image
+                                </button>
                             </div>
                         </div>
 
@@ -113,14 +134,17 @@
             const form = document.getElementById('heroAddForm');
             if (!form) return;
             const imageInput = document.getElementById('heroImageInput');
+            const mobileImageInput = document.getElementById('heroMobileImageInput');
+            const desktopError = document.getElementById('heroImageClientError');
             const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
             const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
-            const fileTooLargeMessage = 'File too large. Maximum allowed size is 2MB.';
+            const fileTooLargeMessage = 'File too large. Maximum allowed size is 5MB.';
+            const requiredDesktopMessage = 'Desktop hero banner is required.';
 
             function getValidationMessage(file) {
                 if (!file) return '';
                 if (!allowedMimeTypes.includes(file.type)) return invalidTypeMessage;
-                if (file.size > 2 * 1024 * 1024) return fileTooLargeMessage;
+                if (file.size > 5 * 1024 * 1024) return fileTooLargeMessage;
                 return '';
             }
 
@@ -129,9 +153,32 @@
                 window.showToast(message, 'error');
             }
 
+            function setDesktopImageError(message) {
+                if (!desktopError) return;
+                desktopError.textContent = message || '';
+                desktopError.classList.toggle('hidden', !message);
+            }
+
+            if (imageInput) {
+                imageInput.addEventListener('change', function () {
+                    const file = imageInput.files && imageInput.files[0] ? imageInput.files[0] : null;
+                    setDesktopImageError(file ? '' : requiredDesktopMessage);
+                });
+            }
+
             form.addEventListener('submit', function (event) {
                 const file = imageInput && imageInput.files ? imageInput.files[0] : null;
-                const validationMessage = getValidationMessage(file);
+                const mobileFile = mobileImageInput && mobileImageInput.files ? mobileImageInput.files[0] : null;
+                if (!file) {
+                    event.preventDefault();
+                    setDesktopImageError(requiredDesktopMessage);
+                    showHeroUploadError(requiredDesktopMessage);
+                    if (typeof hideLoader === 'function') hideLoader();
+                    return;
+                }
+
+                setDesktopImageError('');
+                const validationMessage = getValidationMessage(file) || getValidationMessage(mobileFile);
                 if (validationMessage) {
                     event.preventDefault();
                     showHeroUploadError(validationMessage);
@@ -209,7 +256,7 @@
             const resolutionHint = document.getElementById('heroResolutionHint');
             const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
             const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
-            const fileTooLargeMessage = 'File too large. Maximum allowed size is 2MB.';
+            const fileTooLargeMessage = 'File too large. Maximum allowed size is 5MB.';
 
             if (!imageInput || !previewWrap || !previewImg || !recropBtn || !resolutionHint || typeof Cropper === 'undefined') return;
 
@@ -266,7 +313,7 @@
             function getValidationMessage(file) {
                 if (!file) return '';
                 if (!allowedMimeTypes.includes(file.type)) return invalidTypeMessage;
-                if (file.size > 2 * 1024 * 1024) return fileTooLargeMessage;
+                if (file.size > 5 * 1024 * 1024) return fileTooLargeMessage;
                 return '';
             }
 
@@ -388,6 +435,86 @@
                     setPreview(latestObjectUrl);
                     closeModal();
                 }, currentFileType || 'image/png', 0.92);
+            });
+        })();
+
+        (function () {
+            const imageInput = document.getElementById('heroMobileImageInput');
+            const previewWrap = document.getElementById('heroMobileImagePreviewWrap');
+            const previewImg = document.getElementById('heroMobileImagePreview');
+            const removeWrap = document.getElementById('heroMobileImageRemoveWrap');
+            const removeBtn = document.getElementById('heroMobileImageRemoveBtn');
+            const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            const invalidTypeMessage = 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+            const fileTooLargeMessage = 'File too large. Maximum allowed size is 5MB.';
+
+            if (!imageInput || !previewWrap || !previewImg || !removeWrap || !removeBtn) return;
+
+            function getValidationMessage(file) {
+                if (!file) return '';
+                if (!allowedMimeTypes.includes(file.type)) return invalidTypeMessage;
+                if (file.size > 5 * 1024 * 1024) return fileTooLargeMessage;
+                return '';
+            }
+
+            function showHeroUploadError(message) {
+                if (!message || typeof window.showToast !== 'function') return;
+                window.showToast(message, 'error');
+            }
+
+            function setPreview(src) {
+                previewImg.src = src || '';
+                if (src) {
+                    previewWrap.classList.remove('hidden');
+                    removeWrap.classList.remove('hidden');
+                } else {
+                    previewWrap.classList.add('hidden');
+                    removeWrap.classList.add('hidden');
+                }
+            }
+
+            function clearMobileImageSelection() {
+                imageInput.value = '';
+                setPreview('');
+            }
+
+            imageInput.addEventListener('change', function () {
+                const file = imageInput.files && imageInput.files[0];
+                if (!file) {
+                    setPreview('');
+                    return;
+                }
+
+                const validationMessage = getValidationMessage(file);
+                if (validationMessage) {
+                    showHeroUploadError(validationMessage);
+                    imageInput.value = '';
+                    setPreview('');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const src = e.target && e.target.result ? String(e.target.result) : '';
+                    setPreview(src);
+                };
+                reader.readAsDataURL(file);
+            });
+
+            removeBtn.addEventListener('click', function () {
+                Swal.fire({
+                    title: 'Remove Mobile Hero Image?',
+                    text: 'This will clear the selected mobile hero image before creating the hero banner.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, Remove',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (!result.isConfirmed) return;
+                    clearMobileImageSelection();
+                });
             });
         })();
     </script>

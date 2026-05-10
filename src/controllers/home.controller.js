@@ -52,7 +52,7 @@ exports.getHomePage = async (req, res) => {
                 isActive: true,
                 type: { $in: HERO_BANNER_TYPES }
             })
-                .select('image type refId order')
+                .select('image mobileImage type refId order')
                 .sort({ order: 1 })
                 .limit(10)
                 .lean()

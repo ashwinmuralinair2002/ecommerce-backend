@@ -3,8 +3,12 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
 const MESSAGES = require('../constants/messages');
 
-const MAX_HERO_IMAGE_SIZE = 2 * 1024 * 1024;
+const MAX_HERO_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_HERO_MIMES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const HERO_UPLOAD_FIELDS = [
+    { name: 'image', maxCount: 1 },
+    { name: 'mobileImage', maxCount: 1 }
+];
 
 const storage = new CloudinaryStorage({
     cloudinary,
@@ -42,6 +46,9 @@ function wrapUpload(uploadHandler) {
     return (req, res, next) => {
         uploadHandler(req, res, (error) => {
             if (!error) {
+                if (!req.file && req.files && Array.isArray(req.files.image) && req.files.image.length > 0) {
+                    req.file = req.files.image[0];
+                }
                 next();
                 return;
             }
@@ -53,7 +60,7 @@ function wrapUpload(uploadHandler) {
 }
 
 module.exports = {
-    single(fieldName) {
-        return wrapUpload(upload.single(fieldName));
+    fields(fieldsConfig = HERO_UPLOAD_FIELDS) {
+        return wrapUpload(upload.fields(fieldsConfig));
     }
 };

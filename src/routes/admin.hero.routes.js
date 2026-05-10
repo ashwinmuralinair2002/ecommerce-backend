@@ -9,10 +9,11 @@ router.use(ensureAdminAuthenticated);
 
 router.get('/heroes', heroController.getAllHeroes);
 router.get('/heroes/add', heroController.getAddHero);
-router.post('/heroes', heroUpload.single('image'), heroController.createHero);
+router.post('/heroes', heroUpload.fields(), heroController.createHero);
 router.get('/heroes/:id', heroController.getEditHero);
 router.get('/heroes/:id/edit', heroController.getEditHero);
-router.patch('/heroes/:id', heroUpload.single('image'), heroController.updateHero);
+router.patch('/heroes/:id', heroUpload.fields(), heroController.updateHero);
+router.patch('/heroes/:id/mobile-image/remove', heroController.removeHeroMobileImage);
 router.patch('/heroes/:id/toggle', heroController.toggleHeroStatus);
 router.delete('/heroes/:id', heroController.deleteHero);
 
