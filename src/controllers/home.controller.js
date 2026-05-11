@@ -81,6 +81,22 @@ exports.getHomePage = async (req, res) => {
     }
 };
 
+exports.getAboutPage = (req, res) => {
+    res.render('user/about');
+};
+
+exports.getContactPage = (req, res) => {
+    res.render('user/contact');
+};
+
+exports.getPrivacyPolicyPage = (req, res) => {
+    res.render('user/privacy-policy');
+};
+
+exports.getTermsOfServicePage = (req, res) => {
+    res.render('user/terms-of-service');
+};
+
 exports.redirectHeroBanner = async (req, res) => {
     try {
         const banner = await HeroBanner.findById(req.params.id).lean();

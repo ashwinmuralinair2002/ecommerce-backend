@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SoundWave | About</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans:wght@400;500;700&display=swap" />
+
+    <%- include('../partials/user/theme-config') %>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+</head>
+
+<body class="bg-background-soft" style='font-family:"Space Grotesk","Noto Sans",sans-serif;'>
+    <%- include('../partials/user/navbar') %>
+
+    <main class="w-full px-4 py-10 md:px-6 lg:px-8 xl:px-10">
+        <section class="mx-auto max-w-7xl rounded-2xl border border-primary-light/45 bg-white p-6 shadow-sm md:p-8 lg:p-10 xl:p-12">
+            <nav class="mb-4 flex text-sm text-gray-500" aria-label="Breadcrumb">
+                <ol class="inline-flex items-center space-x-1 md:space-x-2">
+                    <li class="inline-flex items-center">
+                        <a href="/" class="inline-flex items-center text-gray-500 hover:text-primary">
+                            Home
+                        </a>
+                    </li>
+                    <li aria-current="page">
+                        <div class="flex items-center">
+                            <span class="mx-2 text-gray-400">/</span>
+                            <span class="font-medium text-primary">About</span>
+                        </div>
+                    </li>
+                </ol>
+            </nav>
+
+            <div class="max-w-6xl space-y-8">
+                <div class="rounded-2xl border border-primary-light/45 bg-primary-light/10 p-5 md:p-6 lg:p-7">
+                    <div class="flex flex-col gap-4 md:gap-5">
+                        <div class="inline-flex w-fit items-center gap-3 rounded-full border border-primary-light/50 bg-white px-4 py-2 text-primary shadow-sm">
+                            <div class="size-4">
+                                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M24 45.8096C19.6865 45.8096 15.4698 44.5305 11.8832 42.134C8.29667 39.7376 5.50128 36.3314 3.85056 32.3462C2.19985 28.361 1.76794 23.9758 2.60947 19.7452C3.451 15.5145 5.52816 11.6284 8.57829 8.5783C11.6284 5.52817 15.5145 3.45101 19.7452 2.60948C23.9758 1.76795 28.361 2.19986 32.3462 3.85057C36.3314 5.50129 39.7376 8.29668 42.134 11.8833C44.5305 15.4698 45.8096 19.6865 45.8096 24L24 24L24 45.8096Z" fill="currentColor" />
+                                </svg>
+                            </div>
+                            <span class="text-base font-bold">SoundWave</span>
+                        </div>
+
+                        <div class="max-w-5xl space-y-3">
+                            <p class="text-sm font-medium uppercase tracking-[0.2em] text-primary/70">About SoundWave</p>
+                            <h1 class="text-3xl font-bold text-primary md:text-4xl">Built for people who care about how audio feels.</h1>
+                            <p class="max-w-4xl text-base leading-7 text-gray-700 md:text-lg">
+                                A modern audio storefront shaped around thoughtful curation, a cleaner shopping experience, and products chosen for how they fit into real listening habits.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="max-w-5xl space-y-5 text-base leading-8 text-justify text-gray-700 md:text-[1.02rem] lg:text-[1.045rem]">
+                    <p>SoundWave launched in 2025 with a simple idea: finding great audio gear should feel clear, inspiring, and enjoyable.</p>
+                    <p>We focus on curated headphones, earbuds, and everyday listening essentials that bring together strong performance, thoughtful design, and dependable comfort.</p>
+                    <p>Our catalog is shaped around premium audio experiences, whether you want immersive music sessions, focused work calls, or easy listening on the move.</p>
+                    <p>We pay attention to quality, innovation, and user experience because the best products should sound good, feel right, and fit naturally into daily life.</p>
+                    <p>That curation matters to us. We would rather present a tighter, more useful selection than overwhelm people with endless options that are difficult to compare or understand.</p>
+                    <p>We believe product discovery should feel calm and informed. Good shopping experiences make comparison easier, reduce second-guessing, and help people understand why one product may suit them better than another.</p>
+                    <p>That same thinking carries into the storefront itself, with a modern shopping experience designed to help you browse confidently without unnecessary friction.</p>
+                    <p>We try to make product discovery more intuitive through clearer information, better organization, and a layout that helps shoppers focus on what actually matters when choosing audio gear.</p>
+                    <p>For us, premium does not only mean advanced features. It also means balancing sound, comfort, build quality, and day-to-day usability so the experience feels rewarding long after the first purchase.</p>
+                    <p>Usability also plays a big role in how we approach the experience. From responsive browsing on smaller screens to readable product details and straightforward navigation, the goal is to keep the store comfortable to use.</p>
+                    <p>SoundWave is customer-first in the practical sense: better discovery, cleaner product information, and a store experience that respects your time.</p>
+                    <p>We also care about the small details that shape trust, like consistent presentation, honest product context, and a browsing flow that feels polished without becoming complicated.</p>
+                    <p>Looking ahead, we want SoundWave to keep growing in a steady and useful way, expanding our selection without losing the clarity, simplicity, and listening-focused perspective that define the store today.</p>
+                    <p>As we grow, our goal is to keep the experience focused and trustworthy while continuing to spotlight audio products that earn their place through real value.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <%- include('../partials/user/footer') %>
+</body>
+
+</html>
