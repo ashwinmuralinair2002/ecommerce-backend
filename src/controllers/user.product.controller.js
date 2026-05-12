@@ -146,7 +146,7 @@ async function buildProductListingData(req, forcedFilters = {}) {
     } = mergedQuery;
     const searchTerm = typeof search === 'string' ? search.trim() : '';
     const page = parseInt(mergedQuery.page, 10) || 1;
-    const limit = 15;
+    const limit = 10;
     const skip = (page - 1) * limit;
     const activeCategories = await Category.find({ isBlocked: { $ne: true }, isDeleted: { $ne: true } }).lean();
     const allowedCategoryIds = activeCategories.map((c) => c._id);

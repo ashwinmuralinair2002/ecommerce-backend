@@ -248,8 +248,14 @@
                         <div>
                             <h2 class="text-3xl font-bold text-primary"><%= category && category.name ? category.name : 'Category' %> Products</h2>
                             <% if (searchValue) { %>
-                                <div class="text-sm text-primary mt-1">
+                                <div class="mt-1 flex items-center gap-3 text-sm text-primary">
                                     Showing results for "<%= searchValue %>"
+                                    <button
+                                        type="button"
+                                        class="font-medium underline underline-offset-2 hover:opacity-80 transition"
+                                        onclick="(() => { const params = new URLSearchParams(window.location.search); params.delete('search'); params.delete('page'); const qs = params.toString(); window.location.href = window.location.pathname + (qs ? '?' + qs : ''); })()">
+                                        Clear Search
+                                    </button>
                                 </div>
                             <% } %>
                             <p class="text-sm text-gray-500 mt-1">

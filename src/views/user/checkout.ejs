@@ -305,8 +305,8 @@
 
                         <% if (availableCoupons.length > 0) { %>
                             <details id="available-coupons" class="mt-3 rounded-lg bg-primary-light/10 p-3">
-                                <summary class="cursor-pointer list-none text-sm font-medium text-primary">
-                                    <span><%= couponApplied ? 'More matching coupons' : 'View available coupons' %></span>
+                                <summary class="cursor-pointer list-none rounded-md !bg-[#685BCB] px-3 py-2 text-sm font-medium !text-white transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-primary-light focus:ring-offset-2">
+                                    <span class="!text-white"><%= couponApplied ? 'More matching coupons' : 'View available coupons' %></span>
                                 </summary>
 
                                 <div class="mt-3 space-y-2">
