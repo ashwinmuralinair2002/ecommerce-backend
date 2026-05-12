@@ -39,11 +39,45 @@ const {
     normalizeDateToUTC,
     getReportDateRange,
     getAnalyticsDateRange,
-    buildDailyBuckets
+    getISTDateParts,
+    createISTMidnightUTCDate
 } = require('../utils/date.utils');
 
 const { Types } = mongoose;
 const isAdminUserEditEnabled = () => process.env.ENABLE_ADMIN_USER_EDIT === 'true';
+const getCustomerOrderMetrics = async (userIds) => {
+    const validUserIds = normalizeToArray(userIds)
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+
+    if (validUserIds.length === 0) {
+        return new Map();
+    }
+
+    const metrics = await Order.aggregate([
+        {
+            $match: {
+                user: { $in: validUserIds }
+            }
+        },
+        {
+            $group: {
+                _id: '$user',
+                totalOrders: { $sum: 1 },
+                lifetimeValue: { $sum: { $ifNull: ['$totalAmount', 0] } }
+            }
+        }
+    ]);
+
+    return new Map(metrics.map((metric) => [
+        String(metric._id),
+        {
+            totalOrders: Number(metric.totalOrders || 0),
+            lifetimeValue: Number(metric.lifetimeValue || 0)
+        }
+    ]));
+};
+
 const normalizeOfferDataForSave = (data) => {
     if (data.discountType === 'FLAT') {
         data.maxDiscountAmount = null;
@@ -439,11 +473,12 @@ const getCustomersPage = async (req, res) => {
             .sort(sortOption)
             .skip(skip)
             .limit(limit);
+        const customerMetrics = await getCustomerOrderMetrics(users.map((user) => user._id));
 
         const augmentedUsers = users.map(user => ({
             ...user.toObject(),
-            totalOrders: 0,
-            lifetimeValue: 0,
+            totalOrders: customerMetrics.get(String(user._id))?.totalOrders || 0,
+            lifetimeValue: customerMetrics.get(String(user._id))?.lifetimeValue || 0,
             lastActive: user.updatedAt
         }));
 
@@ -529,10 +564,9 @@ const getCustomerDetails = async (req, res) => {
         const orders = await Order.find({ user: user._id })
             .sort({ createdAt: -1 })
             .lean();
-        const totalOrders = orders.length;
-        const lifetimeValue = orders.reduce((sum, order) => {
-            return sum + Number(order && order.totalAmount ? order.totalAmount : 0);
-        }, 0);
+        const customerMetrics = await getCustomerOrderMetrics([user._id]);
+        const totalOrders = customerMetrics.get(String(user._id))?.totalOrders || 0;
+        const lifetimeValue = customerMetrics.get(String(user._id))?.lifetimeValue || 0;
 
         const customer = {
             ...user.toObject(),
@@ -817,6 +851,12 @@ const uploadAdminProfilePhoto = async (req, res) => {
             error: error.message
         });
     }
+};
+
+// @desc    Render Admin Profile Page
+// @route   GET /admin/profile
+const getAdminProfilePage = (req, res) => {
+    res.render('admin/profile', { user: req.user || null });
 };
 
 // @desc    Render Change Password Page
@@ -2100,27 +2140,175 @@ const getOrderStatusStats = async (req, res) => {
     }
 };
 
-// @desc    Get Revenue Trend For Last 7 Days
+// @desc    Get Revenue Trend For Admin Dashboard Filters
 // @route   GET /admin/revenue-trend
+const ANALYTICS_TIMEZONE = 'Asia/Kolkata';
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const padDatePart = (value) => String(value).padStart(2, '0');
+
+const formatISTDateKey = (value) => {
+    const { year, month, day } = getISTDateParts(value);
+    return `${year}-${padDatePart(month)}-${padDatePart(day)}`;
+};
+
+const buildISTDailyBuckets = (startDate, endDate) => {
+    const buckets = [];
+    const cursor = new Date(startDate);
+
+    while (cursor <= endDate) {
+        buckets.push({
+            date: formatISTDateKey(cursor),
+            revenue: 0
+        });
+
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return buckets;
+};
+
+const getISOWeekDetails = (dateKey) => {
+    const [year, month, day] = dateKey.split('-').map(Number);
+    const utcDate = new Date(Date.UTC(year, month - 1, day));
+    const dayOfWeek = utcDate.getUTCDay() || 7;
+
+    utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayOfWeek);
+
+    const isoYear = utcDate.getUTCFullYear();
+    const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+    const isoWeek = Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
+
+    return {
+        isoYear,
+        isoWeek,
+        key: `${isoYear}-W${padDatePart(isoWeek)}`,
+        label: `Week ${isoWeek}`
+    };
+};
+
+const getRevenueTrendRange = (query = {}) => {
+    const requestedRange = String(query.range || 'daily').toLowerCase();
+    const now = new Date();
+    const today = getISTDateParts(now);
+
+    switch (requestedRange) {
+        case 'daily': {
+            const endDate = new Date(now);
+            const startDate = createISTMidnightUTCDate(today);
+
+            startDate.setUTCDate(startDate.getUTCDate() - 6);
+
+            return {
+                range: 'daily',
+                startDate,
+                endDate,
+                createdAt: {
+                    $gte: startDate,
+                    $lte: endDate
+                }
+            };
+        }
+        case 'weekly':
+            return getAnalyticsDateRange(query, { defaultRange: 'weekly' });
+        case 'monthly': {
+            const startDate = createISTMidnightUTCDate({
+                year: today.year,
+                month: today.month,
+                day: 1
+            });
+
+            return {
+                range: 'monthly',
+                startDate,
+                endDate: new Date(now),
+                createdAt: {
+                    $gte: startDate,
+                    $lte: now
+                }
+            };
+        }
+        case 'yearly': {
+            const startDate = createISTMidnightUTCDate({
+                year: today.year,
+                month: 1,
+                day: 1
+            });
+
+            return {
+                range: 'yearly',
+                startDate,
+                endDate: new Date(now),
+                createdAt: {
+                    $gte: startDate,
+                    $lte: now
+                }
+            };
+        }
+        case 'custom':
+            return getAnalyticsDateRange(query, { defaultRange: 'daily' });
+        default:
+            return getRevenueTrendRange({ range: 'daily' });
+    }
+};
+
+const buildRevenueTrendResponse = (range, startDate, endDate, dailyRevenueMap) => {
+    if (range === 'weekly') {
+        const weekBuckets = [];
+        const bucketMap = new Map();
+        const cursor = new Date(startDate);
+
+        while (cursor <= endDate) {
+            const dateKey = formatISTDateKey(cursor);
+            const { key, label } = getISOWeekDetails(dateKey);
+
+            if (!bucketMap.has(key)) {
+                const bucket = { date: label, revenue: 0 };
+                bucketMap.set(key, bucket);
+                weekBuckets.push(bucket);
+            }
+
+            bucketMap.get(key).revenue += Number(dailyRevenueMap.get(dateKey) || 0);
+            cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
+
+        return weekBuckets;
+    }
+
+    if (range === 'yearly') {
+        const { year: currentYear, month: currentMonth } = getISTDateParts(endDate);
+        const monthBuckets = [];
+
+        for (let month = 1; month <= currentMonth; month += 1) {
+            monthBuckets.push({
+                date: MONTH_LABELS[month - 1],
+                revenue: 0,
+                key: `${currentYear}-${padDatePart(month)}`
+            });
+        }
+
+        dailyRevenueMap.forEach((revenue, dateKey) => {
+            const [year, month] = dateKey.split('-').map(Number);
+
+            if (year === currentYear && monthBuckets[month - 1]) {
+                monthBuckets[month - 1].revenue += Number(revenue || 0);
+            }
+        });
+
+        return monthBuckets.map(({ date, revenue }) => ({ date, revenue }));
+    }
+
+    const dailyBuckets = buildISTDailyBuckets(startDate, endDate);
+
+    return dailyBuckets.map((bucket) => ({
+        date: bucket.date,
+        revenue: Number(dailyRevenueMap.get(bucket.date) || 0)
+    }));
+};
+
 const getRevenueTrend = async (req, res) => {
     try {
-        const hasRequestedRange = ['range', 'startDate', 'endDate'].some((key) => req.query[key]);
-        const dateRange = hasRequestedRange
-            ? getAnalyticsDateRange(req.query, { defaultRange: 'daily' })
-            : (() => {
-                const startDate = new Date();
-                startDate.setDate(startDate.getDate() - 6);
-                startDate.setHours(0, 0, 0, 0);
-
-                return {
-                    range: 'daily',
-                    startDate,
-                    endDate: new Date(),
-                    createdAt: {
-                        $gte: startDate
-                    }
-                };
-            })();
+        const dateRange = getRevenueTrendRange(req.query);
 
         const deliveredStatusExpr = {
             $toLower: {
@@ -2138,34 +2326,32 @@ const getRevenueTrend = async (req, res) => {
             {
                 $group: {
                     _id: {
-                        year: { $year: '$createdAt' },
-                        month: { $month: '$createdAt' },
-                        day: { $dayOfMonth: '$createdAt' }
+                        $dateToString: {
+                            format: '%Y-%m-%d',
+                            date: '$createdAt',
+                            timezone: ANALYTICS_TIMEZONE
+                        }
                     },
                     totalRevenue: { $sum: { $ifNull: ['$totalAmount', 0] } }
                 }
             },
             {
                 $sort: {
-                    '_id.year': 1,
-                    '_id.month': 1,
-                    '_id.day': 1
+                    _id: 1
                 }
             }
         ]);
 
-        const buckets = buildDailyBuckets(dateRange.startDate, dateRange.endDate);
+        const dailyRevenueMap = new Map(
+            revenueData.map((item) => [item._id, Number(item.totalRevenue || 0)])
+        );
 
-        revenueData.forEach((item) => {
-            const date = `${item._id.year}-${String(item._id.month).padStart(2, '0')}-${String(item._id.day).padStart(2, '0')}`;
-            const foundDay = buckets.find((day) => day.date === date);
-
-            if (foundDay) {
-                foundDay.revenue = Number(item.totalRevenue || 0);
-            }
-        });
-
-        return res.json(buckets);
+        return res.json(buildRevenueTrendResponse(
+            dateRange.range,
+            dateRange.startDate,
+            dateRange.endDate,
+            dailyRevenueMap
+        ));
     } catch (error) {
         console.error('REVENUE TREND ERROR:', error);
 
@@ -2173,11 +2359,16 @@ const getRevenueTrend = async (req, res) => {
             return res.status(error.statusCode || 400).json({ message: error.message });
         }
 
-        const fallbackStartDate = new Date();
-        fallbackStartDate.setDate(fallbackStartDate.getDate() - 6);
-        fallbackStartDate.setHours(0, 0, 0, 0);
+        const fallbackRange = getRevenueTrendRange({ range: 'daily' });
 
-        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(buildDailyBuckets(fallbackStartDate, new Date()));
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
+            buildRevenueTrendResponse(
+                fallbackRange.range,
+                fallbackRange.startDate,
+                fallbackRange.endDate,
+                new Map()
+            )
+        );
     }
 };
 
@@ -2637,6 +2828,7 @@ module.exports = {
     getCustomerOrders,
     updateAdminProfile,
     uploadAdminProfilePhoto,
+    getAdminProfilePage,
     getChangePasswordPage,
     changeAdminPassword,
     renderAddCustomerPage,

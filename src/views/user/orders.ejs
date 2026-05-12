@@ -216,45 +216,43 @@
                         <% }) %>
                     </section>
 
-                    <% if (pageCount > 1) { %>
-                        <nav class="mt-6 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
-                            <% if (activePage > 1) { %>
-                                <a
-                                    href="<%= buildPageHref(activePage - 1) %>"
-                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
-                                    &laquo; Previous
-                                </a>
-                            <% } else { %>
-                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
-                                    &laquo; Previous
-                                </span>
-                            <% } %>
+                    <nav class="mt-6 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
+                        <% if (activePage > 1) { %>
+                            <a
+                                href="<%= buildPageHref(activePage - 1) %>"
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                &laquo; Previous
+                            </a>
+                        <% } else { %>
+                            <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                &laquo; Previous
+                            </span>
+                        <% } %>
 
-                            <% for (let i = visiblePageStart; i <= pageWindowEnd; i += 1) { %>
-                                <% if (i === activePage) { %>
-                                    <span class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold"><%= i %></span>
-                                <% } else { %>
-                                    <a
-                                        href="<%= buildPageHref(i) %>"
-                                        class="flex items-center justify-center h-10 w-10 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
-                                        <%= i %>
-                                    </a>
-                                <% } %>
-                            <% } %>
-
-                            <% if (activePage < pageCount) { %>
-                                <a
-                                    href="<%= buildPageHref(activePage + 1) %>"
-                                    class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
-                                    Next &raquo;
-                                </a>
+                        <% for (let i = visiblePageStart; i <= pageWindowEnd; i += 1) { %>
+                            <% if (i === activePage) { %>
+                                <span class="flex items-center justify-center h-10 w-10 rounded-lg bg-[#685BCB] text-white text-sm font-bold"><%= i %></span>
                             <% } else { %>
-                                <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
-                                    Next &raquo;
-                                </span>
+                                <a
+                                    href="<%= buildPageHref(i) %>"
+                                    class="flex items-center justify-center h-10 w-10 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                    <%= i %>
+                                </a>
                             <% } %>
-                        </nav>
-                    <% } %>
+                        <% } %>
+
+                        <% if (activePage < pageCount) { %>
+                            <a
+                                href="<%= buildPageHref(activePage + 1) %>"
+                                class="flex items-center justify-center h-10 px-4 rounded-lg bg-white text-[#1F1F1F] text-sm font-medium hover:bg-[#D3CEEA] transition-colors">
+                                Next &raquo;
+                            </a>
+                        <% } else { %>
+                            <span class="flex items-center justify-center h-10 px-4 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium">
+                                Next &raquo;
+                            </span>
+                        <% } %>
+                    </nav>
                 <% } %>
             </section>
         </main>

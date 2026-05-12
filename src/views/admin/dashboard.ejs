@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="/js/utils.js"></script>
     <style>
         .top-row {
@@ -343,402 +344,6 @@
             <!-- Main Content Panel -->
             <section class="flex-1 bg-white p-6 md:p-8">
                 <div class="top-row">
-                    <div class="admin-tile">
-                    <div class="admin-main-card">
-                        <h1 class="text-2xl font-bold text-[#1F1F1F] mb-6">Admin Account</h1>
-
-                        <!-- Profile Summary -->
-                        <section class="flex items-center gap-6 mb-8">
-                            <div class="relative">
-                                <div class="h-24 w-24 overflow-hidden rounded-full border-2 border-[#D3CEEA]">
-                                    <img id="admin-profile-image-preview"
-                                        src="<%= user && user.profileImage ? user.profileImage : '/images/admin/profile.jpg' %>"
-                                        alt="Admin profile"
-                                        class="h-full w-full object-cover" />
-                                </div>
-                                <label for="admin-profile-upload"
-                                    class="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-white bg-[#685BCB] text-white shadow-lg transition-colors hover:bg-[#5a4dc0]">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </label>
-                                <input type="file" id="admin-profile-upload" accept="image/jpeg, image/jpg, image/png, image/webp" class="hidden"
-                                    onchange="openAdminProfilePhotoCropper(this)" />
-                            </div>
-
-                            <div>
-                                <p class="text-[22px] font-bold text-[#1F1F1F]">
-                                    <%= user ? user.name : 'Ashwin Murali Nair' %>
-                                </p>
-                                <p class="text-sm text-[#685BCB]">Super Admin</p>
-                                <p id="adminPhotoStatus" class="mt-2 hidden text-sm"></p>
-                            </div>
-                        </section>
-
-                        <!-- PROFILE DETAILS -->
-                        <section class="max-w-3xl">
-                            <div class="flex justify-between items-center mb-4">
-                                <h2 class="text-[22px] font-bold text-[#1F1F1F]">Profile Details</h2>
-                            </div>
-
-                            <!-- Inline Messaging Container -->
-                            <div id="messageContainer" class="hidden mb-4 p-3 rounded-xl text-sm font-medium"></div>
-
-                            <!-- View Mode -->
-                            <div id="viewMode" class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                                <div>
-                                    <p class="text-sm text-[#685BCB]">Full Name</p>
-                                    <p class="text-sm text-[#1F1F1F]" id="viewName">
-                                        <%= user ? user.name : 'Ashwin Murali Nair' %>
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-[#685BCB]">Role</p>
-                                    <p class="text-sm text-[#1F1F1F]">Super Admin</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-[#685BCB]">Email</p>
-                                    <p class="text-sm text-[#1F1F1F]" id="viewEmail">
-                                        <%= user ? user.email : 'admin@soundwave.com' %>
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-[#685BCB]">Phone</p>
-                                    <p class="text-sm text-[#1F1F1F]" id="viewPhone">
-                                        <%= user && user.phone ? user.phone : '—' %>
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Edit Mode (Hidden by default) -->
-                            <form id="editForm" class="hidden grid grid-cols-1 gap-4 max-w-xl" onsubmit="saveAdminInfo(event)">
-                                <div>
-                                    <label class="block text-sm text-[#685BCB] mb-1">Full Name</label>
-                                    <input type="text" id="editName" name="name"
-                                        value="<%= user ? user.name : 'Ashwin Murali Nair' %>"
-                                        class="w-full h-10 rounded-xl bg-[#FFFFFF] px-3 border-none text-[#1F1F1F] focus:ring-1 focus:ring-[#685BCB]" />
-                                </div>
-                                <div>
-                                    <label class="block text-sm text-[#685BCB] mb-1">Email</label>
-                                    <input type="email" id="editEmail" name="email"
-                                        value="<%= user ? user.email : 'admin@soundwave.com' %>"
-                                        class="w-full h-10 rounded-xl bg-[#FFFFFF] px-3 border-none text-[#1F1F1F] focus:ring-1 focus:ring-[#685BCB]" />
-                                </div>
-                                <div>
-                                    <label class="block text-sm text-[#685BCB] mb-1">Phone</label>
-                                    <input type="tel" id="editPhone" name="phone"
-                                        value="<%= user && user.phone ? user.phone : '' %>"
-                                        class="w-full h-10 rounded-xl bg-[#FFFFFF] px-3 border-none text-[#1F1F1F] focus:ring-1 focus:ring-[#685BCB]" />
-                                </div>
-
-                                <div class="flex gap-3 mt-2">
-                                    <button type="submit" id="saveBtn"
-                                        class="h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0]">
-                                        Save Changes
-                                    </button>
-                                    <button type="button" onclick="cancelEdit()"
-                                        class="h-10 px-6 rounded-xl bg-[#FFFFFF] font-bold text-[#1F1F1F] hover:bg-[#D3CEEA]">
-                                        Cancel
-                                    </button>
-                                </div>
-                            </form>
-                        </section>
-
-                        <script>
-                        let adminProfilePhotoCropper = null;
-                        let pendingAdminProfilePhotoFile = null;
-                        let pendingAdminProfilePhotoObjectUrl = '';
-                        const originalName = "<%= user ? user.name : 'Ashwin Murali Nair' %>";
-                        const originalEmail = "<%= user ? user.email : 'admin@soundwave.com' %>";
-                        const originalPhone = "<%= user && user.phone ? user.phone : '' %>";
-
-                        function closeAdminProfilePhotoCropModal() {
-                            const cropModal = document.getElementById('admin-profile-photo-crop-modal');
-                            const cropImage = document.getElementById('admin-profile-photo-cropper-image');
-                            if (adminProfilePhotoCropper) {
-                                adminProfilePhotoCropper.destroy();
-                                adminProfilePhotoCropper = null;
-                            }
-                            if (cropModal) {
-                                cropModal.classList.add('hidden');
-                                cropModal.classList.remove('flex');
-                            }
-                            if (cropImage) {
-                                cropImage.src = '';
-                            }
-                        }
-
-                        async function uploadAdminProfilePhotoFile(file) {
-                            const statusEl = document.getElementById('adminPhotoStatus');
-                            const formData = new FormData();
-                            formData.append('profileImage', file);
-
-                            if (statusEl) {
-                                statusEl.textContent = 'Uploading...';
-                                statusEl.classList.remove('hidden', 'text-red-600', 'text-green-700');
-                                statusEl.classList.add('text-blue-600');
-                            }
-
-                            try {
-                                const response = await fetch('/admin/profile/upload-photo', {
-                                    method: 'POST',
-                                    body: formData
-                                });
-                                const data = await response.json();
-
-                                if (!response.ok) {
-                                    throw new Error(data.message || data.error || 'Upload failed');
-                                }
-
-                                const preview = document.getElementById('admin-profile-image-preview');
-                                if (preview) {
-                                    preview.src = data.profileImage;
-                                }
-
-                                if (statusEl) {
-                                    statusEl.textContent = 'Photo updated successfully';
-                                    statusEl.classList.remove('text-blue-600');
-                                    statusEl.classList.add('text-green-700');
-                                }
-
-                                showMessage('Profile photo updated successfully!', 'success');
-                            } catch (error) {
-                                if (statusEl) {
-                                    statusEl.textContent = error.message || 'Upload failed';
-                                    statusEl.classList.remove('text-blue-600');
-                                    statusEl.classList.add('text-red-600');
-                                }
-                                showMessage(error.message || 'Failed to upload profile photo', 'error');
-                            }
-                        }
-
-                        async function saveAdminProfilePhotoCrop() {
-                            if (!adminProfilePhotoCropper || !pendingAdminProfilePhotoFile) return;
-                            const canvas = adminProfilePhotoCropper.getCroppedCanvas({
-                                width: 500,
-                                height: 500,
-                                fillColor: '#ffffff'
-                            });
-                            if (!canvas) return;
-
-                            const outputType = pendingAdminProfilePhotoFile.type || 'image/jpeg';
-                            const blob = await new Promise((resolve) => canvas.toBlob(resolve, outputType, 0.95));
-                            if (!blob) return;
-
-                            const croppedFile = new File([blob], pendingAdminProfilePhotoFile.name, {
-                                type: blob.type || outputType,
-                                lastModified: Date.now()
-                            });
-
-                            closeAdminProfilePhotoCropModal();
-                            await uploadAdminProfilePhotoFile(croppedFile);
-                        }
-
-                        async function openAdminProfilePhotoCropper(input) {
-                            const file = input.files[0];
-                            if (!file) return;
-
-                            if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
-                                showMessage('Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.', 'error');
-                                input.value = '';
-                                return;
-                            }
-
-                            if (file.size > 2 * 1024 * 1024) {
-                                showMessage('File too large. Maximum allowed size is 2MB.', 'error');
-                                input.value = '';
-                                return;
-                            }
-
-                            pendingAdminProfilePhotoFile = file;
-                            if (pendingAdminProfilePhotoObjectUrl) {
-                                URL.revokeObjectURL(pendingAdminProfilePhotoObjectUrl);
-                            }
-                            pendingAdminProfilePhotoObjectUrl = URL.createObjectURL(file);
-
-                            const cropModal = document.getElementById('admin-profile-photo-crop-modal');
-                            const cropImage = document.getElementById('admin-profile-photo-cropper-image');
-                            if (!cropModal || !cropImage || typeof Cropper === 'undefined') {
-                                await uploadAdminProfilePhotoFile(file);
-                                input.value = '';
-                                return;
-                            }
-
-                            cropImage.src = pendingAdminProfilePhotoObjectUrl;
-                            cropModal.classList.remove('hidden');
-                            cropModal.classList.add('flex');
-
-                            cropImage.onload = function () {
-                                if (adminProfilePhotoCropper) adminProfilePhotoCropper.destroy();
-                                adminProfilePhotoCropper = new Cropper(cropImage, {
-                                    aspectRatio: 1,
-                                    viewMode: 1,
-                                    movable: true,
-                                    zoomable: true,
-                                    scalable: false,
-                                    cropBoxResizable: true,
-                                    autoCropArea: 0.9
-                                });
-                            };
-
-                            input.value = '';
-                        }
-
-                        function toggleEditMode() {
-                            document.getElementById('viewMode').classList.add('hidden');
-                            document.getElementById('editInfoBtn').classList.add('hidden');
-                            document.getElementById('editForm').classList.remove('hidden');
-
-                            // Reset message
-                            const msgContainer = document.getElementById('messageContainer');
-                            msgContainer.classList.add('hidden');
-                        }
-
-                        function cancelEdit() {
-                            document.getElementById('viewMode').classList.remove('hidden');
-                            document.getElementById('editInfoBtn').classList.remove('hidden');
-                            document.getElementById('editForm').classList.add('hidden');
-
-                            // Restore values
-                            document.getElementById('editName').value = originalName;
-                            document.getElementById('editEmail').value = originalEmail;
-                            document.getElementById('editPhone').value = originalPhone;
-                        }
-
-                        async function saveAdminInfo(e) {
-                            e.preventDefault();
-                            const name = document.getElementById('editName').value.trim();
-                            const email = document.getElementById('editEmail').value.trim();
-                            const phone = document.getElementById('editPhone').value.trim();
-                            const msgContainer = document.getElementById('messageContainer');
-                            const saveBtn = document.getElementById('saveBtn');
-
-                        // Client-side Validation (Regex)
-                        const nameRegex = /^[a-zA-Z\s]+$/;
-                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-                        if (name.length < 2 || !nameRegex.test(name)) {
-                            showMessage('Name must be at least 2 characters and allow only letters.', 'error');
-                            return;
-                        }
-                        if (!emailRegex.test(email)) {
-                            showMessage('Please enter a valid email address.', 'error');
-                            return;
-                        }
-
-                        // Disable button
-                        saveBtn.disabled = true;
-                        saveBtn.innerText = 'Saving...';
-
-                        try {
-                            const response = await fetch('/admin/profile/update', {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ name, email, phone })
-                            });
-
-                            const data = await response.json();
-
-                            if (data.requiresOtp) {
-                                window.location.href = '/verify-otp?mode=email_change';
-                                return;
-                            }
-
-                            if (response.ok) {
-                                showMessage('Profile updated successfully!', 'success');
-
-                                // Update View Mode values
-                                document.getElementById('viewName').innerText = name;
-                                document.getElementById('viewEmail').innerText = email;
-                                document.getElementById('viewPhone').innerText = phone || '—';
-
-                                // Update Header Name (Visual consistency)
-                                const headerName = document.querySelector('.text-\\[22px\\].font-bold.text-\\[\\#1F1F1F\\]');
-                                if (headerName) headerName.innerText = name;
-
-                                setTimeout(() => {
-                                    location.reload(); // Refresh to ensure session/server sync is perfect
-                                }, 1000);
-                            } else {
-                                showMessage(data.error || 'Failed to update profile', 'error');
-                                saveBtn.disabled = false;
-                                saveBtn.innerText = 'Save Changes';
-                            }
-                        } catch (error) {
-                            console.error(error);
-                            showMessage('An unexpected error occurred.', 'error');
-                            saveBtn.disabled = false;
-                            saveBtn.innerText = 'Save Changes';
-                        }
-                    }
-
-                        function showMessage(text, type) {
-                            const container = document.getElementById('messageContainer');
-                            container.innerText = text;
-                            container.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
-
-                            if (type === 'error') {
-                                container.classList.add('bg-red-100', 'text-red-800');
-                            } else {
-                                container.classList.add('bg-green-100', 'text-green-800');
-                            }
-                            container.classList.remove('hidden');
-                        }
-                        </script>
-
-                        <div id="admin-profile-photo-crop-modal" class="fixed inset-0 hidden items-center justify-center bg-black/60 p-4 z-50">
-                            <div class="w-full max-w-2xl rounded-xl bg-white p-4">
-                                <div class="mb-3 flex items-center justify-between">
-                                    <h2 class="text-lg font-bold text-[#1F1F1F]">Crop Profile Photo</h2>
-                                    <button type="button" onclick="closeAdminProfilePhotoCropModal()" class="text-sm font-semibold text-[#685BCB]">Close</button>
-                                </div>
-                                <div class="max-h-[70vh] overflow-hidden rounded-lg bg-gray-100">
-                                    <img id="admin-profile-photo-cropper-image" src="" alt="Crop preview" class="max-w-full" />
-                                </div>
-                                <div class="mt-4 flex justify-end gap-3">
-                                    <button type="button" onclick="closeAdminProfilePhotoCropModal()" class="h-10 rounded-xl border border-[#BCA6DB] bg-white px-6 font-bold text-[#1F1F1F] hover:bg-[#D3CEEA]">Cancel</button>
-                                    <button type="button" onclick="saveAdminProfilePhotoCrop()" class="h-10 rounded-xl bg-[#685BCB] px-6 font-bold text-white hover:bg-[#5a4dc0]">Save Crop</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- SECURITY & ACCOUNT ACTIONS -->
-                        <section class="mt-10 pb-10 max-w-3xl">
-                            <h2 class="text-[22px] font-bold mb-3 text-[#1F1F1F]">Account Actions</h2>
-                            <p class="text-sm text-[#685BCB] mb-4">Manage your profile and security settings</p>
-
-                            <div class="flex flex-wrap gap-3">
-                                <!-- Edit Info Button -->
-                                <button id="editInfoBtn" onclick="toggleEditMode()"
-                                    class="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                                        viewBox="0 0 256 256">
-                                        <path
-                                            d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31l60-60,22.34,22.34a8,8,0,0,0,11.32-11.32L175.31,148l52-52A16,16,0,0,0,227.31,73.37ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.32,64l24-24L216,84.68Z">
-                                        </path>
-                                    </svg>
-                                    Edit Info
-                                </button>
-
-                                <!-- Change Password Button -->
-                                <a href="/admin/change-password"
-                                    class="inline-flex items-center gap-2 h-10 px-6 rounded-xl bg-[#685BCB] font-bold text-white hover:bg-[#5a4dc0] transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                                        viewBox="0 0 256 256">
-                                        <path
-                                            d="M208,80H176V56a48,48,0,0,0-96,0V80H48A16,16,0,0,0,32,96V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V96A16,16,0,0,0,208,80ZM96,56a32,32,0,0,1,64,0V80H96ZM208,208H48V96H208V208Zm-80-88a28,28,0,0,0-8,54.83V184a8,8,0,0,0,16,0V174.83A28,28,0,0,0,128,120Z">
-                                        </path>
-                                    </svg>
-                                    Change Password
-                                </a>
-                            </div>
-                        </section>
-                    </div>
-
-                    </div>
-
                     <div class="chart-tile">
                     <div class="chart-card">
                         <h2 class="chart-title">Order Status Distribution</h2>
@@ -843,6 +448,29 @@
                 startDate: document.getElementById('startDate')?.value || '',
                 endDate: document.getElementById('endDate')?.value || ''
             };
+        }
+
+        function getTodayDateString() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+
+            return `${year}-${month}-${day}`;
+        }
+
+        function applyCustomDateLimits() {
+            const today = getTodayDateString();
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+
+            if (startDateInput) {
+                startDateInput.max = today;
+            }
+
+            if (endDateInput) {
+                endDateInput.max = today;
+            }
         }
 
         function toggleCustomRangeInputs(show) {
@@ -1163,20 +791,32 @@
 
         document.getElementById('applyCustomRange').addEventListener('click', () => {
             const { startDate, endDate } = getRangeInputValues();
+            const today = getTodayDateString();
 
             if (!startDate || !endDate) {
-                alert('Please select both dates');
+                Swal.fire('Error', 'Please select both dates', 'error');
+                return;
+            }
+
+            if (startDate > today || endDate > today) {
+                Swal.fire('Error', 'Future dates are not allowed.', 'error');
+                return;
+            }
+
+            if (startDate === endDate) {
+                Swal.fire('Error', 'Start date and end date cannot be the same.', 'error');
                 return;
             }
 
             if (new Date(startDate) > new Date(endDate)) {
-                alert('Start date cannot be after end date');
+                Swal.fire('Error', 'Start date cannot be after end date', 'error');
                 return;
             }
 
             fetchDashboard('custom', startDate, endDate);
         });
 
+        applyCustomDateLimits();
         fetchDashboard('daily');
     </script>
 </body>

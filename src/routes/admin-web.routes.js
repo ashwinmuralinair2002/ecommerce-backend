@@ -16,6 +16,7 @@ router.use(ensureAdminAuthenticated);
 router.get('/dashboard', (req, res) => {
     res.render('admin/dashboard', { user: req.user || null });
 });
+router.get('/profile', adminController.getAdminProfilePage);
 router.post('/profile/upload-photo', handleProfileImageUpload, adminController.uploadAdminProfilePhoto);
 router.get('/dashboard-stats', adminController.getDashboardStats);
 router.get('/order-status-stats', adminController.getOrderStatusStats);

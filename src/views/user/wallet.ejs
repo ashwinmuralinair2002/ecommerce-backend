@@ -137,6 +137,7 @@
                                 <thead>
                                     <tr class="text-left text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
                                         <th class="px-4 py-3">Date</th>
+                                        <th class="px-4 py-3">Order ID</th>
                                         <th class="px-4 py-3">Type</th>
                                         <th class="px-4 py-3">Amount</th>
                                         <th class="px-4 py-3">Reason</th>
@@ -162,6 +163,7 @@
                                         %>
                                         <tr class="transition hover:bg-background-soft">
                                             <td class="px-4 py-4 text-sm text-gray-600"><%= formatDate(tx.createdAt) %></td>
+                                            <td class="px-4 py-4 text-sm font-medium text-primary"><%= tx.orderId || 'N/A' %></td>
                                             <td class="px-4 py-4">
                                                 <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide <%= tx.type === 'credit' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' %>">
                                                     <%= tx.type || 'N/A' %>

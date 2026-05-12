@@ -1,7 +1,23 @@
 <!-- Admin dashboard sidebar partial -->
 <div class="flex flex-col gap-3 bg-[#BCA6DB] p-3 min-h-full text-[#1F1F1F]">
-    <!-- Navigation Links -->
     <div class="space-y-1">
+        <a href="/admin/profile"
+            class="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors <%= page === 'profile' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
+            <div class="h-10 w-10 overflow-hidden rounded-full border border-white/70 bg-white/50 flex-shrink-0">
+                <img id="admin-sidebar-profile-image"
+                    src="<%= user && user.profileImage ? user.profileImage : '/images/admin/profile.jpg' %>"
+                    alt="Admin profile"
+                    class="h-full w-full object-cover" />
+            </div>
+            <div class="min-w-0">
+                <p id="admin-sidebar-profile-name" class="text-sm font-semibold truncate">
+                    <%= user ? user.name : 'Admin' %>
+                </p>
+                <p class="text-xs <%= page === 'profile' ? 'text-white/80' : 'text-[#685BCB]' %>">Admin Profile</p>
+            </div>
+        </a>
+
+        <!-- Navigation Links -->
         <a href="/admin/dashboard"
             class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors <%= page === 'dashboard' ? 'bg-[#685BCB] text-white font-bold' : 'hover:bg-[#D3CEEA]' %>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24px" height="24px" fill="currentColor"
